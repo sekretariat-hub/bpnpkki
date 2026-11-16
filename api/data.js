@@ -138,6 +138,7 @@ module.exports = async (req, res) => {
   try {
     const acc = await getAccess(s);
     if (!acc) return res.status(401).json({ error: 'Akun tidak aktif' });
+    if (acc.pending) return res.status(403).json({ pending: true, nama: acc.nama, error: 'Menunggu persetujuan Admin' });
     if (acc.mustChange) return res.status(403).json({ mustChange: true, error: 'Ganti password terlebih dahulu' });
     if (!cache.data || Date.now() - cache.at > TTL || (req.query.refresh === '1' && Date.now() - cache.at > 10000)) cache = { at: Date.now(), data: await build() };
     const d = cache.data, P = acc.perm, ok = (k) => (P[k] || 0) >= 1;

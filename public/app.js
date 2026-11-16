@@ -410,7 +410,7 @@ async function admApi(body) {
 }
 const admReload = async () => { ADM = null; render(); };
 function showPw(j, judul) {
-  modal(`<h2>${judul}</h2><p>Berikan password sementara ini kepada pengguna. <b>Password hanya tampil sekali</b>.</p><div class="kvs">${row('Email', esc(j.email))}${row('Password', `<code class="pw">${esc(j.password)}</code>`)}</div><div class="mact"><button class="btn" id="cp">Salin password</button></div>`);
+  modal(`<h2>${judul}</h2><p>Pengguna masuk dengan nomor WhatsApp-nya. Berikan password sementara dan tautan ini kepadanya. <b>Hanya tampil sekali</b>; ia wajib menggantinya.</p><div class="kvs">${row('Nomor', esc(j.wa))}${row('Password', `<code class="pw">${esc(j.password)}</code>`)}${row('Tautan masuk', `<input readonly value="${esc(j.link || '')}" onclick="this.select()" style="width:100%">`)}</div><div class="mact"><button class="btn" id="cp">Salin password</button></div>`);
   $('#cp').onclick = () => { navigator.clipboard?.writeText(j.password); $('#cp').textContent = 'Tersalin ✓'; };
 }
 function openAkses(u) {
@@ -437,12 +437,12 @@ PAGES['admin/pengguna'] = () => {
     document.querySelectorAll('button[data-reset]').forEach((el) => el.addEventListener('click', async () => { if (!confirm('Buat password sementara baru untuk pengguna ini?')) return; try { showPw(await admApi({ action: 'reset', id: el.dataset.reset }), 'Password baru'); } catch (e) { alert(e.message); } }));
     let sel = null;
     const q = $('#adq'), box = $('#adr');
-    q?.addEventListener('input', () => { clearTimeout(q._t); sel = null; $('#adadd').disabled = true; if (q.value.trim().length < 2) { box.innerHTML = ''; return; } q._t = setTimeout(async () => { const j = await fetch('/api/admin?q=' + encodeURIComponent(q.value.trim()), { credentials: 'same-origin' }).then((r) => r.json()).catch(() => ({ orang: [] })); box.innerHTML = (j.orang || []).map((o) => `<button type="button" class="opt" data-e="${esc(o.email)}" data-n="${esc(o.nama)}"><b>${esc(o.nama)}</b> <span class="sub">${esc(o.email)}</span></button>`).join('') || '<div class="sub">Tidak ada yang cocok (email harus terdaftar di M-Person).</div>'; box.querySelectorAll('.opt').forEach((b2) => b2.addEventListener('click', () => { sel = b2.dataset.e; q.value = `${b2.dataset.n} <${sel}>`; box.innerHTML = ''; $('#adadd').disabled = false; })); }, 300); });
-    $('#adadd')?.addEventListener('click', async () => { if (!sel) return; $('#adadd').disabled = true; try { const j = await admApi({ action: 'create', email: sel, peran: $('#adp').value }); showPw(j, 'Pengguna ditambahkan'); admReload(); } catch (e) { $('#ade').textContent = e.message; $('#adadd').disabled = false; } });
+    q?.addEventListener('input', () => { clearTimeout(q._t); sel = null; $('#adadd').disabled = true; if (q.value.trim().length < 2) { box.innerHTML = ''; return; } q._t = setTimeout(async () => { const j = await fetch('/api/admin?q=' + encodeURIComponent(q.value.trim()), { credentials: 'same-origin' }).then((r) => r.json()).catch(() => ({ orang: [] })); box.innerHTML = (j.orang || []).map((o) => `<button type="button" class="opt" data-e="${esc(o.id)}" data-n="${esc(o.nama)}"><b>${esc(o.nama)}</b> <span class="sub">WA ${esc(o.wa)}</span></button>`).join('') || '<div class="sub">Tidak ada yang cocok (harus ada di M-Person dengan nomor WhatsApp).</div>'; box.querySelectorAll('.opt').forEach((b2) => b2.addEventListener('click', () => { sel = b2.dataset.e; q.value = b2.dataset.n; box.innerHTML = ''; $('#adadd').disabled = false; })); }, 300); });
+    $('#adadd')?.addEventListener('click', async () => { if (!sel) return; $('#adadd').disabled = true; try { const j = await admApi({ action: 'create', personId: sel, peran: $('#adp').value }); showPw(j, 'Pengguna ditambahkan'); admReload(); } catch (e) { $('#ade').textContent = e.message; $('#adadd').disabled = false; } });
   });
-  const tgl = (u) => `${esc(u.nama)}<div class="sub">${esc(u.email)}</div>`;
-  return `${edit ? `<div class="card" style="margin-bottom:16px"><h3>Tambah pengguna<small>pilih dari M-Person (email harus terdaftar)</small></h3><div class="filters" style="margin:0"><div class="q" style="position:relative"><label>Cari nama / email</label><input id="adq" autocomplete="off" placeholder="Ketik minimal 2 huruf…"><div id="adr" class="sres"></div></div><div><label>Peran</label><select id="adp">${ADM.peran.map((x) => `<option>${esc(x)}</option>`).join('')}</select></div><div style="flex:none;align-self:end"><button class="btn" id="adadd" disabled>Tambah</button></div></div><div class="err" id="ade"></div></div>` : ''}
-  <div class="card"><h3>Pengguna<small>${ADM.users.length} akun</small></h3><div class="tw"><table><thead><tr><th>Pengguna</th><th>Peran</th><th>Aktif</th><th>Terakhir masuk</th><th></th></tr></thead><tbody>${ADM.users.map((u) => `<tr><td>${tgl(u)}</td><td>${edit ? `<select data-peran="${u.id}">${ADM.peran.map((x) => `<option${x === u.peran ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>` : esc(u.peran)}${Object.keys(u.khusus).length ? ` ${chip('akses khusus', 'amber')}` : ''}</td><td><input type="checkbox" data-aktif="${u.id}" ${u.aktif ? 'checked' : ''} ${edit ? '' : 'disabled'} style="width:auto"></td><td class="sub">${u.lastLogin ? esc(new Date(u.lastLogin).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })) : '–'}</td><td style="white-space:nowrap"><button class="ghost" data-akses="${u.id}">Hak akses</button> ${edit ? `<button class="ghost" data-reset="${u.id}">Reset password</button>` : ''}</td></tr>`).join('')}</tbody></table></div>
+  const tgl = (u) => `${esc(u.nama)}${u.pending ? ' ' + chip('menunggu persetujuan', 'amber') : ''}<div class="sub">WA ${esc(u.wa || '–')}${u.email && !/^\d+$/.test(u.email) ? ' · ' + esc(u.email) : ''}</div>`;
+  return `${edit ? `<div class="card" style="margin-bottom:16px"><h3>Tambah pengguna<small>pilih dari M-Person (harus punya nomor WhatsApp). Orang juga bisa mendaftar sendiri dari halaman login.</small></h3><div class="filters" style="margin:0"><div class="q" style="position:relative"><label>Cari nama</label><input id="adq" autocomplete="off" placeholder="Ketik minimal 2 huruf…"><div id="adr" class="sres"></div></div><div><label>Peran</label><select id="adp">${ADM.peran.map((x) => `<option>${esc(x)}</option>`).join('')}</select></div><div style="flex:none;align-self:end"><button class="btn" id="adadd" disabled>Tambah</button></div></div><div class="err" id="ade"></div></div>` : ''}
+  <div class="card"><h3>Pengguna<small>${ADM.users.length} akun</small></h3><div class="tw"><table><thead><tr><th>Pengguna</th><th>Peran</th><th>Aktif</th><th>Terakhir masuk</th><th></th></tr></thead><tbody>${ADM.users.map((u) => `<tr><td>${tgl(u)}</td><td>${edit ? `<select data-peran="${u.id}">${u.peran ? '' : '<option value="" selected disabled>— pilih peran untuk menyetujui —</option>'}${ADM.peran.map((x) => `<option${x === u.peran ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>` : esc(u.peran)}${Object.keys(u.khusus).length ? ` ${chip('akses khusus', 'amber')}` : ''}</td><td><input type="checkbox" data-aktif="${u.id}" ${u.aktif ? 'checked' : ''} ${edit ? '' : 'disabled'} style="width:auto"></td><td class="sub">${u.lastLogin ? esc(new Date(u.lastLogin).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })) : '–'}</td><td style="white-space:nowrap"><button class="ghost" data-akses="${u.id}">Hak akses</button> ${edit ? `<button class="ghost" data-reset="${u.id}">Reset password</button>` : ''}</td></tr>`).join('')}</tbody></table></div>
   <p class="note" style="margin-top:12px"><b>Peran:</b> Admin (semua + administrasi) · Editor BPN (semua menu, boleh edit) · Pengurus BPN Harian (semua menu, hanya lihat) · Koordinator BPK (hanya program, PD, dan data keuskupannya + data Pengurus BPN) · Pengamat (hanya lihat).</p></div>`;
 };
 
@@ -486,24 +486,84 @@ function render() {
 async function load(refresh) {
   const r = await fetch('/api/data' + (refresh ? '?refresh=1' : ''), { credentials: 'same-origin' });
   if (r.status === 401) return showLogin();
-  if (r.status === 403) { const j = await r.clone().json().catch(() => ({})); if (j.mustChange) { $('#login').classList.add('hide'); $('#app').classList.add('hide'); return showChangePw(true); } }
+  if (r.status === 403) { const j = await r.clone().json().catch(() => ({})); if (j.pending) return stepPending(j.nama); if (j.mustChange) { $('#login').classList.add('hide'); $('#app').classList.add('hide'); return showChangePw(true); } }
   if (!r.ok) { $('#login').classList.add('hide'); $('#app').classList.remove('hide'); $('#page').innerHTML = '<div class="empty">Gagal memuat data. Coba muat ulang.</div>'; return; }
   D = await r.json(); if (refresh) { R = null; ADM = null; }
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
   $('#mename').textContent = D.user.nama; $('#melevel').textContent = D.user.level; $('#meav').style.background = hue(D.user.nama); $('#meav').textContent = initials(D.user.nama);
   render();
 }
-function showLogin() { $('#app').classList.add('hide'); $('#login').classList.remove('hide'); D = null; R = null; }
+function showLogin() { $('#app').classList.add('hide'); $('#login').classList.remove('hide'); D = null; R = null; stepPhone(); }
 window.addEventListener('hashchange', render);
-$('#lf').addEventListener('submit', async (ev) => {
-  ev.preventDefault(); $('#le').textContent = ''; $('#lb').disabled = true;
-  try {
-    const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ email: $('#email').value, password: $('#pw').value }) });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) $('#le').textContent = j.error || 'Gagal masuk'; else { $('#pw').value = ''; await load(); }
-  } catch { $('#le').textContent = 'Koneksi bermasalah'; }
-  $('#lb').disabled = false;
-});
+/* ===== Login WhatsApp ===== */
+const LG = { wa: '', phone: '', grant: '', tujuan: '', timer: null };
+const post = async (url, body) => { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body) }); const j = await r.json().catch(() => ({})); if (!r.ok) { const e = new Error(j.error || 'Terjadi kesalahan'); e.status = r.status; throw e; } return j; };
+const lerr = (m) => { $('#le').textContent = m || ''; };
+function lstep(html, bind) { clearInterval(LG.timer); lerr(''); $('#lstep').innerHTML = html; bind && bind(); $('#lstep input,#lstep select')?.focus(); }
+function busy(btn, on, txt) { btn.disabled = on; if (txt) btn.textContent = txt; }
+const back = '<button type="button" class="ghost lback" id="lbk">← Ganti nomor</button>';
+function stepPhone() {
+  lstep(`<label for="ph">Nomor WhatsApp</label><input id="ph" type="tel" inputmode="tel" autocomplete="tel" placeholder="0812 3456 7890" value="${esc(LG.phone)}"><button class="btn" id="lb" type="submit">Lanjut</button>`, () => {
+    $('#lf').onsubmit = async (ev) => { ev.preventDefault(); busy($('#lb'), true); lerr('');
+      try { LG.phone = $('#ph').value; const j = await post('/api/akses', { action: 'cek', phone: LG.phone }); LG.wa = j.wa; if (j.ada) { if (!j.aktif) throw new Error('Akun ini dinonaktifkan. Hubungi Admin BPN.'); stepPassword(); } else stepNew(); }
+      catch (e) { lerr(e.message); busy($('#lb'), false); } };
+  });
+}
+function stepPassword() {
+  lstep(`<div class="who">+${esc(LG.wa)}</div><label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password"><button class="btn" id="lb" type="submit">Masuk</button><button type="button" class="linkbtn" id="lf1">Lupa password? Kirim kode ke WhatsApp</button>${back}`, () => {
+    $('#lbk').onclick = stepPhone; $('#lf1').onclick = () => sendOtp();
+    $('#lf').onsubmit = async (ev) => { ev.preventDefault(); busy($('#lb'), true); lerr('');
+      try { const j = await post('/api/login', { phone: LG.wa, password: $('#pw').value }); await afterAuth(j); }
+      catch (e) { lerr(e.message); busy($('#lb'), false); } };
+  });
+}
+function stepNew() {
+  lstep(`<div class="who">+${esc(LG.wa)}</div><p class="note" style="text-align:left">Nomor ini belum terdaftar. Buat akun baru: kami kirim kode 4 digit ke WhatsApp nomor ini untuk memastikan nomor tersebut milik Anda.</p><button class="btn" id="lb" type="submit">Kirim kode ke WhatsApp</button>${back}`, () => {
+    $('#lbk').onclick = stepPhone; $('#lf').onsubmit = (ev) => { ev.preventDefault(); sendOtp(); };
+  });
+}
+async function sendOtp() {
+  try { const j = await post('/api/akses', { action: 'kirim', phone: LG.wa }); LG.tujuan = j.tujuan; stepOtp(j.tujuanNomor); }
+  catch (e) { lerr(e.message); }
+}
+function stepOtp(masked) {
+  lstep(`<p class="note" style="text-align:left">Kode 4 digit sudah dikirim ke WhatsApp <b>${esc(masked)}</b>. Berlaku 5 menit.</p><label for="otp">Kode OTP</label><input id="otp" inputmode="numeric" maxlength="4" autocomplete="one-time-code" style="letter-spacing:.5em;font-size:22px;text-align:center"><button class="btn" id="lb" type="submit">Verifikasi</button><button type="button" class="linkbtn" id="rs" disabled>Kirim ulang kode (60)</button>${back}`, () => {
+    $('#lbk').onclick = stepPhone;
+    let t = 60; LG.timer = setInterval(() => { t--; const b = $('#rs'); if (!b) return clearInterval(LG.timer); if (t <= 0) { b.disabled = false; b.textContent = 'Kirim ulang kode'; clearInterval(LG.timer); } else b.textContent = `Kirim ulang kode (${t})`; }, 1000);
+    $('#rs').onclick = () => sendOtp();
+    $('#otp').addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); if (e.target.value.length === 4) $('#lf').requestSubmit(); });
+    $('#lf').onsubmit = async (ev) => { ev.preventDefault(); if ($('#otp').value.length !== 4) return; busy($('#lb'), true); lerr('');
+      try { const j = await post('/api/akses', { action: 'verifikasi', phone: LG.wa, code: $('#otp').value }); LG.grant = j.grant; LG.tujuan = j.tujuan; if (j.perluProfil) stepProfil(); else stepSetPw(j.orang && j.orang.nama); }
+      catch (e) { lerr(e.message); busy($('#lb'), false); $('#otp').value = ''; } };
+  });
+}
+const pwFields = '<label for="p1">Password baru</label><input id="p1" type="password" autocomplete="new-password"><label for="p2">Ketik ulang password</label><input id="p2" type="password" autocomplete="new-password"><p class="note" style="text-align:left;margin:6px 0 0">Minimal 8 karakter, berisi huruf dan angka.</p>';
+function stepSetPw(nama) {
+  const reset = LG.tujuan === 'reset';
+  lstep(`<p class="note" style="text-align:left">${reset ? 'Nomor terverifikasi. Buat password baru Anda.' : `Nomor terverifikasi${nama ? ` dan cocok dengan data <b>${esc(nama)}</b>` : ''}. Buat password untuk akun Anda.`}</p>${pwFields}<button class="btn" id="lb" type="submit">Simpan &amp; masuk</button>`, () => {
+    $('#lf').onsubmit = async (ev) => { ev.preventDefault(); busy($('#lb'), true); lerr('');
+      try { const j = await post('/api/akses', { action: 'simpan', grant: LG.grant, password: $('#p1').value, ulang: $('#p2').value }); await afterAuth(j); }
+      catch (e) { lerr(e.message); busy($('#lb'), false); } };
+  });
+}
+async function stepProfil() {
+  let kus = []; try { kus = (await (await fetch('/api/akses')).json()).keuskupan || []; } catch { /* kosong */ }
+  const yr = new Date().getFullYear();
+  lstep(`<p class="note" style="text-align:left">Nomor terverifikasi, tetapi belum ada di data BPN. Lengkapi profil Anda.</p>
+    <label>Nama lengkap</label><input id="f_nama" autocomplete="name"><label>Nama panggilan</label><input id="f_pan"><label>Jenis kelamin</label><select id="f_jk"><option value="">Pilih…</option><option>Pria</option><option>Wanita</option></select>
+    <label>Email</label><input id="f_email" type="email" autocomplete="email"><label>Keuskupan domisili</label><select id="f_kus"><option value="">Pilih…</option>${kus.map((k) => `<option value="${k.id}">${esc(k.nama)}</option>`).join('')}</select>
+    <label>Tanggal lahir</label><div class="dob"><select id="f_tgl"><option value="">Tgl</option>${Array.from({ length: 31 }, (_, i) => `<option>${i + 1}</option>`).join('')}</select><select id="f_bln"><option value="">Bulan</option>${BLN3.map((b, i) => `<option value="${i + 1}">${b}</option>`).join('')}</select><select id="f_thn"><option value="">Tahun</option>${Array.from({ length: yr - 1919 }, (_, i) => `<option>${yr - i}</option>`).join('')}</select></div>
+    <label>Alamat surat (opsional)</label><input id="f_alamat">${pwFields}<button class="btn" id="lb" type="submit">Daftar</button>`, () => {
+    $('#lf').onsubmit = async (ev) => { ev.preventDefault(); busy($('#lb'), true); lerr(''); const v = (id) => $('#' + id).value;
+      try { const j = await post('/api/akses', { action: 'simpan', grant: LG.grant, password: v('p1'), ulang: v('p2'), profil: { nama: v('f_nama'), panggilan: v('f_pan'), jk: v('f_jk'), email: v('f_email'), keuskupan: v('f_kus'), tgl: v('f_tgl'), bln: v('f_bln'), thn: v('f_thn'), alamat: v('f_alamat') } }); await afterAuth(j); }
+      catch (e) { lerr(e.message); busy($('#lb'), false); } };
+  });
+}
+function stepPending(nama) {
+  $('#app').classList.add('hide'); $('#login').classList.remove('hide');
+  lstep(`<div class="okbox">✓</div><h2 style="text-align:center;margin:8px 0">Akun Anda sudah dibuat</h2><p class="note" style="text-align:center">${nama ? esc(nama) + ', ' : ''}akun menunggu persetujuan Admin BPN. Setelah disetujui, Anda bisa masuk dan melihat data sesuai hak akses.</p><button class="btn" id="lb" type="button">Keluar</button>`, () => { $('#lb').onclick = async () => { await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); LG.phone = ''; stepPhone(); }; });
+}
+async function afterAuth(j) { if (j && j.pending) return stepPending(); await load(); }
 $('#rf').onclick = async () => { $('#rf').disabled = true; $('#rf').textContent = 'Memuat…'; await load(true); $('#rf').disabled = false; $('#rf').textContent = 'Muat ulang'; };
 $('#lo').onclick = async () => { await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); showLogin(); };
 $('#pwbtn')?.addEventListener('click', () => showChangePw(false));

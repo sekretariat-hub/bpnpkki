@@ -15,15 +15,14 @@ module.exports = async (req, res) => {
   if (baru.length < 8) return res.status(400).json({ error: 'Password minimal 8 karakter' });
   if (!/[A-Za-z]/.test(baru) || !/\d/.test(baru)) return res.status(400).json({ error: 'Password harus berisi huruf dan angka' });
   try {
-    const esc = String(s.email).toLowerCase().replace(/\\/g, '').replace(/'/g, "\\'");
-    const rows = await fetchAll(T, Object.values(F), { filterByFormula: `LOWER({Email})='${esc}'`, maxRecords: '1' });
+    const rows = await fetchAll(T, Object.values(F), { filterByFormula: `RECORD_ID()='${String(s.rid || '').replace(/[^A-Za-z0-9]/g, '')}'`, maxRecords: '1' });
     const rec = rows[0];
     if (!rec || !rec.fields[F.aktif]) return res.status(401).json({ error: 'Akun tidak aktif' });
     const must = !!rec.fields[F.mustChange];
     if (!must && !verifyPassword(String(b.lama || ''), rec.fields[F.hash])) return res.status(400).json({ error: 'Password lama salah' });
     if (verifyPassword(baru, rec.fields[F.hash])) return res.status(400).json({ error: 'Password baru tidak boleh sama dengan yang lama' });
     await update(T, rec.id, { [F.hash]: hashPassword(baru), [F.mustChange]: false, [F.tokenHash]: null, [F.tokenExp]: null });
-    forget(s.email);
+    forget(s.rid || s.email);
     return res.status(200).json({ ok: true });
   } catch (e) {
     console.error('password error', e.message);

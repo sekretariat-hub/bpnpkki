@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
     const rec = rows[0], f = rec ? rec.fields : null;
     if (!f || !f[F.aktif] || !(Number(f[F.tokenExp]) > now)) return res.status(410).json({ error: 'Tautan undangan sudah dipakai atau kedaluwarsa. Silakan masuk dengan email dan password bawaan.' });
     await update(T, rec.id, { [F.tokenHash]: null, [F.tokenExp]: null, [F.lastLogin]: new Date().toISOString() });
-    setSession(res, { email: String(f[F.email]).toLowerCase(), nama: f[F.nama] || f[F.email], level: 'Pengurus' });
+    setSession(res, { rid: rec.id, email: String(f[F.email]).toLowerCase(), nama: f[F.nama] || f[F.email], level: 'Pengurus' });
     return res.status(200).json({ ok: true, mustChange: !!f[F.mustChange] });
   } catch (e) {
     console.error('invite error', e.message);

@@ -11,15 +11,11 @@
 </head>
 <body>
 <div id="login" class="login hide">
-  <form id="lf" autocomplete="on">
+  <form id="lf" autocomplete="on" novalidate>
     <img src="/logo.png" alt="Logo BPN PKKI">
     <h1>Sistem Informasi BPN PKKI</h1>
     <p>Badan Pelayanan Nasional Pembaruan Karismatik Katolik Indonesia</p>
-    <label for="email">Email</label>
-    <input id="email" type="email" autocomplete="username" required>
-    <label for="pw">Password</label>
-    <input id="pw" type="password" autocomplete="current-password" required>
-    <button class="btn" id="lb" type="submit">Masuk</button>
+    <div id="lstep"></div>
     <div class="err" id="le" role="alert"></div>
   </form>
 </div>

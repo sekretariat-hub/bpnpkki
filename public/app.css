@@ -185,3 +185,8 @@ code.pw{font-size:18px;background:#F1F5FF;padding:6px 10px;border-radius:8px;let
 @media(max-width:640px){.eform,.pejs{grid-template-columns:1fr}.kv{grid-template-columns:1fr}}
 .clk{cursor:pointer}.card.kpi.clk:hover{box-shadow:0 6px 20px rgba(31,86,196,.18);transform:translateY(-1px)}.bar.clk:hover,.lg .clk:hover,.cols .c.clk:hover{background:#F3F7FF;border-radius:8px}
 .pmenu{z-index:120}
+.who{background:#EEF3FF;border-radius:10px;padding:10px 12px;text-align:center;font-weight:700;color:var(--navy);margin:6px 0 8px}
+.linkbtn{background:none;border:0;color:var(--navy);text-decoration:underline;cursor:pointer;font:inherit;font-size:13px;margin-top:10px;display:block;width:100%;text-align:center}.linkbtn:disabled{color:#9AA7C0;text-decoration:none;cursor:default}
+.lback{display:block;margin:8px auto 0}.dob{display:grid;grid-template-columns:1fr 1.4fr 1.2fr;gap:8px}
+.okbox{width:54px;height:54px;border-radius:50%;background:#E3F6EC;color:#13805A;font-size:28px;display:grid;place-items:center;margin:8px auto}
+.login select{width:100%;box-sizing:border-box}
