@@ -5,6 +5,7 @@ const { T, F } = require('../lib/users');
 const { waDigits, mask } = require('../lib/phone');
 const otp = require('../lib/otp');
 const A = require('../lib/access');
+const PX = require('../lib/person');
 
 const PERSON = 'tbl21zOSogH7Anlu2';
 const PF = { nama: 'fldVU2gofcKEhWHmB', wa: 'fldGsFt4GflTXoTa0', pan: 'fldstVCm8Oa3tyxNA', jk: 'fld3A1rRGfWxbuase', email: 'fldhjOTrQfLGC6hWj', dom: 'fldwJ7RnXW1nLaOcv', tgl: 'fld6yev36uF0pzxcu', bln: 'fldmCKGMF57RMV3tE', thn: 'fldmTqYBcGuYVkkgM', alamat: 'fldZC8crJW8pETX6J' };
@@ -15,12 +16,8 @@ const hits = new Map();
 const tooMany = (ip) => { const n = Date.now(), l = (hits.get(ip) || []).filter((t) => n - t < 15 * 60 * 1000); l.push(n); hits.set(ip, l); return l.length > 25; };
 
 const userByWa = async (wa) => (await fetchAll(T, Object.values(F), { filterByFormula: `{Whatsapp}='${wa}'`, maxRecords: '1' }))[0];
-async function personByWa(wa) {
-  const nat = wa.slice(2);
-  const f = `FIND('${nat}', SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE({Whatsapp},'+',''),' ',''),'-',''),'(',''))>0`;
-  const rows = await fetchAll(PERSON, [PF.nama, PF.wa, PF.email], { filterByFormula: f, maxRecords: '10' });
-  return rows.find((r) => waDigits(r.fields[PF.wa]) === wa);
-}
+const ALLP = Object.values(PF);
+const personByWa = (wa) => PX.personByWa(wa, ALLP);
 const passRule = (p, u) => (p !== u ? 'Kedua password harus sama' : p.length < 8 ? 'Password minimal 8 karakter' : !/[A-Za-z]/.test(p) || !/\d/.test(p) ? 'Password harus berisi huruf dan angka' : '');
 
 module.exports = async (req, res) => {
@@ -58,7 +55,8 @@ module.exports = async (req, res) => {
       try { tujuan = await otp.check(wa, code); } catch (e) { return bad(res, e.message, e.status || 400); }
       const person = tujuan === 'daftar' ? await personByWa(wa) : null;
       const grant = sign({ k: 'grant', wa, tujuan, exp: Date.now() + 15 * 60 * 1000 });
-      return res.json({ ok: true, tujuan, grant, orang: person ? { nama: person.fields[PF.nama] || '' } : null, perluProfil: tujuan === 'daftar' && !person });
+      const jk = person && person.fields[PF.jk] && (person.fields[PF.jk].name || person.fields[PF.jk]);
+      return res.json({ ok: true, tujuan, grant, orang: person ? { nama: person.fields[PF.nama] || '', jk: jk || '' } : null, perluProfil: tujuan === 'daftar' && (!person || !PX.lengkap(person)) });
     }
     if (b.action === 'simpan') {
       let g; try { g = verify(b.grant); } catch { g = null; }
@@ -75,15 +73,16 @@ module.exports = async (req, res) => {
       }
       if (existing) return bad(res, 'Nomor ini sudah punya akun. Silakan masuk atau pakai Lupa password.', 409);
       let person = await personByWa(g.wa), nama, email;
-      if (!person) {
+      if (!person || !PX.lengkap(person)) {
         const p = b.profil || {}, s = (v, n = 200) => String(v || '').trim().slice(0, n);
         const tgl = +p.tgl, bln = +p.bln, thn = +p.thn;
         const err = !s(p.nama) ? 'Nama lengkap wajib diisi' : !s(p.panggilan) ? 'Nama panggilan wajib diisi' : !['Pria', 'Wanita'].includes(p.jk) ? 'Pilih jenis kelamin'
           : !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s(p.email)) ? 'Email tidak valid' : !/^rec[A-Za-z0-9]{14}$/.test(s(p.keuskupan)) ? 'Pilih keuskupan domisili'
           : !(tgl >= 1 && tgl <= 31 && bln >= 1 && bln <= 12 && thn >= 1920 && thn <= new Date().getFullYear()) ? 'Tanggal lahir tidak valid' : '';
         if (err) return bad(res, err);
-        const made = await create(PERSON, { [PF.nama]: s(p.nama), [PF.pan]: s(p.panggilan, 60), [PF.wa]: '+' + g.wa, [PF.jk]: p.jk, [PF.email]: s(p.email), [PF.dom]: [s(p.keuskupan)], [PF.tgl]: tgl, [PF.bln]: bln, [PF.thn]: thn, ...(s(p.alamat, 300) ? { [PF.alamat]: s(p.alamat, 300) } : {}) });
-        person = made; nama = s(p.nama); email = s(p.email).toLowerCase();
+        const flds = { [PF.nama]: s(p.nama), [PF.pan]: s(p.panggilan, 60), [PF.wa]: '+' + g.wa, [PF.jk]: p.jk, [PF.email]: s(p.email), [PF.dom]: [s(p.keuskupan)], [PF.tgl]: tgl, [PF.bln]: bln, [PF.thn]: thn, ...(s(p.alamat, 300) ? { [PF.alamat]: s(p.alamat, 300) } : {}) };
+        if (person) { delete flds[PF.wa]; await update(PERSON, person.id, flds); } else person = await create(PERSON, flds);
+        person = person; nama = s(p.nama); email = s(p.email).toLowerCase();
       } else { nama = person.fields[PF.nama] || g.wa; email = String(person.fields[PF.email] || '').toLowerCase(); }
       const rec = await create(T, { [F.email]: email || g.wa, [F.nama]: nama, [F.wa]: g.wa, [F.aktif]: true, [F.disetujui]: false, [F.hash]: hash, [F.person]: person.id, [A.FX.khusus]: '{}', [F.lastLogin]: new Date().toISOString() });
       setSession(res, { rid: rec.id, email, nama, level: 'Pengurus' });

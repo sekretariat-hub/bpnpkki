@@ -7,7 +7,7 @@ const { getAccess } = require('../lib/access');
 
 const T = {
   proker: 'tblJVp60qiZ4mz40v', program: 'tblqlr84XesZvbEJi', bpk: 'tblgj0UYB9w7UWWnv', seksi: 'tblyGzVk36H6eGrFt',
-  bidang: 'tblOkJcrqWIqc7kQz', jabBpk: 'tbldxeUpwRdy3ghib', pengurus: 'tblRzqA9mzvDBWgSZ', tim: 'tblDpFOHsHMntZwWk',
+  bidang: 'tblOkJcrqWIqc7kQz', jabBpk: 'tbldxeUpwRdy3ghib', pengurus: 'tblRzqA9mzvDBWgSZ', riwayat: 'tblNNm7hwT7q9hxAV', tim: 'tblDpFOHsHMntZwWk',
   pdpkk: 'tblhmeuR1qFHxUIId', pejabat: 'tblGR9a8J4UOyJGep', person: 'tbl21zOSogH7Anlu2', event: 'tblXXCoICRKHWKxV4', task: 'tblpFsvyTnpzL3ghc',
 };
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agust', 'Sept', 'Okt', 'Nov', 'Dec'];
@@ -21,7 +21,7 @@ const iso = (d) => d.toISOString().slice(0, 10);
 
 async function build() {
   // Gelombang 1: tabel referensi kecil + data utama
-  const [bpk, seksi, bidang, program, jabBpk, pengurus, proker, tim, pdpkk, event, task, pejabat] = await Promise.all([
+  const [bpk, seksi, bidang, program, jabBpk, pengurus, proker, tim, pdpkk, event, task, pejabat, riwayat] = await Promise.all([
     fetchAll(T.bpk, ['fldxvUJvguk6J81mP', 'fldcvLPHh5A9E3S0G', 'fldvPkDbxZn38WFrJ', 'fldphfJk5nqDLTGB6', 'flde1x6UBt0lZ9oc6']),
     fetchAll(T.seksi, ['fldlNoAUIJ9jKfZll', 'fldHR7n95OKVB50jx']),
     fetchAll(T.bidang, ['fld92od5eBugVo19p']),
@@ -33,7 +33,8 @@ async function build() {
     fetchAll(T.pdpkk, ['fldzIeY3YMiHMo4ky', 'fldWcO7mYhPFpFXlA', 'fldq43MYnCIKg34ts', 'fldxlRQG4ikb8coP2', 'fldYgMqtmX7AbHfU3']),
     fetchAll(T.event, ['flduBRbHd5qS10GGC', 'fldqLzgGmTFR7CkMV', 'fld4fFsOg9vwjxzYw']),
     fetchAll(T.task, ['fldry0ymZWhzbsvN7', 'fldFTszJpZtVvuBRs', 'fldPliH590gA6RsPc', 'fldXsegGJCM9Rk065', 'fldQ62QG6uFvzHHBx', 'fldNwimQQb6Ms1Rhv']),
-    fetchAll(T.pejabat, ['fldrGASVYBRTS7v8o', 'fldCYWlWFYtnkjv6Z', 'fldAsSxbg8bZRkrru', 'fldyWZFFnXeN8CMlk']),
+    fetchAll(T.pejabat, ['fldrGASVYBRTS7v8o', 'fldCYWlWFYtnkjv6Z', 'fldAsSxbg8bZRkrru', 'fldyWZFFnXeN8CMlk', 'fldg6fcg234kY4yCT', 'fldg9BWVX7AmO3Iw7']),
+    fetchAll(T.riwayat, ['fldV7IAegtyjm2lV4', 'fldPCsNiSY7fO0LU2', 'fldfPGyXH4MGPLa8x', 'fldJ9VuWtPiEceSe6']),
   ]);
 
   // Peta ID -> nama
@@ -50,6 +51,7 @@ async function build() {
   tim.forEach((r) => (r.fields.fldomDq2DVSouEZRg || []).forEach((i) => pid.add(i)));
   pdpkk.forEach((r) => (r.fields.fldxlRQG4ikb8coP2 || []).forEach((i) => pid.add(i)));
   task.forEach((r) => (r.fields.fldNwimQQb6Ms1Rhv || []).forEach((i) => pid.add(i)));
+  riwayat.forEach((r) => (r.fields.fldPCsNiSY7fO0LU2 || []).forEach((i) => pid.add(i)));
   pejabat.forEach((r) => (r.fields.fldCYWlWFYtnkjv6Z || []).forEach((i) => pid.add(i)));
   const [persons, pewarta] = await Promise.all([
     listByIds(T.person, [...pid], ['fldVU2gofcKEhWHmB', 'fldstVCm8Oa3tyxNA', 'fldGsFt4GflTXoTa0', 'fldhjOTrQfLGC6hWj', 'fldwJ7RnXW1nLaOcv', 'fld3A1rRGfWxbuase', 'fldIuYdJWnN77zoaT']),
@@ -77,14 +79,18 @@ async function build() {
   const profil = {};
   pejabat.forEach((r) => {
     const f = r.fields; const st = L(f.fldyWZFFnXeN8CMlk)[0] || '';
-    if (!/aktif/i.test(st) || /tidak/i.test(st)) return;
-    const jab = L(f.fldAsSxbg8bZRkrru)[0] || '';
+    const aktif = /aktif/i.test(st) && !/tidak/i.test(st), selesai = /selesai/i.test(st);
+    if (!aktif && !selesai) return;
+    const jab = L(f.fldAsSxbg8bZRkrru)[0] || '', jid = (f.fldAsSxbg8bZRkrru || [])[0] || '';
     (f.fldrGASVYBRTS7v8o || []).forEach((bid) => {
-      const key = bid; profil[key] = profil[key] || { id: bid, nama: names[bid] || '', pejabat: [] };
-      person(f.fldCYWlWFYtnkjv6Z).forEach((o) => profil[key].pejabat.push({ jabatan: jab, koordinator: /koord/i.test(jab), orang: o }));
+      const key = bid; profil[key] = profil[key] || { id: bid, nama: names[bid] || '', pejabat: [], riwayat: [] };
+      person(f.fldCYWlWFYtnkjv6Z).forEach((o) => {
+        const row = { pid: r.id, jabatan: jab, jabatanId: jid, koordinator: /koord/i.test(jab), orang: o, mulai: f.fldg6fcg234kY4yCT || '', selesai: f.fldg9BWVX7AmO3Iw7 || '' };
+        (aktif ? profil[key].pejabat : profil[key].riwayat).push(row);
+      });
     });
   });
-  Object.values(profil).forEach((b) => b.pejabat.sort((x, y) => Number(y.koordinator) - Number(x.koordinator)));
+  Object.values(profil).forEach((b) => { b.pejabat.sort((x, y) => Number(y.koordinator) - Number(x.koordinator)); b.riwayat.sort((x, y) => String(y.selesai).localeCompare(String(x.selesai))); });
 
   // BPN Inti = koordinator BPK yang menjabat aktif (bukan wakil)
   const inti = {};
@@ -121,6 +127,8 @@ async function build() {
       };
     }),
     kelompok: { inti: Object.values(inti) },
+    jabatanBpk: jabBpk.map((r) => ({ id: r.id, nama: String(r.fields.fld1D1ejz3qnx7A8h || '').trim() })).filter((x) => x.nama).sort((a, b) => a.nama.localeCompare(b.nama, 'id')),
+    riwayatPengurus: riwayat.map((r) => ({ id: r.id, jabatan: r.fields.fldV7IAegtyjm2lV4 || '', orang: person(r.fields.fldPCsNiSY7fO0LU2)[0] || null, selesai: r.fields.fldfPGyXH4MGPLa8x || '', pengganti: r.fields.fldJ9VuWtPiEceSe6 || '' })).filter((x) => x.orang).sort((a, b) => String(b.selesai).localeCompare(String(a.selesai))),
     pdpkk: pdpkk.map((r) => ({
       id: r.id, nama: String(r.fields.fldzIeY3YMiHMo4ky || '').trim(), keuskupan: first(r.fields.fldWcO7mYhPFpFXlA), jenis: first(r.fields.fldq43MYnCIKg34ts),
       koordinator: person(r.fields.fldxlRQG4ikb8coP2), jumlahUmat: (r.fields.fldYgMqtmX7AbHfU3 || []).length,
@@ -161,10 +169,11 @@ module.exports = async (req, res) => {
       proker: anyOf('proker') || ok('dashboard') ? d.proker.filter((p) => inScope([...p.penerima, ...p.pelaksana])) : [],
       pengurus: anyOf('pengurus') ? d.pengurus : [],
       tim: anyOf('tim') ? d.tim : [],
-      kelompok: anyOf('pengurus') ? { inti: d.kelompok.inti, tim: d.tim.filter((t) => t.orang).map((t) => ({ orang: t.orang, jabatan: [...t.jabatanBpn, ...t.seksi].filter(Boolean).join(' · '), seksi: t.seksi })) } : { inti: [], tim: [] },
+      kelompok: anyOf('pengurus') ? { inti: d.kelompok.inti, tim: d.tim.filter((t) => t.orang && /^aktif$/i.test(t.status || '')).map((t) => ({ orang: t.orang, jabatan: [...t.jabatanBpn, ...t.seksi].filter(Boolean).join(' · '), seksi: t.seksi })) } : { inti: [], tim: [] },
       pdpkk: anyOf('pd') ? d.pdpkk.filter((x) => !scopeNames || scopeNames.has(x.keuskupan)) : [],
       bpkList: d.bpkList, event: ok('dashboard') && !scopeNames ? d.event : [], tugas: ok('dashboard') && !scopeNames ? d.tugas : [],
-      bpkProfil: anyOf('proker') || anyOf('pd') ? Object.fromEntries(Object.entries(d.bpkProfil).filter(([id]) => !acc.bpkIds || acc.bpkIds.includes(id))) : {},
+      jabatanBpk: ok('pendataan') ? d.jabatanBpk : [], riwayatPengurus: anyOf('pengurus') ? d.riwayatPengurus : [],
+      bpkProfil: anyOf('proker') || anyOf('pd') || ok('pendataan') ? Object.fromEntries(Object.entries(d.bpkProfil).filter(([id]) => !acc.bpkIds || acc.bpkIds.includes(id))) : {},
     };
     // Nomor WA tidak pernah dikirim ke browser (tombol WA memakai /api/wa). Email disembunyikan untuk Pengamat.
     const out = JSON.stringify(body, (k, v) => (k === 'wa' ? '' : acc.peran === 'Pengamat' && k === 'email' && typeof v === 'string' && k !== 'user' ? '' : v));
@@ -176,3 +185,4 @@ module.exports = async (req, res) => {
   }
 };
 module.exports.getCache = () => cache;
+module.exports.invalidate = () => { cache = { at: 0, data: null }; };

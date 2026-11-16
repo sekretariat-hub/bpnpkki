@@ -44,6 +44,7 @@ const MENU = [
   { id: 'pengurus', label: 'Pengurus BPN', icon: I.star, sub: 'Susunan pengurus BPN', c: '#8B7CF6' },
   { id: 'pd', label: 'Koordinator PD', icon: I.pd, sub: 'Persekutuan Doa dan koordinatornya', c: '#14B8A6', tabs: [['daftar', 'Daftar PD'], ['ringkasan', 'Ringkasan']] },
   { id: 'tim', label: 'Tim Kerja BPN', icon: I.team, sub: 'Siapa saja yang bertugas di BPN', c: '#FF7A6B', tabs: [['bagan', 'Bagan Tim Aktif'], ['daftar', 'Daftar Tim Kerja']] },
+  { id: 'pendataan', label: 'Pendataan PIC', icon: I.pd, sub: 'Pejabat dan PIC di setiap BPK, lengkap dengan riwayatnya', c: '#E0661A' },
   { id: 'laporan', label: 'Laporan', icon: I.chart, sub: 'Ringkasan kegiatan', c: '#34C28A', tabs: [['pleno', 'Pleno & Golden Jubilee'], ['tc', 'TC SHDR'], ['kepemudaan', 'Kepemudaan']] },
   { id: 'admin', label: 'Administrasi', icon: I.key, sub: 'Kelola pengguna dan hak akses', c: '#6B7A99', tabs: [['pengguna', 'Pengguna & Hak Akses']] },
 ];
@@ -78,7 +79,7 @@ const kpi = (label, n, { c = 'var(--navy)', t = 'var(--blue-t)', delta, note, go
   if (delta) { const diff = delta.now - delta.prev; d = diff > 0 ? `<div class="d up">▲ +${nf.format(diff)} dari bulan lalu</div>` : diff < 0 ? `<div class="d down">▼ ${nf.format(diff)} dari bulan lalu</div>` : '<div class="d flat">● Sama dengan bulan lalu</div>'; }
   return `<div class="card kpi${gid === null ? '' : ' clk'}"${dat(gid, '')} style="--c:${c};--t:${t}"><div class="l">${esc(label)}</div><div class="n">${nf.format(n)}</div>${d}${note ? `<div class="note">${esc(note)}</div>` : ''}</div>`;
 };
-const person = (p, jab) => `<div class="card pc">${av(p.nama)}<div style="min-width:0"><div class="n">${esc(p.nama)}</div><div class="j">${esc(jab || '')}</div><div class="j">${esc(p.keuskupan)}</div><div class="acts">${p.adaWa ? `<a class="wa" target="_blank" rel="noopener" href="/api/wa?p=${esc(p.id)}">WhatsApp</a>` : ''}${p.email ? `<a class="wa em" href="mailto:${esc(p.email)}">Email</a>` : ''}</div></div></div>`;
+const person = (p, jab, extra) => `<div class="card pc">${av(p.nama)}<div style="min-width:0"><div class="n">${esc(p.nama)}</div><div class="j">${esc(jab || '')}</div><div class="j">${esc(p.keuskupan)}</div><div class="acts">${p.adaWa ? `<a class="wa" target="_blank" rel="noopener" href="/api/wa?p=${esc(p.id)}">WhatsApp</a>` : ''}${p.email ? `<a class="wa em" href="mailto:${esc(p.email)}">Email</a>` : ''}${extra || ''}</div></div></div>`;
 
 /* ===== Program Kerja: status ===== */
 const TONE_STATUS = { 'BELUM DIMULAI': 'gray', 'ON PROGRESS': 'amber', SELESAI: 'green', DIBATALKAN: 'violet' };
@@ -216,18 +217,21 @@ PAGES.pengurus = () => {
   // Satu orang bisa ada di beberapa kelompok (tumpang tindih diperbolehkan).
   const K = D.kelompok || { inti: [], tim: [] };
   const grp = {
-    harian: D.pengurus.filter((x) => x.orang.length).flatMap((x) => x.orang.map((o) => ({ o, jab: x.jabatan, rank: x.rank }))),
+    harian: D.pengurus.filter((x) => x.orang.length).flatMap((x) => x.orang.map((o) => ({ o, jab: x.jabatan, rank: x.rank, pid: x.id }))),
     inti: K.inti.map((x) => ({ o: x.orang, jab: x.jabatan.join(', '), rank: 0 })),
     tim: K.tim.map((x) => ({ o: x.orang, jab: x.jabatan, rank: 0 })),
   };
   const LBL = { harian: 'BPN Harian', inti: 'BPN Inti', tim: 'Tim Kerja' };
+  const edit = (D.perm.pengurus || 0) >= 2;
   const uniqN = (g) => new Set(grp[g].map((x) => x.o.id)).size;
   const draw = () => {
     const f = S.pg, q = f.q.toLowerCase();
     const list = grp[f.g].filter((x) => (!f.kus || x.o.keuskupan === f.kus) && (!f.jab || x.jab.split(/, | · /).includes(f.jab)) && (!q || `${x.o.nama} ${x.o.panggilan || ''} ${x.jab} ${x.o.keuskupan}`.toLowerCase().includes(q)));
     const seen = new Set(), rows = list.filter((x) => (seen.has(x.o.id) ? false : seen.add(x.o.id)));
     $('#pgn').textContent = `${nf.format(rows.length)} orang${rows.length !== uniqN(f.g) ? ` dari ${nf.format(uniqN(f.g))}` : ''} · ${LBL[f.g]}`;
-    $('#pgr').innerHTML = rows.map((x) => person(x.o, grp[f.g].filter((y) => y.o.id === x.o.id).map((y) => y.jab).filter(Boolean).join(' · '))).join('') || '<div class="empty">Tidak ada yang sesuai filter.</div>';
+    const items = (x) => grp[f.g].filter((y) => y.o.id === x.o.id);
+    const extra = (x) => (f.g !== 'harian' ? '' : items(x).map((y) => `${(D.riwayatPengurus || []).some((r) => r.jabatan === y.jab) ? `<a href="#" class="wa em" data-riw="${esc(y.jab)}">Riwayat</a>` : ''}${edit ? `<a href="#" class="wa em" data-gnt="${y.pid}|${y.o.id}">Ganti</a>` : ''}`).join(''));
+    $('#pgr').innerHTML = rows.map((x) => person(x.o, items(x).map((y) => y.jab).filter(Boolean).join(' · '), extra(x))).join('') || '<div class="empty">Tidak ada yang sesuai filter.</div>';
     document.querySelectorAll('[data-g]').forEach((el) => el.classList.toggle('sel', el.dataset.g === f.g));
     const opts = (arr, cur) => `<option value="">Semua</option>${arr.map((v) => `<option${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join('')}`;
     $('#pgk').innerHTML = opts(uniq(grp[f.g].map((x) => x.o.keuskupan).filter(Boolean)).sort(cmp), f.kus);
@@ -238,13 +242,92 @@ PAGES.pengurus = () => {
     $('#pgk').addEventListener('change', (e) => { S.pg.kus = e.target.value; draw(); });
     $('#pgj').addEventListener('change', (e) => { S.pg.jab = e.target.value; draw(); });
     $('#pgq').value = S.pg.q; $('#pgq').addEventListener('input', (e) => { S.pg.q = e.target.value; draw(); });
+    $('#pgr').addEventListener('click', (e) => {
+      const r = e.target.closest('[data-riw]'), g = e.target.closest('[data-gnt]');
+      if (r) { e.preventDefault(); riwayatPengurus(r.dataset.riw); }
+      if (g) { e.preventDefault(); const [pid, oid] = g.dataset.gnt.split('|'); gantiPengurus(pid, oid); }
+    });
+    $('#pgrw')?.addEventListener('click', () => riwayatPengurus(''));
+    $('#pgpv')?.addEventListener('click', previewProfil);
     draw();
   });
   const card = (g, c, t) => `<div class="card kpi clk" data-g="${g}" style="--c:${c};--t:${t}"><div class="l">${LBL[g]}</div><div class="n">${nf.format(uniqN(g))}</div><div class="note">${g === 'harian' ? 'Susunan pengurus BPN' : g === 'inti' ? 'Koordinator BPK yang menjabat aktif' : 'Anggota tim kerja di bawah koordinator seksi'}</div></div>`;
   return `<div class="grid g3" style="margin-bottom:14px">${card('harian', '#5B4CD1', 'var(--violet-t)')}${card('inti', '#1F56C4', 'var(--blue-t)')}${card('tim', '#0B8277', 'var(--teal-t)')}</div>
   <div class="filters"><div class="q"><label>Cari</label><input id="pgq" placeholder="Nama / jabatan / keuskupan…"></div><div><label>Keuskupan</label><select id="pgk"></select></div><div><label>Jabatan</label><select id="pgj"></select></div></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 8px"><button class="ghost" id="pgrw">Riwayat jabatan</button><button class="ghost" id="pgpv">Lihat form profil pendaftaran</button></div>
   <div class="note" id="pgn" style="margin:2px 0 10px"></div><div class="people" id="pgr"></div>`;
 };
+
+function riwayatPengurus(jab) {
+  const l = (D.riwayatPengurus || []).filter((r) => !jab || r.jabatan === jab);
+  modal(`<h2>Riwayat jabatan${jab ? ': ' + esc(jab) : ' Pengurus BPN'}</h2>${l.length ? `<div class="tw"><table><thead><tr><th>Jabatan</th><th>Nama</th><th>Berakhir</th><th>Digantikan oleh</th></tr></thead><tbody>${l.map((r) => `<tr><td>${esc(r.jabatan)}</td><td><b>${esc(r.orang.nama)}</b></td><td>${esc(fmtTgl(r.selesai) || '–')}</td><td>${esc(r.pengganti || '–')}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Belum ada riwayat. Riwayat tercatat otomatis setiap kali pemegang jabatan diganti.</div>'}`, true);
+}
+function gantiPengurus(pid, oid) {
+  const x = D.pengurus.find((p) => p.id === pid), o = x && x.orang.find((q) => q.id === oid);
+  if (!x || !o) return;
+  let pick = '';
+  modal(`<h2>Ganti / akhiri jabatan</h2><p class="sub"><b>${esc(x.jabatan)}</b>: saat ini ${esc(o.nama)}. Datanya tidak dihapus, tetapi masuk ke riwayat jabatan.</p>
+    <form id="gf" class="eform" style="grid-template-columns:1fr"><div class="q" style="position:relative"><label>Pengganti (cari nama di data umat; kosongkan bila hanya mengakhiri)</label><input id="gq" autocomplete="off" placeholder="Ketik minimal 2 huruf…"><div id="gr" class="sres"></div></div>
+    <div><label>Berakhir pada tanggal</label><input type="date" name="tgl" value="${new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10)}"></div>
+    <div class="err" id="ge"></div><div class="mact"><button class="btn" id="gs" type="submit">Simpan</button></div></form>`);
+  const q = $('#gq'), box = $('#gr');
+  q.addEventListener('input', () => { clearTimeout(q._t); pick = ''; if (q.value.trim().length < 2) { box.innerHTML = ''; return; } q._t = setTimeout(async () => { const j = await fetch('/api/orang?q=' + encodeURIComponent(q.value.trim()), { credentials: 'same-origin' }).then((r) => r.json()).catch(() => ({ orang: [] })); box.innerHTML = (j.orang || []).map((r) => `<button type="button" class="opt" data-i="${esc(r.id)}" data-n="${esc(r.nama)}"><b>${esc(r.nama)}</b></button>`).join('') || '<div class="sub">Tidak ada yang cocok.</div>'; box.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => { pick = b.dataset.i; q.value = b.dataset.n; box.innerHTML = ''; })); }, 300); });
+  $('#gf').addEventListener('submit', async (ev) => {
+    ev.preventDefault(); if (q.value.trim() && !pick) { $('#ge').textContent = 'Pilih nama pengganti dari daftar, atau kosongkan.'; return; }
+    if (!confirm(pick ? `Ganti ${o.nama} dengan ${q.value}?` : `Akhiri jabatan ${o.nama}?`)) return;
+    $('#gs').disabled = true;
+    try { await post('/api/pengurus', { id: pid, lamaId: oid, baruId: pick, tanggal: ev.target.tgl.value }); closeModal(); await load(true); } catch (e) { $('#ge').textContent = e.message; $('#gs').disabled = false; }
+  });
+}
+async function previewProfil() {
+  let kus = []; try { kus = (await (await fetch('/api/akses')).json()).keuskupan || []; } catch { /* kosong */ }
+  modal(`<h2>Pratinjau form profil</h2><p class="sub">Inilah yang dilihat orang yang diundang setelah verifikasi WhatsApp: ia melengkapi profil lalu membuat password. Ini hanya pratinjau, tidak menyimpan apa pun.</p>
+    <form id="pvf" class="pvform" onsubmit="return false">${profilFields(kus, {})}${pwFields}<button class="btn" type="button" disabled>Daftar (pratinjau)</button></form>`, true);
+}
+/* --- Pendataan PIC / pejabat BPK --- */
+S.pdt = S.pdt || { bpk: '', q: '' };
+PAGES.pendataan = () => {
+  const edit = (D.perm.pendataan || 0) >= 2;
+  const list = D.bpkList.filter((b) => b.aktif && (!D.user.scope || D.user.scope.includes(b.nama))).sort((a, b) => cmp(a.nama, b.nama));
+  if (list.length === 1) S.pdt.bpk = list[0].id;
+  setTimeout(() => {
+    $('#pdb')?.addEventListener('change', (e) => { S.pdt.bpk = e.target.value; render(); });
+    $('#pdq')?.addEventListener('input', (e) => { S.pdt.q = e.target.value; render(); $('#pdq').focus(); });
+    document.querySelectorAll('[data-pbk]').forEach((el) => el.addEventListener('click', () => { S.pdt.bpk = el.dataset.pbk; render(); }));
+    document.querySelectorAll('[data-tbh]').forEach((el) => el.addEventListener('click', () => formPejabat(el.dataset.tbh.split('|')[0], el.dataset.tbh.split('|')[1] || '')));
+    document.querySelectorAll('[data-akh]').forEach((el) => el.addEventListener('click', async () => { if (!confirm('Akhiri jabatan ini? Data tetap tersimpan sebagai riwayat.')) return; try { await post('/api/pejabat', { action: 'akhiri', bpkId: S.pdt.bpk, id: el.dataset.akh }); await load(true); } catch (e) { alert(e.message); } }));
+  });
+  const head = `<div class="filters"><div><label>BPK</label><select id="pdb">${list.length > 1 ? '<option value="">Semua BPK</option>' : ''}${list.map((b) => `<option value="${b.id}"${b.id === S.pdt.bpk ? ' selected' : ''}>${esc(b.nama)}</option>`).join('')}</select></div></div>`;
+  const prof = (id) => D.bpkProfil[id] || { pejabat: [], riwayat: [] };
+  if (!S.pdt.bpk) {
+    const q = S.pdt.q.toLowerCase();
+    return `${head}<div class="tw"><table><thead><tr><th>BPK</th><th>Koordinator</th><th>Jabatan aktif</th></tr></thead><tbody>${list.filter((b) => !q || b.nama.toLowerCase().includes(q)).map((b) => { const pj = prof(b.id).pejabat; const k = pj.find((x) => x.koordinator && !/wakil/i.test(x.jabatan)); const c = {}; pj.forEach((x) => { c[x.jabatan] = (c[x.jabatan] || 0) + 1; }); return `<tr class="clk" data-pbk="${b.id}"><td><b>${esc(b.nama)}</b></td><td>${k ? esc(k.orang.nama) : '<span class="sub">belum ada</span>'}</td><td>${Object.entries(c).map(([j, n]) => chip(`${j} ${n}`, 'blue')).join(' ') || '<span class="sub">–</span>'}</td></tr>`; }).join('')}</tbody></table></div>`;
+  }
+  const b = list.find((x) => x.id === S.pdt.bpk) || { nama: '', id: S.pdt.bpk }, pr = prof(b.id);
+  const g = {}; pr.pejabat.forEach((x) => { (g[x.jabatan] = g[x.jabatan] || []).push(x); });
+  const jabs = (D.jabatanBpk || []).map((j) => j.nama);
+  const aktifTbl = Object.keys(g).length ? Object.entries(g).map(([j, l]) => `<div class="card" style="margin-bottom:10px"><h3>${esc(j)}<small>${l.length} aktif</small></h3>${l.map((x) => `<div class="prow2"><div><b>${esc(x.orang.nama)}</b> <span class="sub">sejak ${esc(x.mulai ? fmtTgl(x.mulai) : 'tidak tercatat')}</span></div><div class="acts">${x.orang.adaWa ? `<a class="wa" target="_blank" rel="noopener" href="/api/wa?p=${esc(x.orang.id)}">WhatsApp</a>` : ''}${edit ? `<button class="ghost" data-akh="${x.pid}">Akhiri</button>` : ''}</div></div>`).join('')}${edit ? `<div style="margin-top:6px"><button class="ghost" data-tbh="${b.id}|${esc(l[0].jabatanId)}">+ Tambah ${esc(j)}</button></div>` : ''}</div>`).join('') : '<div class="empty">Belum ada pejabat/PIC aktif yang tercatat di BPK ini.</div>';
+  return `${head}<div class="card" style="margin:12px 0"><h3>BPK ${esc(b.nama)}<small>${pr.pejabat.length} pejabat/PIC aktif</small></h3>${edit ? `<button class="btn" data-tbh="${b.id}|">+ Data PIC / pejabat baru</button>` : '<div class="sub">Anda hanya bisa melihat data ini.</div>'}</div>${aktifTbl}${riwayatHtml(pr)}`;
+};
+function formPejabat(bpkId, jabId) {
+  const b = D.bpkList.find((x) => x.id === bpkId) || { nama: '' }, pr = D.bpkProfil[bpkId] || { pejabat: [] };
+  modal(`<h2>Data PIC / pejabat baru</h2><p class="sub">BPK ${esc(b.nama)}. Setelah disimpan, orang ini masuk ke data umat BPN dan langsung dikirimi WhatsApp undangan.</p>
+    <form id="pjf" class="eform" style="grid-template-columns:1fr"><div><label>Jabatan</label><select name="jab" required><option value="">Pilih jabatan…</option>${(D.jabatanBpk || []).map((j) => `<option value="${j.id}"${j.id === jabId ? ' selected' : ''}>${esc(j.nama)}</option>`).join('')}</select></div>
+    <div id="pjak"></div><div><label>Nama</label><input name="nama" required autocomplete="off"></div><div><label>Nomor WhatsApp</label><input name="wa" type="tel" inputmode="tel" placeholder="0812 3456 7890" required></div>
+    <div><label>Jenis kelamin</label><select name="jk" required><option value="">Pilih…</option><option>Pria</option><option>Wanita</option></select></div>
+    <div class="err" id="pje"></div><div class="mact"><button class="btn" id="pjs" type="submit">Simpan &amp; kirim undangan WA</button></div></form>`);
+  const f = $('#pjf'), box = $('#pjak');
+  const ak = () => { const cur = pr.pejabat.filter((x) => x.jabatanId === f.elements.jab.value); box.innerHTML = cur.length ? `<div class="warnbox">Sudah ada ${cur.length} pemegang jabatan ini. Centang bila ia digantikan (jabatannya diakhiri hari ini, datanya tetap tersimpan sebagai riwayat):${cur.map((x) => `<label class="chk"><input type="checkbox" name="akh" value="${x.pid}"> ${esc(x.orang.nama)}</label>`).join('')}</div>` : ''; };
+  f.elements.jab.addEventListener('change', ak); ak();
+  f.addEventListener('submit', async (ev) => {
+    ev.preventDefault(); $('#pje').textContent = ''; $('#pjs').disabled = true; $('#pjs').textContent = 'Menyimpan…';
+    try {
+      const j = await post('/api/pejabat', { action: 'tambah', bpkId, jabatanId: f.elements.jab.value, nama: f.elements.nama.value, wa: f.elements.wa.value, jk: f.elements.jk.value, akhiri: [...f.querySelectorAll('input[name=akh]:checked')].map((x) => x.value) });
+      await load(true);
+      modal(`<h2>Tersimpan ✓</h2><p>${esc(f.elements.nama.value)} sudah dicatat sebagai pejabat/PIC BPK ${esc(b.nama)}${j.orangBaru ? ' dan ditambahkan ke data umat BPN' : ' (datanya sudah ada di data umat BPN)'}.</p>${j.terkirim ? '<p class="okmsg">✓ WhatsApp undangan sudah dikirim.</p>' : `<p class="errmsg">WhatsApp belum terkirim: ${esc(j.galat || 'gagal')}. Data tetap tersimpan.</p><div class="kvs"><div>Tautan undangan</div><input readonly value="${esc(j.link)}" onclick="this.select()" style="width:100%"></div>`}`);
+    } catch (e) { $('#pje').textContent = e.message; $('#pjs').disabled = false; $('#pjs').textContent = 'Simpan & kirim undangan WA'; }
+  });
+}
 
 /* --- Koordinator PD --- */
 const pdRows = () => { const f = S.pdf, q = f.q.toLowerCase(); return D.pdpkk.filter((x) => (!f.kus || x.keuskupan === f.kus) && (!f.jenis || x.jenis === f.jenis) && (!q || (x.nama + ' ' + x.koordinator.map((k) => k.nama).join(' ') + ' ' + x.keuskupan).toLowerCase().includes(q))); };
@@ -433,10 +516,12 @@ function openEdit(id) {
     } catch (e) { $('#ee').textContent = e.message; $('#es').disabled = false; $('#es').textContent = 'Simpan'; }
   };
 }
+const fmtTgl = (d) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
+const masa = (x) => `${x.mulai ? fmtTgl(x.mulai) : 'awal tidak tercatat'} – ${x.selesai ? fmtTgl(x.selesai) : 'sekarang'}`;
 function pejCard(x, big) {
   const o = x.orang;
   const photo = o.foto ? `<img class="ph${big ? ' big' : ''}" src="${esc(o.foto)}" alt="${esc(o.nama)}" loading="lazy">` : `<div class="av${big ? ' bigav' : ''}" style="background:${hue(o.nama)}">${esc(initials(o.nama))}</div>`;
-  return `<div class="pej${big ? ' main' : ''}">${photo}<div class="pi"><b>${esc(o.nama)}</b><span>${esc(x.jabatan || '')}</span><div class="acts">${o.adaWa ? `<a class="wa" target="_blank" rel="noopener" href="/api/wa?p=${esc(o.id)}">💬 WhatsApp</a>` : ''}${o.email ? `<a class="wa em" href="mailto:${esc(o.email)}">✉ Email</a>` : ''}</div></div></div>`;
+  return `<div class="pej${big ? ' main' : ''}">${photo}<div class="pi"><b>${esc(o.nama)}</b><span>${esc(x.jabatan || '')}${x.mulai ? ` · sejak ${esc(fmtTgl(x.mulai))}` : ''}</span><div class="acts">${o.adaWa ? `<a class="wa" target="_blank" rel="noopener" href="/api/wa?p=${esc(o.id)}">💬 WhatsApp</a>` : ''}${o.email ? `<a class="wa em" href="mailto:${esc(o.email)}">✉ Email</a>` : ''}</div></div></div>`;
 }
 function openBpk(nama) {
   const b = PBmap()[nama];
@@ -444,7 +529,14 @@ function openBpk(nama) {
   const koor = (b ? b.pejabat : []).filter((x) => x.koordinator), lain = (b ? b.pejabat : []).filter((x) => !x.koordinator);
   modal(`<h2>BPK ${esc(nama)}</h2><div class="chips" style="margin-bottom:12px">${chip(dil.length + ' program dilayani', 'blue')}${chip(mel.length + ' program dilaksanakan', 'teal')}</div>
     <h4>Koordinator BPK</h4>${koor.length ? koor.map((x) => pejCard(x, true)).join('') : '<div class="empty">Data koordinator belum tersedia.</div>'}
-    ${lain.length ? `<h4>Pengurus BPK lainnya</h4><div class="pejs">${lain.map((x) => pejCard(x, false)).join('')}</div>` : ''}`, true);
+    ${lain.length ? `<h4>Pengurus BPK lainnya</h4><div class="pejs">${lain.map((x) => pejCard(x, false)).join('')}</div>` : ''}
+    ${riwayatHtml(b)}`, true);
+}
+function riwayatHtml(b) {
+  const r = (b && b.riwayat) || [];
+  if (!r.length) return '';
+  const g = {}; r.forEach((x) => { (g[x.jabatan || '–'] = g[x.jabatan || '–'] || []).push(x); });
+  return `<h4>Riwayat jabatan (sudah tidak aktif)</h4>${Object.entries(g).map(([j, l]) => `<div class="riw"><b>${esc(j)}</b>${l.map((x) => `<div class="sub">${esc(x.orang.nama)} · ${esc(masa(x))}</div>`).join('')}</div>`).join('')}`;
 }
 
 /* ===== Administrasi pengguna ===== */
@@ -547,7 +639,7 @@ async function load(refresh) {
 function showLogin() { $('#app').classList.add('hide'); $('#login').classList.remove('hide'); D = null; R = null; stepPhone(); }
 window.addEventListener('hashchange', render);
 /* ===== Login WhatsApp ===== */
-const LG = { wa: '', phone: '', grant: '', tujuan: '', timer: null };
+const LG = { wa: '', phone: '', grant: '', tujuan: '', timer: null, pre: {} };
 const post = async (url, body) => { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body) }); const j = await r.json().catch(() => ({})); if (!r.ok) { const e = new Error(j.error || 'Terjadi kesalahan'); e.status = r.status; throw e; } return j; };
 const lerr = (m) => { $('#le').textContent = m || ''; };
 function lstep(html, bind) { clearInterval(LG.timer); lerr(''); $('#lstep').innerHTML = html; bind && bind(); $('#lstep input,#lstep select')?.focus(); }
@@ -584,7 +676,7 @@ function stepOtp(masked) {
     $('#rs').onclick = () => sendOtp();
     $('#otp').addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); if (e.target.value.length === 4) $('#lf').requestSubmit(); });
     $('#lf').onsubmit = async (ev) => { ev.preventDefault(); if ($('#otp').value.length !== 4) return; busy($('#lb'), true); lerr('');
-      try { const j = await post('/api/akses', { action: 'verifikasi', phone: LG.wa, code: $('#otp').value }); LG.grant = j.grant; LG.tujuan = j.tujuan; if (j.perluProfil) stepProfil(); else stepSetPw(j.orang && j.orang.nama); }
+      try { const j = await post('/api/akses', { action: 'verifikasi', phone: LG.wa, code: $('#otp').value }); LG.grant = j.grant; LG.tujuan = j.tujuan; LG.pre = j.orang || {}; if (j.perluProfil) stepProfil(); else stepSetPw(j.orang && j.orang.nama); }
       catch (e) { lerr(e.message); busy($('#lb'), false); $('#otp').value = ''; } };
   });
 }
@@ -597,14 +689,17 @@ function stepSetPw(nama) {
       catch (e) { lerr(e.message); busy($('#lb'), false); } };
   });
 }
-async function stepProfil() {
-  let kus = []; try { kus = (await (await fetch('/api/akses')).json()).keuskupan || []; } catch { /* kosong */ }
+function profilFields(kus, pre) {
   const yr = new Date().getFullYear();
-  lstep(`<p class="note" style="text-align:left">Nomor terverifikasi, tetapi belum ada di data BPN. Lengkapi profil Anda.</p>
-    <label>Nama lengkap</label><input id="f_nama" autocomplete="name"><label>Nama panggilan</label><input id="f_pan"><label>Jenis kelamin</label><select id="f_jk"><option value="">Pilih…</option><option>Pria</option><option>Wanita</option></select>
+  return `<label>Nama lengkap</label><input id="f_nama" autocomplete="name" value="${esc(pre.nama || '')}"><label>Nama panggilan</label><input id="f_pan"><label>Jenis kelamin</label><select id="f_jk"><option value="">Pilih…</option><option${pre.jk === 'Pria' ? ' selected' : ''}>Pria</option><option${pre.jk === 'Wanita' ? ' selected' : ''}>Wanita</option></select>
     <label>Email</label><input id="f_email" type="email" autocomplete="email"><label>Keuskupan domisili</label><select id="f_kus"><option value="">Pilih…</option>${kus.map((k) => `<option value="${k.id}">${esc(k.nama)}</option>`).join('')}</select>
     <label>Tanggal lahir</label><div class="dob"><select id="f_tgl"><option value="">Tgl</option>${Array.from({ length: 31 }, (_, i) => `<option>${i + 1}</option>`).join('')}</select><select id="f_bln"><option value="">Bulan</option>${BLN3.map((b, i) => `<option value="${i + 1}">${b}</option>`).join('')}</select><select id="f_thn"><option value="">Tahun</option>${Array.from({ length: yr - 1919 }, (_, i) => `<option>${yr - i}</option>`).join('')}</select></div>
-    <label>Alamat surat (opsional)</label><input id="f_alamat">${pwFields}<button class="btn" id="lb" type="submit">Daftar</button>`, () => {
+    <label>Alamat surat (opsional)</label><input id="f_alamat">`;
+}
+async function stepProfil() {
+  let kus = []; try { kus = (await (await fetch('/api/akses')).json()).keuskupan || []; } catch { /* kosong */ }
+  const pre = LG.pre || {};
+  lstep(`<p class="note" style="text-align:left">${pre.nama ? `Nomor terverifikasi. Anda sudah didata di BPN${pre.nama ? ` sebagai <b>${esc(pre.nama)}</b>` : ''}; lengkapi profil Anda dulu.` : 'Nomor terverifikasi, tetapi belum ada di data BPN. Lengkapi profil Anda.'}</p>${profilFields(kus, pre)}${pwFields}<button class="btn" id="lb" type="submit">Daftar</button>`, () => {
     $('#lf').onsubmit = async (ev) => { ev.preventDefault(); busy($('#lb'), true); lerr(''); const v = (id) => $('#' + id).value;
       try { const j = await post('/api/akses', { action: 'simpan', grant: LG.grant, password: v('p1'), ulang: v('p2'), profil: { nama: v('f_nama'), panggilan: v('f_pan'), jk: v('f_jk'), email: v('f_email'), keuskupan: v('f_kus'), tgl: v('f_tgl'), bln: v('f_bln'), thn: v('f_thn'), alamat: v('f_alamat') } }); await afterAuth(j); }
       catch (e) { lerr(e.message); busy($('#lb'), false); } };
@@ -621,6 +716,8 @@ $('#pwbtn')?.addEventListener('click', () => showChangePw(false));
 $('#burger').onclick = () => $('#side').classList.toggle('open');
 (async () => {
   const inv = new URLSearchParams(location.search).get('invite');
+  const hp = (new URLSearchParams(location.search).get('hp') || '').replace(/\D/g, '');
+  if (hp) { LG.phone = hp; history.replaceState(null, '', location.pathname + location.hash); }
   if (inv) {
     history.replaceState(null, '', location.pathname + location.hash);
     try {
