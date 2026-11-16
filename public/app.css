@@ -208,3 +208,4 @@ tr.clk{cursor:pointer}tr.clk:hover{background:#F3F7FF}
 .me a#meprof{display:block;margin-top:3px;font-size:12px;font-weight:700;color:var(--navy);text-decoration:none}.me a#meprof:hover{text-decoration:underline}.me a#meprof.on{color:#E0661A}
 .kv>div{min-width:0;overflow-wrap:anywhere}.kv .chip{white-space:normal;text-align:left}
 .warnbox label.chk{display:flex;gap:8px;align-items:center;margin:8px 0 0;font-weight:700;color:inherit}.warnbox label.chk input{width:auto;margin:0}
+.mcard{display:block;cursor:pointer}.mcard .mn{font-weight:800;font-size:15px;margin-bottom:8px}.mcard .mrow{display:flex;gap:14px;font-size:13px;color:var(--mute);margin-bottom:8px}.mcard .mrow b{font-size:18px;color:var(--navy)}.mcard .mbar{height:6px;background:#EEF2FA;border-radius:6px;overflow:hidden;margin-bottom:8px}.mcard .mbar i{display:block;height:100%;background:linear-gradient(90deg,#7C5CE0,#1F56C4)}

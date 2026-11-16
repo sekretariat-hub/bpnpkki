@@ -53,7 +53,7 @@ module.exports = async (req, res) => {
       const ex = await fetchAll(T, [F.wa], { filterByFormula: `{Whatsapp}='${wa}'`, maxRecords: '1' });
       if (ex[0]) return res.status(409).json({ error: 'Pengguna dengan nomor ini sudah ada' });
       const pw = temp(), iv = inv(req), email = String(p.fields[PF.email] || '').toLowerCase();
-      await create(T, { ...iv.f, [F.email]: email || wa, [F.nama]: p.fields[PF.nama] || wa, [F.wa]: wa, [F.level]: b.peran === 'Admin' ? 'Admin' : 'Pengurus', [A.FX.peran]: b.peran, [F.aktif]: true, [F.disetujui]: true, [F.hash]: hashPassword(pw), [F.person]: pid, [A.FX.khusus]: '{}' }, { typecast: b.peran === 'PIC BPK' });
+      await create(T, { ...iv.f, [F.email]: email || wa, [F.nama]: p.fields[PF.nama] || wa, [F.wa]: wa, [F.level]: b.peran === 'Admin' ? 'Admin' : 'Pengurus', [A.FX.peran]: b.peran, [F.aktif]: true, [F.disetujui]: true, [F.hash]: hashPassword(pw), [F.person]: pid, [A.FX.khusus]: '{}' }, { typecast: ['PIC BPK', 'Koordinator PD'].includes(b.peran) });
       console.log('admin create', acc.email, wa, b.peran);
       const kirim = await kirimUndangan(wa, p.fields[PF.nama] || '', b.peran, iv.link);
       return res.json({ ok: true, wa: mask(wa), password: pw, link: iv.link, ...kirim });
@@ -69,7 +69,7 @@ module.exports = async (req, res) => {
       if (b.peran !== undefined) { if (!A.PERAN.includes(b.peran)) return res.status(400).json({ error: 'Peran tidak valid' }); if (self && b.peran !== 'Admin') return res.status(400).json({ error: 'Anda tidak bisa menurunkan peran sendiri' }); f[A.FX.peran] = b.peran; f[F.level] = b.peran === 'Admin' ? 'Admin' : 'Pengurus'; f[F.disetujui] = true; }
       if (b.aktif !== undefined) { if (self && !b.aktif) return res.status(400).json({ error: 'Anda tidak bisa menonaktifkan diri sendiri' }); f[F.aktif] = !!b.aktif; }
       if (b.khusus !== undefined) f[A.FX.khusus] = JSON.stringify(A.cleanKhusus(b.khusus));
-      await update(T, id, f, { typecast: f[A.FX.peran] === 'PIC BPK' }); A.forget(id); A.forget(email);
+      await update(T, id, f, { typecast: ['PIC BPK', 'Koordinator PD'].includes(f[A.FX.peran]) }); A.forget(id); A.forget(email);
       console.log('admin update', acc.email, email, Object.keys(f).join(','));
       return res.json({ ok: true });
     }

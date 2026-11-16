@@ -6,6 +6,7 @@ const A = require('../lib/access');
 const { waDigits } = require('../lib/phone');
 const { personByWa, PERSON } = require('../lib/person');
 const { kirimAdmin } = require('../lib/mail');
+const { analitik, invalidate: ulangAnalitik } = require('../lib/analitik');
 const { P, OPSI, nm, pengajar, kurang, TAMPIL_BAB } = require('../lib/profil');
 
 const BPK = 'tblgj0UYB9w7UWWnv', PD = 'tblhmeuR1qFHxUIId', PAR = 'tblqKpvfwGtLEHnip', KOTA = 'tblSaXvGJJ7G1P9my', PEL = 'tblTzNOMyrh4iF8MA', MOD = 'tblymcTBL1pjIMa4A', ANT = 'tblRarr3Rk6PQ1C8j';
@@ -91,6 +92,10 @@ module.exports = async (req, res) => {
   try {
     const b = req.method === 'POST' ? (typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {}) : {};
     const q = req.query || {}, act = String(b.act || q.act || '');
+    if (req.method === 'GET' && act === 'analitik') { // data untuk menu Modul Berjenjang & Data Umat
+      if (!A.can(acc, 'modul') && !A.can(acc, 'umat')) return bad(res, 'Tidak diizinkan', 403);
+      return res.json(await analitik(acc));
+    }
     const own = await ownPerson(acc);
     const want = String(b.id || q.id || '');
     let pid = own;
@@ -159,7 +164,7 @@ module.exports = async (req, res) => {
       if (has('modulAjar') && fl[P.modAjar] === undefined) fl[P.modAjar] = ids(d.modulAjar);
       if (TAMPIL_BAB && has('bab') && fl[P.bab] === undefined) fl[P.bab] = (Array.isArray(d.bab) ? d.bab : []).filter((x) => OPSI.bab.includes(x));
       if (!Object.keys(fl).length) return bad(res, 'Tidak ada yang diubah');
-      await update(PERSON, pid, fl);
+      await update(PERSON, pid, fl); ulangAnalitik();
       console.log('profil simpan', acc.email, milik ? 'sendiri' : 'orang lain ' + pid, Object.keys(fl).length, 'field');
       const sh = await shape(await readPerson(pid));
       return res.json({ ok: true, ...sh });
@@ -178,6 +183,7 @@ module.exports = async (req, res) => {
       if (!r.ok) { console.error('foto', r.status, (await r.text().catch(() => '')).slice(0, 160)); return bad(res, 'Gagal mengunggah foto', 502); }
       const j = await r.json(); const all = (j.fields && j.fields[P.foto]) || [];
       if (all.length > 1) await update(PERSON, pid, { [P.foto]: [{ id: all[all.length - 1].id }] }); // hanya simpan foto terbaru
+      ulangAnalitik();
       const sh = await shape(await readPerson(pid));
       return res.json({ ok: true, ...sh });
     }

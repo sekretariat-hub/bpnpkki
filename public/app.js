@@ -36,6 +36,7 @@ const I = {
   pd: '<circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.6"/><path d="M3 20c.6-3.5 3-5.5 6-5.5s5.400 2 6 5.500"/><path d="M15.500 14.800c2.700-.4 4.800 1.300 5.500 4.200"/>',
   team: '<rect x="9" y="3" width="6" height="5" rx="1.500"/><rect x="3" y="16" width="6" height="5" rx="1.500"/><rect x="15" y="16" width="6" height="5" rx="1.500"/><path d="M12 8v4M6 16v-4h12v4"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  book: '<path d="M4 5.500A2.500 2.500 0 016.500 3H20v15H6.500A2.500 2.500 0 004 20.500z"/><path d="M4 20.500V5.500M9 8h7M9 12h7"/>',
   key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/>',
 };
 const MENU = [
@@ -45,6 +46,8 @@ const MENU = [
   { id: 'pengurus', label: 'Pengurus BPN', icon: I.star, sub: 'Susunan pengurus BPN', c: '#8B7CF6' },
   { id: 'pd', label: 'Koordinator PD', icon: I.pd, sub: 'Persekutuan Doa dan koordinatornya', c: '#14B8A6', tabs: [['daftar', 'Daftar PD'], ['ringkasan', 'Ringkasan']] },
   { id: 'tim', label: 'Tim Kerja BPN', icon: I.team, sub: 'Siapa saja yang bertugas di BPN', c: '#FF7A6B', tabs: [['bagan', 'Bagan Tim Aktif'], ['daftar', 'Daftar Tim Kerja']] },
+  { id: 'modul', label: 'Modul Berjenjang', icon: I.book, sub: 'Retret berjenjang BPN: peserta lulus, pengajar, dan sebarannya', c: '#7C5CE0', tabs: [['ringkasan', 'Ringkasan'], ['permodul', 'Per Modul'], ['peserta', 'Peserta Lulus'], ['pengajar', 'Pengajar']] },
+  { id: 'umat', label: 'Data Umat', icon: I.pd, sub: 'Profil umat yang terdaftar di sistem BPN', c: '#0EA5A4', tabs: [['ringkasan', 'Infografis'], ['daftar', 'Daftar Umat']] },
   { id: 'pendataan', label: 'Pendataan PIC', icon: I.pd, sub: 'Pejabat dan PIC di setiap BPK, lengkap dengan riwayatnya', c: '#E0661A' },
   { id: 'laporan', label: 'Laporan', icon: I.chart, sub: 'Ringkasan kegiatan', c: '#34C28A', tabs: [['pleno', 'Pleno & Golden Jubilee'], ['tc', 'TC SHDR'], ['kepemudaan', 'Kepemudaan']] },
   { id: 'admin', label: 'Administrasi', icon: I.key, sub: 'Kelola pengguna dan hak akses', c: '#6B7A99', tabs: [['pengguna', 'Pengguna & Hak Akses']] },
@@ -318,14 +321,16 @@ function formPejabat(bpkId, jabId) {
     <div><label>Jenis kelamin</label><select name="jk" required><option value="">Pilih…</option><option>Pria</option><option>Wanita</option></select></div>
     <div class="err" id="pje"></div><div class="mact"><button class="btn" id="pjs" type="submit">Simpan &amp; kirim undangan WA</button></div></form>`);
   const f = $('#pjf'), box = $('#pjak');
-  const ak = () => { const cur = pr.pejabat.filter((x) => x.jabatanId === f.elements.jab.value); box.innerHTML = cur.length ? `<div class="warnbox">Jabatan ini sudah ada pemegangnya. <b>Centang namanya</b> bila orang baru ini <b>menggantikannya</b>: jabatan yang lama otomatis diakhiri hari ini dan masuk riwayat (datanya tidak dihapus). <b>Jangan dicentang</b> bila jabatan ini boleh dipegang lebih dari satu orang:${cur.map((x) => `<label class="chk"><input type="checkbox" name="akh" value="${x.pid}"> ${esc(x.orang.nama)}</label>`).join('')}</div>` : ''; };
+  const hint = () => { const cur = pr.pejabat.filter((x) => x.jabatanId === f.elements.jab.value), pil = [...f.querySelectorAll('input[name=akh]:checked')].length, h = $('#akh_h'); if (!h) return; const nama = (f.elements.nama.value || 'Orang baru ini').trim() || 'Orang baru ini'; h.innerHTML = pil ? `✔ <b>${esc(nama)} menggantikan</b>: pemegang yang dicentang diakhiri hari ini dan masuk riwayat.${pil < cur.length ? ' Sisanya tetap aktif.' : ''}` : `➕ <b>${esc(nama)} ditambahkan</b>: semua pemegang yang sekarang tetap aktif, jadi jabatan ini dipegang ${cur.length + 1} orang.`; };
+  const ak = () => { const cur = pr.pejabat.filter((x) => x.jabatanId === f.elements.jab.value); box.innerHTML = cur.length ? `<div class="warnbox"><b>Jabatan ini sudah ada pemegangnya.</b> Pilih salah satu:<ul style="margin:6px 0 8px 18px;padding:0"><li><b>Orang baru MENGGANTIKAN</b> (misalnya ganti koordinator): <b>centang</b> nama pemegang lama di bawah. Ia diakhiri hari ini dan masuk riwayat, datanya tidak dihapus.</li><li><b>Orang baru MENAMBAH</b> (jabatan boleh dipegang beberapa orang, misalnya beberapa PIC): <b>jangan centang</b> apa pun.</li></ul>${cur.map((x) => `<label class="chk"><input type="checkbox" name="akh" value="${x.pid}"> Ganti ${esc(x.orang.nama)} (diakhiri hari ini)</label>`).join('')}<div id="akh_h" class="note" style="margin-top:8px"></div></div>` : ''; box.querySelectorAll('input[name=akh]').forEach((c) => c.addEventListener('change', hint)); hint(); };
   f.elements.jab.addEventListener('change', ak); ak();
+  f.elements.nama.addEventListener('input', hint);
   f.addEventListener('submit', async (ev) => {
     ev.preventDefault(); $('#pje').textContent = ''; $('#pjs').disabled = true; $('#pjs').textContent = 'Menyimpan…';
     try {
       const j = await post('/api/pejabat', { action: 'tambah', bpkId, jabatanId: f.elements.jab.value, nama: f.elements.nama.value, wa: f.elements.wa.value, jk: f.elements.jk.value, akhiri: [...f.querySelectorAll('input[name=akh]:checked')].map((x) => x.value) });
       await load(true);
-      modal(`<h2>Tersimpan ✓</h2><p>${esc(f.elements.nama.value)} sudah dicatat sebagai pejabat/PIC BPK ${esc(b.nama)}${j.orangBaru ? ' dan ditambahkan ke data umat BPN' : ' (datanya sudah ada di data umat BPN)'}.</p>${j.terkirim ? '<p class="okmsg">✓ WhatsApp undangan sudah dikirim.</p>' : `<p class="errmsg">WhatsApp belum terkirim: ${esc(j.galat || 'gagal')}. Data tetap tersimpan.</p><div class="kvs"><div>Tautan undangan</div><input readonly value="${esc(j.link)}" onclick="this.select()" style="width:100%"></div>`}`);
+      modal(`<h2>Tersimpan ✓</h2><p>${esc(f.elements.nama.value)} sudah dicatat sebagai pejabat/PIC BPK ${esc(b.nama)}${j.orangBaru ? ' dan ditambahkan ke data umat BPN' : ' (datanya sudah ada di data umat BPN)'}. Keuskupan domisili di profilnya otomatis diisi ${esc(b.nama)}.</p>${j.terkirim ? '<p class="okmsg">✓ WhatsApp undangan sudah dikirim.</p>' : `<p class="errmsg">WhatsApp belum terkirim: ${esc(j.galat || 'gagal')}. Data tetap tersimpan.</p><div class="kvs"><div>Tautan undangan</div><input readonly value="${esc(j.link)}" onclick="this.select()" style="width:100%"></div>`}`);
     } catch (e) { $('#pje').textContent = e.message; $('#pjs').disabled = false; $('#pjs').textContent = 'Simpan & kirim undangan WA'; }
   });
 }
@@ -443,7 +448,7 @@ function bindProfil() {
   $('#pf_batal').onclick = () => { S.prof.edit = false; render(); };
   $('#pf_file').addEventListener('change', async (ev) => {
     const file = ev.target.files[0]; if (!file) return; $('#pf_fe').textContent = 'Mengunggah…';
-    try { const j = await post('/api/profil', { act: 'foto', id: P.pid || undefined, file: await resizeImg(file) }); Object.assign(S.prof, { profil: j.profil, kurang: j.kurang }); if (P.milik && D) D.pr = { kurang: j.kurang, lengkap: !j.kurang.length }; $('#pf_img').outerHTML = `<img class="pfoto" id="pf_img" src="${esc(j.profil.foto)}" alt="">`; $('#pf_fe').textContent = '✓ Foto tersimpan'; }
+    try { const j = await post('/api/profil', { act: 'foto', id: P.pid || undefined, file: await resizeImg(file) }); AN = null; Object.assign(S.prof, { profil: j.profil, kurang: j.kurang }); if (P.milik && D) D.pr = { kurang: j.kurang, lengkap: !j.kurang.length }; $('#pf_img').outerHTML = `<img class="pfoto" id="pf_img" src="${esc(j.profil.foto)}" alt="">`; $('#pf_fe').textContent = '✓ Foto tersimpan'; }
     catch (e) { $('#pf_fe').textContent = e.message; }
   });
   $('#pf_pdb').addEventListener('click', (ev) => { ev.preventDefault(); formPdBaru(v('kus'), (j) => { if (!cbPd.items.some((x) => x.id === j.pd.id)) cbPd.items.unshift({ id: j.pd.id, nama: j.pd.nama, label: j.pd.nama, cari: j.pd.nama.toLowerCase() }); cbPd.enable(true, 'Ketik untuk mencari PD…'); cbPd.pick(j.pd.id); }); });
@@ -458,6 +463,7 @@ function bindProfil() {
       const chk = (n) => [...f.querySelectorAll(`input[name=${n}]:checked`)].map((x) => x.value);
       const data = { nama: v('nama'), pan: v('pan'), jk: v('jk'), email: v('email'), tgl: v('tgl'), bln: v('bln'), thn: v('thn'), alamat: v('alamat'), kus: v('kus'), kota, paroki: paroki === '__baru' ? '' : paroki, pd: v('pd'), kategori: v('kategori'), baptis: v('baptis'), krisma: v('krisma'), size: v('size'), pelayanan: chk('pel'), modulAjar: chk('maj'), modulIkut: chk('mik') };
       const j = await post('/api/profil', { act: 'simpan', id: P.pid || undefined, data });
+      AN = null;
       S.prof = { ...S.prof, profil: j.profil, kurang: j.kurang, edit: false }; if (P.milik && D) D.pr = { kurang: j.kurang, lengkap: !j.kurang.length };
       render(); window.scrollTo(0, 0);
     } catch (er) { e.textContent = er.message; s.disabled = false; s.textContent = 'Simpan profil'; }
@@ -623,6 +629,8 @@ function showMenu(id, ev) {
 document.addEventListener('click', (e) => {
   const dd = e.target.closest('[data-dr]');
   if (dd && DR[+dd.dataset.dr]) { closeMenu(); return DR[+dd.dataset.dr](dd.dataset.l); }
+  const pp = e.target.closest('a.ppl');
+  if (pp && AN && AN.orang) { e.preventDefault(); e.stopPropagation(); closeMenu(); return openOrang(pp.dataset.ppl); }
   const a = e.target.closest('a.bpk');
   if (a) { e.preventDefault(); e.stopPropagation(); closeMenu(); return openBpk(a.dataset.bpk); }
   if (e.target.closest('#pmenu')) return;
@@ -763,9 +771,131 @@ function showChangePw(forced) {
 }
 
 /* ===== router ===== */
+/* ===== Modul Berjenjang & Data Umat ===== */
+let AN = null, ANP = null;
+S.af = { kus: '', modul: '', q: '', jk: '', kat: '', ug: '', pel: '', lengkap: '' };
+const UG = ['<18 th', '18-35 th', '36-55 th', '56-70 th', '>70 th', 'Tidak ada data'], SZ = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', 'Belum diisi'];
+function anLoad() {
+  if (AN || ANP) return;
+  ANP = fetch('/api/profil?act=analitik', { credentials: 'same-origin' }).then(async (r) => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Gagal memuat data'); AN = anPrep(j); })
+    .catch((e) => { AN = { err: e.message }; }).finally(() => { ANP = null; render(); });
+}
+function anPrep(j) {
+  j.kN = Object.fromEntries(j.kus.map((x) => [x.id, x.nama])); j.pN = Object.fromEntries(j.pd.map((x) => [x.id, x.nama])); j.plN = Object.fromEntries(j.pel.map((x) => [x.id, x.nama])); j.mN = Object.fromEntries(j.modul.map((x) => [x.id, x]));
+  j.orang.forEach((o) => {
+    o.keu = j.kN[o.kus] || ''; o.pdn = j.pN[o.pd] || ''; o.plN = o.pl.map((i) => j.plN[i]).filter(Boolean);
+    o.miN = o.mi.map((i) => (j.mN[i] || {}).nama).filter(Boolean); o.maN = o.ma.map((i) => (j.mN[i] || {}).nama).filter(Boolean);
+    o.ug = o.u == null ? 'Tidak ada data' : o.u < 18 ? '<18 th' : o.u <= 35 ? '18-35 th' : o.u <= 55 ? '36-55 th' : o.u <= 70 ? '56-70 th' : '>70 th';
+    o.jkN = o.jk === 'P' ? 'Pria' : o.jk === 'W' ? 'Wanita' : 'Belum diisi'; o.png = o.ma.length > 0 || o.plN.some((n) => /pewarta|pengajar/i.test(n));
+    o.cari = [o.n, o.keu, o.pdn, o.prov, o.plN.join(' '), o.miN.join(' ')].join(' ').toLowerCase();
+  });
+  return j;
+}
+const anGate = () => { if (!AN) { anLoad(); return '<div class="load"><div class="sp"></div><div>Memuat data umat…</div></div>'; } return AN.err ? `<div class="empty">${esc(AN.err)}</div>` : null; };
+const anRows = (fn) => AN.orang.filter((o) => (!S.af.kus || o.kus === S.af.kus) && (!fn || fn(o)));
+C.umat = [['Nama', (o) => `<a href="#" class="ppl" data-ppl="${esc(o.id)}"><b>${esc(o.n)}</b></a>`], ['Keuskupan', (o) => esc(o.keu || '–')], ['Asal PD', (o) => esc(o.pdn || '–')], ['Modul diikuti', (o) => nf.format(o.mi.length)], ['Pengajar', (o) => (o.ma.length ? 'Ya' : '–')], ['Profil', (o) => (o.l ? 'Lengkap' : `Belum (${o.k})`)]];
+const miniChips = (a, n = 3, tone = 'blue') => (a.length ? `<div class="chips">${a.slice(0, n).map((x) => chip(x, tone)).join('')}${a.length > n ? chip('+' + (a.length - n), 'gray') : ''}</div>` : '<span class="sub">–</span>');
+function anBar(extra = '') {
+  const nas = AN.scope.tipe === 'nasional';
+  return `<div class="note" style="margin-bottom:8px">📍 Data: <b>${esc(AN.scope.label)}</b> · ${nf.format(AN.orang.length)} umat terdata</div><div class="filters">${nas ? `<div><label>Keuskupan</label><select data-af="kus"><option value="">Semua keuskupan</option>${AN.kus.map((k) => `<option value="${k.id}"${S.af.kus === k.id ? ' selected' : ''}>${esc(k.nama)}</option>`).join('')}</select></div>` : ''}${extra}</div><div id="res"></div>`;
+}
+const afSel = (k, label, opts) => `<div><label>${label}</label><select data-af="${k}"><option value="">Semua</option>${opts.map((x) => (Array.isArray(x) ? `<option value="${esc(x[0])}"${S.af[k] === x[0] ? ' selected' : ''}>${esc(x[1])}</option>` : `<option${S.af[k] === x ? ' selected' : ''}>${esc(x)}</option>`)).join('')}</select></div>`;
+const afQ = () => `<div style="flex:1;min-width:200px"><label>Cari</label><input data-af="q" placeholder="Nama, keuskupan, PD…" value="${esc(S.af.q)}"></div>`;
+const afBind = (draw) => setTimeout(() => { document.querySelectorAll('[data-af]').forEach((el) => el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', () => { S.af[el.dataset.af] = el.value; draw(); })); draw(); });
+const tableOrang = (rows, cols, vazio = 'Tidak ada data yang cocok.') => `<div class="note" style="margin-bottom:8px">${nf.format(rows.length)} orang${rows.length > 300 ? ' (menampilkan 300 pertama)' : ''}</div><div class="tw"><table><thead><tr>${cols.map(([h]) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.slice(0, 300).map((o) => `<tr>${cols.map(([, f]) => `<td>${f(o)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cols.length}"><div class="empty">${vazio}</div></td></tr>`}</tbody></table></div>`;
+const drl = (rows, get) => ({ rows, get, cols: C.umat });
+
+function openOrang(id) {
+  const o = AN.orang.find((x) => x.id === id); if (!o) return;
+  const adm = ['Admin', 'Editor BPN'].includes(D.user.peran);
+  modal(`<h2>${esc(o.n)}</h2><div class="chips" style="margin-bottom:10px">${o.kat ? chip(o.kat, 'violet') : ''}${o.png ? chip('Pewarta / Pengajar', 'teal') : ''}${chip(o.l ? 'Profil lengkap' : `Profil belum lengkap (${o.k})`, o.l ? 'green' : 'coral')}</div>
+    <div class="kvs">${row('Keuskupan', esc(o.keu))}${row('Provinsi', esc(o.prov))}${row('Asal PD', esc(o.pdn))}${row('Jenis kelamin', esc(o.jk ? o.jkN : ''))}${row('Usia', o.u != null ? o.u + ' tahun' : '')}${row('Sakramen', [o.bp === 1 ? 'Baptis ✓' : o.bp === 0 ? 'Baptis: belum' : '', o.kr === 1 ? 'Krisma ✓' : o.kr === 0 ? 'Krisma: belum' : ''].filter(Boolean).join(' · '))}${row('Ukuran baju', esc(o.sz))}${row('Pelayanan', miniChips(o.plN, 20))}${row('Modul diikuti', miniChips(o.miN, 20))}${row('Modul diajar', miniChips(o.maN, 20, 'teal'))}</div>
+    <div class="acts" style="margin-top:12px">${o.wa ? `<a class="wa" target="_blank" rel="noopener" href="/api/wa?p=${esc(o.id)}">WhatsApp</a>` : ''}${adm ? `<a class="wa em" href="#/profil/${esc(o.id)}" onclick="document.getElementById('ov')?.remove()">Buka profil lengkap</a>` : ''}</div>`);
+}
+
+/* --- Modul Berjenjang --- */
+const mStats = (rows) => AN.modul.map((m) => ({ m, pes: rows.filter((o) => o.mi.includes(m.id)), aj: rows.filter((o) => o.ma.includes(m.id)) }));
+PAGES['modul/ringkasan'] = () => {
+  const g = anGate(); if (g) return g;
+  const draw = () => {
+    const r = anRows(), ms = mStats(r), pes = r.filter((o) => o.mi.length), aj = r.filter((o) => o.ma.length), tp = (i) => (AN.mN[i] || {}).tahap || 'Lainnya';
+    const bucket = (o) => { const n = o.mi.length; return n === 0 ? '0 modul' : n <= 3 ? '1–3 modul' : n <= 7 ? '4–7 modul' : n <= 11 ? '8–11 modul' : '12+ modul'; };
+    const BK = ['0 modul', '1–3 modul', '4–7 modul', '8–11 modul', '12+ modul'], cb = count(r, bucket);
+    $('#res').innerHTML = `<div class="grid g4" style="margin-bottom:16px">${kpi('Modul berjenjang', AN.modul.length, { c: '#1F56C4', t: 'var(--blue-t)', note: 'dalam 4 tahap formatio' })}${kpi('Umat yang sudah lulus modul', pes.length, { c: '#0B8277', t: 'var(--teal-t)', note: nf.format(sum(r, (o) => o.mi.length)) + ' kelulusan modul secara total', go: () => openDrill('Umat yang sudah lulus modul', pes, C.umat) })}${kpi('Pengajar', aj.length, { c: '#7C5CE0', t: 'var(--violet-t, var(--blue-t))', go: () => openDrill('Pengajar', aj, C.umat) })}${kpi('Keuskupan memiliki pengajar', uniq(aj.map((o) => o.keu).filter(Boolean)).length, { c: '#E0661A', t: 'var(--amber-t, var(--blue-t))' })}</div>
+    <div class="grid g2">${bars('Peserta lulus per modul', ms.map((x) => ({ label: x.m.nama, value: x.pes.length })).sort((a, b) => b.value - a.value), { max: 20, drill: drl(r, (o) => o.miN) })}${bars('Pengajar per modul', ms.map((x) => ({ label: x.m.nama, value: x.aj.length })).sort((a, b) => b.value - a.value), { max: 20, colour: '#14B8A6', drill: drl(r, (o) => o.maN) })}
+    ${donut('Kelulusan per tahap formatio', count(pes, (o) => o.mi.map(tp)), drl(pes, (o) => o.mi.map(tp)))}${columns('Umat menurut jumlah modul yang diikuti', BK.map((l) => ({ label: l, value: (cb.find((x) => x.label === l) || { value: 0 }).value })), drl(r, bucket))}
+    ${bars('Pengajar tersebar di keuskupan', count(aj, (o) => o.keu || '(kosong)'), { max: 15, colour: '#14B8A6', drill: drl(aj, (o) => o.keu || '(kosong)') })}${bars('Peserta lulus per keuskupan', count(pes, (o) => o.keu || '(kosong)'), { max: 15, drill: drl(pes, (o) => o.keu || '(kosong)') })}</div>`;
+  };
+  const h = anBar(); afBind(draw); return h;
+};
+PAGES['modul/permodul'] = () => {
+  const g = anGate(); if (g) return g;
+  const draw = () => {
+    const r = anRows(), ms = mStats(r), mx = Math.max(1, ...ms.map((x) => x.pes.length)), gr = by(ms, (x) => x.m.tahap || 'Lainnya');
+    $('#res').innerHTML = Object.keys(gr).sort(cmp).map((t) => `<h3 style="margin:18px 0 8px">${esc(t)}</h3><div class="grid g3">${gr[t].map((x) => `<div class="card mcard clk" data-modul="${esc(x.m.id)}" tabindex="0"><div class="mn">${esc(x.m.nama)}</div><div class="mrow"><span><b>${nf.format(x.pes.length)}</b> peserta lulus</span><span><b>${nf.format(x.aj.length)}</b> pengajar</span></div><div class="mbar"><i style="width:${(x.pes.length / mx) * 100}%"></i></div><div class="sub">${nf.format(uniq(x.pes.map((o) => o.keu).filter(Boolean)).length)} keuskupan · klik untuk detail</div></div>`).join('')}</div>`).join('') || '<div class="empty">Belum ada modul.</div>';
+    document.querySelectorAll('[data-modul]').forEach((el) => { const go = () => openModul(el.dataset.modul); el.addEventListener('click', go); el.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); }); });
+  };
+  const h = anBar(); afBind(draw); return h;
+};
+function openModul(id) {
+  const m = AN.mN[id], r = anRows(), pes = r.filter((o) => o.mi.includes(id)), aj = r.filter((o) => o.ma.includes(id));
+  modal(`<h2>${esc(m.nama)}</h2><div class="note">${esc(m.tahap)} · ${nf.format(pes.length)} peserta lulus · ${nf.format(aj.length)} pengajar${S.af.kus ? ' · ' + esc(AN.kN[S.af.kus]) : ''}</div>
+    <div class="grid g2" style="margin:10px 0">${bars('Peserta per keuskupan', count(pes, (o) => o.keu || '(kosong)'), { max: 8 })}${bars('Pengajar per keuskupan', count(aj, (o) => o.keu || '(kosong)'), { max: 8, colour: '#14B8A6' })}</div>
+    <div class="filters"><div><label>Tampilkan</label><select id="mm_t"><option value="p">Peserta lulus (${pes.length})</option><option value="a">Pengajar (${aj.length})</option></select></div><div style="flex:1"><label>Cari</label><input id="mm_q" placeholder="Nama, keuskupan, PD…"></div></div><div id="mm_l" style="max-height:40vh;overflow:auto"></div>`, true);
+  const draw = () => { const q = $('#mm_q').value.toLowerCase(), l = ($('#mm_t').value === 'a' ? aj : pes).filter((o) => !q || o.cari.includes(q)); $('#mm_l').innerHTML = tableOrang(l, [C.umat[0], C.umat[1], C.umat[2], ['Modul diikuti', (o) => nf.format(o.mi.length)]]); };
+  $('#mm_t').addEventListener('change', draw); $('#mm_q').addEventListener('input', draw); draw();
+}
+PAGES['modul/peserta'] = () => {
+  const g = anGate(); if (g) return g;
+  const draw = () => {
+    const q = S.af.q.toLowerCase(), l = anRows((o) => o.mi.length && (!S.af.modul || o.mi.includes(S.af.modul)) && (!q || o.cari.includes(q))).sort((a, b) => b.mi.length - a.mi.length || cmp(a.n, b.n));
+    $('#res').innerHTML = tableOrang(l, [C.umat[0], C.umat[1], C.umat[2], ['Modul yang sudah lulus', (o) => miniChips(o.miN, 3)], ['Jumlah', (o) => nf.format(o.mi.length)], C.umat[4]]);
+  };
+  const h = anBar(afSel('modul', 'Modul', AN.modul.map((m) => [m.id, m.nama])) + afQ()); afBind(draw); return h;
+};
+PAGES['modul/pengajar'] = () => {
+  const g = anGate(); if (g) return g;
+  const draw = () => {
+    const q = S.af.q.toLowerCase(), all = anRows((o) => o.ma.length), l = all.filter((o) => (!S.af.modul || o.ma.includes(S.af.modul)) && (!q || o.cari.includes(q))).sort((a, b) => b.ma.length - a.ma.length || cmp(a.n, b.n));
+    const ms = mStats(l);
+    $('#res').innerHTML = `<div class="grid g3" style="margin-bottom:16px">${kpi('Pengajar', l.length, { c: '#7C5CE0', t: 'var(--blue-t)', go: () => openDrill('Pengajar', l, C.umat) })}${kpi('Tersebar di keuskupan', uniq(l.map((o) => o.keu).filter(Boolean)).length, { c: '#0B8277', t: 'var(--teal-t)' })}${kpi('Rata-rata modul diajar', Math.round((sum(l, (o) => o.ma.length) / Math.max(1, l.length)) * 10) / 10, { c: '#E0661A', t: 'var(--blue-t)' })}</div>
+    <div class="grid g2" style="margin-bottom:16px">${bars('Sebaran pengajar per keuskupan', count(l, (o) => o.keu || '(kosong)'), { max: 12, colour: '#14B8A6', drill: drl(l, (o) => o.keu || '(kosong)') })}${bars('Pengajar per modul', ms.map((x) => ({ label: x.m.nama, value: x.aj.length })).sort((a, b) => b.value - a.value), { max: 12, drill: drl(l, (o) => o.maN) })}</div>
+    ${tableOrang(l, [C.umat[0], C.umat[1], C.umat[2], ['Modul yang diajar', (o) => miniChips(o.maN, 4, 'teal')], ['WA', (o) => (o.wa ? `<a class="wa" target="_blank" rel="noopener" href="/api/wa?p=${esc(o.id)}">WhatsApp</a>` : '–')]])}`;
+  };
+  const h = anBar(afSel('modul', 'Modul yang diajar', AN.modul.map((m) => [m.id, m.nama])) + afQ()); afBind(draw); return h;
+};
+
+/* --- Data Umat --- */
+PAGES['umat/ringkasan'] = () => {
+  const g = anGate(); if (g) return g;
+  const draw = () => {
+    const r = anRows(), n = r.length, lk = r.filter((o) => o.l), png = r.filter((o) => o.png), pct = (x) => (n ? Math.round((x / n) * 100) : 0);
+    const sak = (k) => (o) => (o[k] === 1 ? 'Sudah' : o[k] === 0 ? 'Belum' : 'Belum diisi');
+    const szl = count(r, (o) => o.sz || 'Belum diisi'), szs = SZ.map((l) => ({ label: l, value: (szl.find((x) => x.label === l) || { value: 0 }).value })).filter((x) => x.value);
+    const ugl = count(r, (o) => o.ug), ugs = UG.map((l) => ({ label: l, value: (ugl.find((x) => x.label === l) || { value: 0 }).value }));
+    $('#res').innerHTML = `<div class="grid g4" style="margin-bottom:16px">${kpi('Umat terdata', n, { c: '#1F56C4', t: 'var(--blue-t)', go: () => openDrill('Umat terdata', r, C.umat) })}${kpi('Profil lengkap', lk.length, { c: '#0B8277', t: 'var(--teal-t)', note: pct(lk.length) + '% dari umat terdata', go: () => openDrill('Profil lengkap', lk, C.umat) })}${kpi('Profil belum lengkap', n - lk.length, { c: '#E0661A', t: 'var(--blue-t)', go: () => openDrill('Profil belum lengkap', r.filter((o) => !o.l), C.umat) })}${kpi('Pewarta / Pengajar', png.length, { c: '#7C5CE0', t: 'var(--blue-t)', go: () => openDrill('Pewarta / Pengajar', png, C.umat) })}</div>
+    <div class="grid g2">${donut('Jenis kelamin', count(r, (o) => o.jkN), drl(r, (o) => o.jkN))}${columns('Kelompok usia', ugs, drl(r, (o) => o.ug))}
+    ${donut('Kategori', count(r, (o) => o.kat || 'Belum diisi'), drl(r, (o) => o.kat || 'Belum diisi'))}${donut('Kelengkapan profil', count(r, (o) => (o.l ? 'Lengkap' : 'Belum lengkap')), drl(r, (o) => (o.l ? 'Lengkap' : 'Belum lengkap')))}
+    ${donut('Sakramen Baptis', count(r, sak('bp')), drl(r, sak('bp')))}${donut('Sakramen Krisma', count(r, sak('kr')), drl(r, sak('kr')))}
+    ${bars('Umat per keuskupan', count(r, (o) => o.keu || '(kosong)'), { max: 15, drill: drl(r, (o) => o.keu || '(kosong)') })}${bars('Umat per provinsi', count(r, (o) => o.prov || '(kosong)'), { max: 12, drill: drl(r, (o) => o.prov || '(kosong)') })}
+    ${bars('Pelayanan yang dijalani', count(r.filter((o) => o.plN.length), (o) => o.plN), { max: 12, colour: '#14B8A6', drill: drl(r, (o) => o.plN) })}${bars('Asal PD terbanyak', count(r.filter((o) => o.pdn), (o) => o.pdn), { max: 10, drill: drl(r, (o) => o.pdn) })}
+    ${bars('Ukuran baju (untuk pesanan kaos/seragam)', szs, { max: 10, colour: '#F5A524', drill: drl(r, (o) => o.sz || 'Belum diisi') })}</div>`;
+  };
+  const h = anBar(); afBind(draw); return h;
+};
+PAGES['umat/daftar'] = () => {
+  const g = anGate(); if (g) return g;
+  const draw = () => {
+    const f = S.af, q = f.q.toLowerCase();
+    const l = anRows((o) => (!f.jk || o.jkN === f.jk) && (!f.kat || o.kat === f.kat) && (!f.ug || o.ug === f.ug) && (!f.pel || o.pl.includes(f.pel)) && (!f.lengkap || (f.lengkap === 'ya' ? o.l : !o.l)) && (!q || o.cari.includes(q))).sort((a, b) => cmp(a.n, b.n));
+    $('#res').innerHTML = tableOrang(l, [C.umat[0], ['Jenis kelamin / usia', (o) => esc((o.jk ? o.jkN : '–') + (o.u != null ? ' · ' + o.u + ' th' : ''))], C.umat[1], C.umat[2], ['Pelayanan', (o) => miniChips(o.plN, 2)], C.umat[5]]);
+  };
+  const h = anBar(afSel('jk', 'Jenis kelamin', ['Pria', 'Wanita', 'Belum diisi']) + afSel('kat', 'Kategori', ['Awam', 'Bruder', 'Suster', 'Frater', 'Imam']) + afSel('ug', 'Kelompok usia', UG) + afSel('pel', 'Pelayanan', AN.pel.map((p) => [p.id, p.nama])) + afSel('lengkap', 'Kelengkapan profil', [['ya', 'Lengkap'], ['tidak', 'Belum lengkap']]) + afQ()); afBind(draw); return h;
+};
+
 const tabsOf = (m) => (m.tabs ? m.tabs.filter(([id]) => (D.perm[`${m.id}/${id}`] || 0) >= 1) : []);
 const visible = () => MENU.filter((m) => m.always || (m.tabs ? tabsOf(m).length : (D.perm[m.id] || 0) >= 1));
-function route() { const ms = visible(); const [m = 'dashboard', t] = location.hash.replace(/^#\/?/, '').split('/'); const menu = ms.find((x) => x.id === m) || ms[0]; if (!menu) return { menu: null, tab: null, tabs: [] }; const tabs = tabsOf(menu); return { menu, tabs, tab: menu.tabs ? (tabs.find((x) => x[0] === t) || tabs[0])[0] : null }; }
+function route() { const ms = visible(); const [m = 'dashboard', t] = location.hash.replace(/^#\/?/, '').split('/'); const menu = ms.find((x) => x.id === m) || ms.find((x) => !x.hide) || ms[0]; if (!menu) return { menu: null, tab: null, tabs: [] }; const tabs = tabsOf(menu); return { menu, tabs, tab: menu.tabs ? (tabs.find((x) => x[0] === t) || tabs[0])[0] : null }; }
 function render() {
   if (!D) return;
   DR = [];

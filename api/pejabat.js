@@ -61,10 +61,12 @@ const pejabat = async (req, res) => {
     const mine = pej.filter((r) => (r.fields[PJ.bpk] || []).includes(bpkId));
     if (mine.some((r) => aktifRow(r) && (r.fields[PJ.orang] || []).includes(person.id) && (r.fields[PJ.jab] || []).includes(jabId))) return res.status(409).json({ error: `${nama} sudah tercatat aktif sebagai ${jabatan} di BPK ${bpkNama}` });
 
+    // Keuskupan domisili di profil otomatis mengikuti BPK tempat ia menjabat.
+    if (!baru) await update(PERSON, person.id, { [PF.dom]: [bpkId] });
     const akhiri = (Array.isArray(b.akhiri) ? b.akhiri : []).filter((x) => REC.test(x));
     for (const id of akhiri) { const r = mine.find((x) => x.id === id); if (r && aktifRow(r)) await update(PEJ, id, { [PJ.selesai]: hariIni() }); }
     await create(PEJ, { [PJ.bpk]: [bpkId], [PJ.orang]: [person.id], [PJ.jab]: [jabId], [PJ.mulai]: hariIni() });
-    data.invalidate();
+    data.invalidate(); require('../lib/analitik').invalidate();
 
     const oleh = acc.nama, olehJab = /Koordinator BPK/.test(acc.peran) ? `Koordinator BPK ${bpkNama}` : acc.peran === 'Admin' ? 'Admin sistem BPN PKKI' : acc.peran;
     const link = `https://${req.headers.host}/?hp=${wa}`;
