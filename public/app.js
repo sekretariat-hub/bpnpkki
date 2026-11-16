@@ -21,7 +21,7 @@ const cmp = (a, b) => String(a).localeCompare(String(b), 'id');
 
 /* ===== state ===== */
 let D = null, R = null; // data, laporan
-const S = { pf: { tahun: '', bulan: '', status: '', acc: '', metode: '', q: '', role: 'penerima' }, sort: { k: 'waktu', d: 1 },
+const S = { pf: { tahun: '', bulan: '', status: '', acc: '', metode: '', q: '', role: 'penerima', scope: 'resmi' }, sort: { k: 'waktu', d: 1 },
   pdf: { kus: '', jenis: '', q: '' }, tf: { status: 'AKTIF', kat: '', bidang: '', q: '' }, showDone: false };
 
 /* ===== menu ===== */
@@ -80,13 +80,14 @@ const waktu = (p) => (p.bulan && p.tahun ? `${p.bulan} ${p.tahun}` : p.tahun || 
 const sortKey = (p) => (p.tahun || '9999') + String(p.bulanIdx < 0 ? 99 : p.bulanIdx).padStart(2, '0');
 function filtered() {
   const f = S.pf, q = f.q.toLowerCase();
-  return D.proker.filter((p) => (!f.tahun || p.tahun === f.tahun) && (!f.bulan || p.bulan === f.bulan) && (!f.status || p.status === f.status) && (!f.acc || (f.acc === 'BELUM' ? !p.acc : p.acc === f.acc)) && (!f.metode || p.metode === f.metode)
+  return D.proker.filter((p) => (f.scope !== 'resmi' || lolos(p)) && (!f.tahun || p.tahun === f.tahun) && (!f.bulan || p.bulan === f.bulan) && (!f.status || p.status === f.status) && (!f.acc || (f.acc === 'BELUM' ? !p.acc : p.acc === f.acc)) && (!f.metode || p.metode === f.metode)
     && (!q || [p.program, p.detil, p.catatan, p.penerima.join(' '), p.pelaksana.join(' '), p.seksi.join(' ')].join(' ').toLowerCase().includes(q)));
 }
 function pfBar(withRole) {
   const o = (arr) => arr.filter(Boolean).map((x) => `<option>${esc(x)}</option>`).join('');
   const sel = (k, label, opts) => `<div><label>${label}</label><select data-pf="${k}"><option value="">Semua</option>${opts}</select></div>`;
-  return `<div class="filters">${withRole ? `<div style="flex:none"><label>Lihat sebagai</label><div class="seg" id="role"><button data-role="penerima" class="${S.pf.role === 'penerima' ? 'on' : ''}">Keuskupan yang dilayani</button><button data-role="pelaksana" class="${S.pf.role === 'pelaksana' ? 'on' : ''}">Keuskupan yang melayani</button></div></div>` : ''}
+  const scope = `<div style="flex:none"><label>Tampilkan</label><div class="seg" id="scope"><button data-scope="resmi" class="${S.pf.scope === 'resmi' ? 'on' : ''}">Program resmi (syarat ACC lengkap)</button><button data-scope="semua" class="${S.pf.scope === 'semua' ? 'on' : ''}">Semua program</button></div></div>`;
+  return `<div class="filters">${scope}${withRole ? `<div style="flex:none"><label>Lihat sebagai</label><div class="seg" id="role"><button data-role="penerima" class="${S.pf.role === 'penerima' ? 'on' : ''}">Keuskupan yang dilayani</button><button data-role="pelaksana" class="${S.pf.role === 'pelaksana' ? 'on' : ''}">Keuskupan yang melayani</button></div></div>` : ''}
     ${sel('tahun', 'Tahun', o(uniq(D.proker.map((p) => p.tahun)).sort()))}
     ${sel('bulan', 'Bulan', Object.keys(BLN).map((b) => `<option value="${b}">${BLN[b]}</option>`).join(''))}
     ${sel('status', 'Status', o(Object.keys(TONE_STATUS)))}
@@ -99,11 +100,12 @@ function bindFilters(cb) {
     el.value = S.pf[el.dataset.pf];
     el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', () => { S.pf[el.dataset.pf] = el.value; cb(); });
   });
+  document.querySelectorAll('#scope button').forEach((b) => b.addEventListener('click', () => { S.pf.scope = b.dataset.scope; document.querySelectorAll('#scope button').forEach((x) => x.classList.toggle('on', x === b)); cb(); }));
   document.querySelectorAll('#role button').forEach((b) => b.addEventListener('click', () => { S.pf.role = b.dataset.role; document.querySelectorAll('#role button').forEach((x) => x.classList.toggle('on', x === b)); cb(); }));
 }
 function prokerKpis(rows) {
   const ok = rows.filter(lolos).length;
-  return `<div class="grid g4" style="margin-bottom:16px">${kpi('Program kerja', rows.length, { c: 'var(--navy)', t: 'var(--blue-t)' })}${kpi('Anggaran dari BPN', 0, { c: '#9A6200', t: 'var(--amber-t)' }).replace('>0<', `>${rpShort(sum(rows, (p) => p.anggaran))}<`)}${kpi('Keuskupan dilayani', uniq(rows.flatMap((p) => p.penerima)).length, { c: '#0B8277', t: 'var(--teal-t)' })}${kpi('Memenuhi syarat ACC', ok, { c: '#13805A', t: 'var(--green-t)', note: `${nf.format(rows.length - ok)} belum memenuhi` })}</div>`;
+  return `<div class="grid g4" style="margin-bottom:16px">${kpi('Program kerja', rows.length, { c: 'var(--navy)', t: 'var(--blue-t)' })}${kpi('Anggaran dari BPN', 0, { c: '#9A6200', t: 'var(--amber-t)' }).replace('>0<', `>${rpShort(sum(rows, (p) => p.anggaran))}<`)}${kpi('Keuskupan dilayani', uniq(rows.flatMap((p) => p.penerima)).length, { c: '#0B8277', t: 'var(--teal-t)' })}${kpi('Memenuhi syarat ACC', ok, { c: '#13805A', t: 'var(--green-t)', note: S.pf.scope === 'resmi' ? 'Pelaksana BPK · Deal · ACC disetujui' : `${nf.format(rows.length - ok)} belum memenuhi` })}</div>`;
 }
 
 /* ===== PAGES ===== */
