@@ -4,6 +4,8 @@ const { fetchAll, update, create } = require('../lib/airtable');
 const { getSession, hashPassword } = require('../lib/auth');
 const { T, F } = require('../lib/users');
 const A = require('../lib/access');
+const { newToken, hashToken, TTL } = require('../lib/invite');
+const inv = (req) => { const t = newToken(); return { t, link: `https://${req.headers.host}/?invite=${t}`, f: { [F.tokenHash]: hashToken(t), [F.tokenExp]: Date.now() + TTL, [F.mustChange]: true } }; };
 
 const PERSON = 'tbl21zOSogH7Anlu2';
 const PF = { nama: 'fldVU2gofcKEhWHmB', email: 'fldhjOTrQfLGC6hWj', dom: 'fldwJ7RnXW1nLaOcv' };
@@ -42,10 +44,10 @@ module.exports = async (req, res) => {
       if (!ps[0]) return res.status(400).json({ error: 'Email belum terdaftar di M-Person' });
       const ex = await fetchAll(T, [F.email], { filterByFormula: `LOWER({Email})='${qs(email)}'`, maxRecords: '1' });
       if (ex[0]) return res.status(409).json({ error: 'Pengguna sudah ada' });
-      const pw = temp();
-      await create(T, { [F.email]: email, [F.nama]: ps[0].fields[PF.nama] || email, [F.level]: b.peran === 'Admin' ? 'Admin' : 'Pengurus', [A.FX.peran]: b.peran, [F.aktif]: true, [F.hash]: hashPassword(pw), [F.person]: ps[0].id, [A.FX.khusus]: '{}' });
+      const pw = temp(), iv = inv(req);
+      await create(T, { ...iv.f, [F.email]: email, [F.nama]: ps[0].fields[PF.nama] || email, [F.level]: b.peran === 'Admin' ? 'Admin' : 'Pengurus', [A.FX.peran]: b.peran, [F.aktif]: true, [F.hash]: hashPassword(pw), [F.person]: ps[0].id, [A.FX.khusus]: '{}' });
       console.log('admin create', acc.email, email, b.peran);
-      return res.json({ ok: true, email, password: pw });
+      return res.json({ ok: true, email, password: pw, link: iv.link });
     }
     const id = String(b.id || '');
     if (!/^rec[A-Za-z0-9]{14}$/.test(id)) return res.status(400).json({ error: 'ID tidak valid' });
@@ -63,10 +65,10 @@ module.exports = async (req, res) => {
       return res.json({ ok: true });
     }
     if (b.action === 'reset') {
-      const pw = temp();
-      await update(T, id, { [F.hash]: hashPassword(pw) }); A.forget(email);
+      const pw = temp(), iv = inv(req);
+      await update(T, id, { [F.hash]: hashPassword(pw), ...iv.f }); A.forget(email);
       console.log('admin reset', acc.email, email);
-      return res.json({ ok: true, email, password: pw });
+      return res.json({ ok: true, email, password: pw, link: iv.link });
     }
     return res.status(400).json({ error: 'Aksi tidak dikenal' });
   } catch (e) {

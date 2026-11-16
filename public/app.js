@@ -18,6 +18,10 @@ const uniq = (a) => [...new Set(a)];
 const by = (arr, fn) => arr.reduce((m, x) => { const k = fn(x); (m[k] = m[k] || []).push(x); return m; }, {});
 const sum = (a, f) => a.reduce((s, x) => s + (f(x) || 0), 0);
 const cmp = (a, b) => String(a).localeCompare(String(b), 'id');
+let DR = [];
+const reg = (fn) => { DR.push(fn); return DR.length - 1; };
+const drillReg = (title, d) => (d ? reg((l) => openDrill(`${title} · ${l}`, matchRows(d.rows, d.get, l), d.cols)) : null);
+const dat = (id, l) => (id === null ? '' : ` data-dr="${id}" data-l="${esc(l)}"`);
 
 /* ===== state ===== */
 let D = null, R = null, ADM = null; // data, laporan, admin
@@ -45,30 +49,34 @@ const MENU = [
 ];
 
 /* ===== komponen ===== */
-function bars(title, list, { max = 10, colour } = {}) {
+function bars(title, list, { max = 10, colour, drill } = {}) {
   list = (list || []).slice(0, max);
+  const dr = drillReg(title, drill);
   const mx = Math.max(1, ...list.map((x) => x.value));
-  const body = list.length ? list.map((x, i) => `<div class="bar"><div class="l" title="${esc(x.label)}">${esc(x.label)}</div><div class="b"><i style="width:${(x.value / mx) * 100}%;background:${colour || PAL[i % PAL.length]}"></i></div><div class="v">${x.fmt || nf.format(x.value)}</div></div>`).join('') : '<div class="empty">Belum ada data</div>';
+  const body = list.length ? list.map((x, i) => `<div class="bar${dr === null ? '' : ' clk'}"${dat(dr, x.label)}><div class="l" title="${esc(x.label)}">${esc(x.label)}</div><div class="b"><i style="width:${(x.value / mx) * 100}%;background:${colour || PAL[i % PAL.length]}"></i></div><div class="v">${x.fmt || nf.format(x.value)}</div></div>`).join('') : '<div class="empty">Belum ada data</div>';
   return `<div class="card"><h3>${esc(title)}</h3>${body}</div>`;
 }
-function donut(title, list) {
+function donut(title, list, drill) {
+  const dr = drillReg(title, drill);
   const tot = sum(list, (x) => x.value);
   let acc = 0;
   const stops = list.map((x, i) => { const a = acc / (tot || 1) * 100; acc += x.value; return `${PAL[i % PAL.length]} ${a}% ${acc / (tot || 1) * 100}%`; }).join(',');
-  return `<div class="card"><h3>${esc(title)}</h3>${tot ? `<div class="donut"><div class="ring" data-c="${nf.format(tot)}" style="background:conic-gradient(${stops})"></div><div class="lg">${list.map((x, i) => `<div><i style="background:${PAL[i % PAL.length]}"></i>${esc(x.label)}<b>${nf.format(x.value)}</b></div>`).join('')}</div></div>` : '<div class="empty">Belum ada data</div>'}</div>`;
+  return `<div class="card"><h3>${esc(title)}</h3>${tot ? `<div class="donut"><div class="ring" data-c="${nf.format(tot)}" style="background:conic-gradient(${stops})"></div><div class="lg">${list.map((x, i) => `<div class="${dr === null ? '' : 'clk'}"${dat(dr, x.label)}><i style="background:${PAL[i % PAL.length]}"></i>${esc(x.label)}<b>${nf.format(x.value)}</b></div>`).join('')}</div></div>` : '<div class="empty">Belum ada data</div>'}</div>`;
 }
-function columns(title, list) {
+function columns(title, list, drill) {
+  const dr = drillReg(title, drill);
   const mx = Math.max(1, ...list.map((x) => x.value));
-  return `<div class="card"><h3>${esc(title)}</h3><div class="cols">${list.map((x, i) => `<div class="c"><b>${x.value || ''}</b><i style="height:${Math.max(4, (x.value / mx) * 120)}px;background:${PAL[i % PAL.length]}"></i><span>${esc(x.label)}</span></div>`).join('')}</div></div>`;
+  return `<div class="card"><h3>${esc(title)}</h3><div class="cols">${list.map((x, i) => `<div class="c${dr === null ? '' : ' clk'}"${dat(dr, x.label)}><b>${x.value || ''}</b><i style="height:${Math.max(4, (x.value / mx) * 120)}px;background:${PAL[i % PAL.length]}"></i><span>${esc(x.label)}</span></div>`).join('')}</div></div>`;
 }
 const count = (arr, fn, { split = false } = {}) => {
   const m = {}; arr.forEach((x) => { let v = fn(x); v = Array.isArray(v) ? v : [v]; (v.length ? v : ['(kosong)']).forEach((k) => { k = k || '(kosong)'; m[k] = (m[k] || 0) + 1; }); });
   return Object.entries(m).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
 };
-const kpi = (label, n, { c = 'var(--navy)', t = 'var(--blue-t)', delta, note } = {}) => {
+const kpi = (label, n, { c = 'var(--navy)', t = 'var(--blue-t)', delta, note, go } = {}) => {
+  const gid = go ? reg(go) : null;
   let d = '';
   if (delta) { const diff = delta.now - delta.prev; d = diff > 0 ? `<div class="d up">▲ +${nf.format(diff)} dari bulan lalu</div>` : diff < 0 ? `<div class="d down">▼ ${nf.format(diff)} dari bulan lalu</div>` : '<div class="d flat">● Sama dengan bulan lalu</div>'; }
-  return `<div class="card kpi" style="--c:${c};--t:${t}"><div class="l">${esc(label)}</div><div class="n">${nf.format(n)}</div>${d}${note ? `<div class="note">${esc(note)}</div>` : ''}</div>`;
+  return `<div class="card kpi${gid === null ? '' : ' clk'}"${dat(gid, '')} style="--c:${c};--t:${t}"><div class="l">${esc(label)}</div><div class="n">${nf.format(n)}</div>${d}${note ? `<div class="note">${esc(note)}</div>` : ''}</div>`;
 };
 const person = (p, jab) => `<div class="card pc">${av(p.nama)}<div style="min-width:0"><div class="n">${esc(p.nama)}</div><div class="j">${esc(jab || '')}</div><div class="j">${esc(p.keuskupan)}</div><div class="acts">${p.adaWa ? `<a class="wa" target="_blank" rel="noopener" href="/api/wa?p=${esc(p.id)}">WhatsApp</a>` : ''}${p.email ? `<a class="wa em" href="mailto:${esc(p.email)}">Email</a>` : ''}</div></div></div>`;
 
@@ -107,7 +115,7 @@ function bindFilters(cb) {
 }
 function prokerKpis(rows) {
   const ok = rows.filter(lolos).length;
-  return `<div class="grid g4" style="margin-bottom:16px">${kpi('Program kerja', rows.length, { c: 'var(--navy)', t: 'var(--blue-t)' })}${kpi('Anggaran dari BPN', 0, { c: '#9A6200', t: 'var(--amber-t)' }).replace('>0<', `>${rpShort(sum(rows, (p) => p.anggaran))}<`)}${kpi('Keuskupan dilayani', uniq(rows.flatMap((p) => p.penerima)).length, { c: '#0B8277', t: 'var(--teal-t)' })}${kpi('Memenuhi syarat ACC', ok, { c: '#13805A', t: 'var(--green-t)', note: S.pf.scope === 'resmi' ? 'Pelaksana BPK · Deal · ACC disetujui' : `${nf.format(rows.length - ok)} belum memenuhi` })}</div>`;
+  return `<div class="grid g4" style="margin-bottom:16px">${kpi('Program kerja', rows.length, { c: 'var(--navy)', t: 'var(--blue-t)', go: () => openDrill('Program kerja', rows, C.proker) })}${kpi('Anggaran dari BPN', 0, { c: '#9A6200', t: 'var(--amber-t)', go: () => openDrill('Program kerja berdasarkan anggaran', rows.filter((p) => p.anggaran).sort((a, b) => b.anggaran - a.anggaran), C.proker) }).replace('>0<', `>${rpShort(sum(rows, (p) => p.anggaran))}<`)}${kpi('Keuskupan dilayani', uniq(rows.flatMap((p) => p.penerima)).length, { c: '#0B8277', t: 'var(--teal-t)', go: () => openDrill('Keuskupan yang dilayani', count(rows, (p) => p.penerima).map((x) => ({ nama: x.label, n: x.value })), [['Keuskupan', (x) => `<b>${esc(x.nama)}</b>`], ['Jumlah program', (x) => x.n]]) })}${kpi('Memenuhi syarat ACC', ok, { c: '#13805A', t: 'var(--green-t)', note: S.pf.scope === 'resmi' ? 'Pelaksana BPK · Deal · ACC disetujui' : `${nf.format(rows.length - ok)} belum memenuhi`, go: () => openDrill('Program yang memenuhi syarat ACC', rows.filter(lolos), C.proker) })}</div>`;
 }
 
 /* ===== PAGES ===== */
@@ -129,10 +137,10 @@ PAGES.dashboard = () => {
   const pLine = (p) => `<div class="tli prow" data-pid="${p.id}"><div style="flex:1;min-width:0"><div class="t">${esc(p.program || p.label)}${p.detil ? ` <span class="s">· ${esc(p.detil)}</span>` : ''}</div><div class="s">${p.penerima.length ? 'Dilayani: ' + esc(p.penerima.join(', ')) : 'Penerima belum diisi'}${p.pelaksana.length ? ' · Melayani: ' + esc(p.pelaksana.join(', ')) : ''}</div></div><div>${chip(p.metode || '—', 'blue')}</div></div>`;
   return `<div class="hero"><div><h2>Halo, ${esc((D.user.nama || '').split(' ')[0])} 👋</h2><p>${esc(fdate(t))} · Semoga pelayanan hari ini berbuah.</p></div></div>
   <div class="grid g4" style="margin-bottom:18px">
-    ${kpi('BPK di Indonesia', k.bpk.now, { c: '#1F56C4', t: 'var(--blue-t)', delta: k.bpk, note: `dari ${k.bpk.total} keuskupan terdata` })}
-    ${kpi('PDPKK terdaftar', k.pdpkk.now, { c: '#0B8277', t: 'var(--teal-t)', delta: k.pdpkk })}
-    ${kpi('Pewarta pengajar terdaftar', k.pewarta ? k.pewarta.now : 0, { c: '#9A6200', t: 'var(--amber-t)', delta: k.pewarta || { now: 0, prev: 0 } })}
-    ${kpi('Program sedang berjalan', running.length, { c: '#5B4CD1', t: 'var(--violet-t)', note: 'berstatus ON PROGRESS' })}
+    ${kpi('BPK di Indonesia', k.bpk.now, { c: '#1F56C4', t: 'var(--blue-t)', delta: k.bpk, note: `dari ${k.bpk.total} keuskupan terdata`, go: () => openDrill('BPK di Indonesia', D.bpkList.filter((b) => b.aktif).sort((a, b) => cmp(a.nama, b.nama)), [['Keuskupan', (b) => `<b>${esc(b.nama)}</b>`], ['Status', (b) => esc(b.status || '–')]]) })}
+    ${kpi('PDPKK terdaftar', k.pdpkk.now, { c: '#0B8277', t: 'var(--teal-t)', delta: k.pdpkk, go: () => openDrill('PDPKK terdaftar', [...D.pdpkk].sort((a, b) => cmp(a.keuskupan, b.keuskupan) || cmp(a.nama, b.nama)), C.pd) })}
+    ${kpi('Pewarta pengajar terdaftar', k.pewarta ? k.pewarta.now : 0, { c: '#9A6200', t: 'var(--amber-t)', delta: k.pewarta || { now: 0, prev: 0 }, go: () => openDrill('Pewarta pengajar terdaftar', D.pewartaList || [], C.orang) })}
+    ${kpi('Program sedang berjalan', running.length, { c: '#5B4CD1', t: 'var(--violet-t)', note: 'berstatus ON PROGRESS', go: () => openDrill('Program sedang berjalan', running, C.proker) })}
   </div>
   <div class="grid g2">
     <div class="card"><h3>Agenda terdekat<small>Tanggal pasti, 30 hari ke depan</small></h3>${fixed.length ? `<div class="tl">${fixed.map((x) => `<div class="tli">${dbox(x.d)}<div style="flex:1"><div class="t">${esc(x.t)}</div><div class="s">${esc(x.s)}</div></div>${chip(fdate(x.d), x.tone)}</div>`).join('')}</div>` : '<div class="empty">Belum ada agenda bertanggal dalam 30 hari ke depan.</div>'}
@@ -181,9 +189,10 @@ PAGES['proker/semua'] = () => {
 PAGES['proker/ringkasan'] = () => {
   const draw = () => {
     const rows = filtered();
+    const dp = (get) => ({ rows, get, cols: C.proker });
     const perYm = Object.entries(by(rows.filter((p) => p.tahun && p.bulanIdx >= 0), (p) => `${p.tahun}-${String(p.bulanIdx + 1).padStart(2, '0')}`)).sort(([a], [b]) => cmp(a, b)).map(([k, v]) => ({ label: `${BLN3[+k.slice(5) - 1]} ${k.slice(2, 4)}`, value: v.length }));
     const ang = Object.entries(by(rows.flatMap((p) => rowsFor(p, 'penerima')), (e) => e.k)).map(([label, v]) => ({ label, value: sum(v, (e) => e.share), fmt: rpShort(sum(v, (e) => e.share)) })).sort((a, b) => b.value - a.value);
-    $('#res').innerHTML = prokerKpis(rows) + `<div class="grid g2">${columns('Program per bulan', perYm)}${donut('Status pelaksanaan', count(rows, (p) => p.status || 'Belum diisi'))}${donut('Status ACC', count(rows, (p) => p.acc || 'Belum ACC'))}${donut('Metode pelaksanaan', count(rows, (p) => p.metode || 'Belum diisi'))}${bars('Seksi penanggung jawab', count(rows, (p) => p.seksi))}${bars('Jenis kegiatan', count(rows, (p) => p.jenis))}${bars('Sumber dana', count(rows, (p) => p.sumberDana || 'Belum diisi'))}${bars('Anggaran per keuskupan yang dilayani', ang, { max: 12 })}${bars('Keuskupan yang melayani', count(rows.filter((p) => p.pelaksana.length), (p) => p.pelaksana), { max: 12 })}${bars('Program terkait modul berjenjang', count(rows.filter((p) => p.modul.length), (p) => p.modul), { max: 12 })}</div>`;
+    $('#res').innerHTML = prokerKpis(rows) + `<div class="grid g2">${columns('Program per bulan', perYm, dp((p) => `${BLN3[p.bulanIdx]} ${String(p.tahun).slice(2)}`))}${donut('Status pelaksanaan', count(rows, (p) => p.status || 'Belum diisi'), dp((p) => p.status || 'Belum diisi'))}${donut('Status ACC', count(rows, (p) => p.acc || 'Belum ACC'), dp((p) => p.acc || 'Belum ACC'))}${donut('Metode pelaksanaan', count(rows, (p) => p.metode || 'Belum diisi'), dp((p) => p.metode || 'Belum diisi'))}${bars('Seksi penanggung jawab', count(rows, (p) => p.seksi), { drill: dp((p) => p.seksi) })}${bars('Jenis kegiatan', count(rows, (p) => p.jenis), { drill: dp((p) => p.jenis) })}${bars('Sumber dana', count(rows, (p) => p.sumberDana || 'Belum diisi'), { drill: dp((p) => p.sumberDana || 'Belum diisi') })}${bars('Anggaran per keuskupan yang dilayani', ang, { max: 12, drill: dp((p) => p.penerima) })}${bars('Keuskupan yang melayani', count(rows.filter((p) => p.pelaksana.length), (p) => p.pelaksana), { max: 12, drill: dp((p) => p.pelaksana) })}${bars('Program terkait modul berjenjang', count(rows.filter((p) => p.modul.length), (p) => p.modul), { max: 12, drill: dp((p) => p.modul) })}</div>`;
   };
   setTimeout(() => { bindFilters(draw); draw(); });
   return pfBar(false) + '<div id="res"></div>';
@@ -225,8 +234,8 @@ PAGES['pd/daftar'] = () => {
 };
 PAGES['pd/ringkasan'] = () => {
   const r = D.pdpkk;
-  return `<div class="grid g4" style="margin-bottom:16px">${kpi('PDPKK terdaftar', r.length, { c: '#0B8277', t: 'var(--teal-t)', delta: D.kpis.pdpkk })}${kpi('Keuskupan memiliki PD', uniq(r.map((x) => x.keuskupan).filter(Boolean)).length, { c: '#1F56C4', t: 'var(--blue-t)' })}${kpi('Koordinator', uniq(r.flatMap((x) => x.koordinator.map((k) => k.id))).length, { c: '#9A6200', t: 'var(--amber-t)' })}${kpi('PD tanpa koordinator', r.filter((x) => !x.koordinator.length).length, { c: '#C2362B', t: 'var(--coral-t)' })}</div>
-  <div class="grid g2">${donut('Jenis PD', count(r, (x) => x.jenis || 'Belum diisi'))}${bars('PD per keuskupan', count(r, (x) => x.keuskupan || '(kosong)'), { max: 15 })}</div>`;
+  return `<div class="grid g4" style="margin-bottom:16px">${kpi('PDPKK terdaftar', r.length, { c: '#0B8277', t: 'var(--teal-t)', delta: D.kpis.pdpkk, go: () => openDrill('PDPKK terdaftar', r, C.pd) })}${kpi('Keuskupan memiliki PD', uniq(r.map((x) => x.keuskupan).filter(Boolean)).length, { c: '#1F56C4', t: 'var(--blue-t)', go: () => openDrill('Keuskupan memiliki PD', count(r, (x) => x.keuskupan || '(kosong)').map((x) => ({ nama: x.label, n: x.value })), [['Keuskupan', (x) => `<b>${esc(x.nama)}</b>`], ['Jumlah PD', (x) => x.n]]) })}${kpi('Koordinator', uniq(r.flatMap((x) => x.koordinator.map((k) => k.id))).length, { c: '#9A6200', t: 'var(--amber-t)', go: () => openDrill('Koordinator PD', uniq(r.flatMap((x) => x.koordinator.map((k) => k.id))).map((id) => { const k = r.flatMap((x) => x.koordinator).find((z) => z.id === id); return { ...k, keuskupan: k.keuskupan || '' }; }), C.orang) })}${kpi('PD tanpa koordinator', r.filter((x) => !x.koordinator.length).length, { c: '#C2362B', t: 'var(--coral-t)', go: () => openDrill('PD tanpa koordinator', r.filter((x) => !x.koordinator.length), C.pd) })}</div>
+  <div class="grid g2">${donut('Jenis PD', count(r, (x) => x.jenis || 'Belum diisi'), { rows: r, get: (x) => x.jenis || 'Belum diisi', cols: C.pd })}${bars('PD per keuskupan', count(r, (x) => x.keuskupan || '(kosong)'), { max: 15, drill: { rows: r, get: (x) => x.keuskupan || '(kosong)', cols: C.pd } })}</div>`;
 };
 
 /* --- Tim Kerja --- */
@@ -262,9 +271,44 @@ const lap = (fn) => () => {
   return fn(R);
 };
 const find = (list, re) => ((list || []).find((x) => re.test(x.label)) || { value: 0 }).value;
-PAGES['laporan/pleno'] = lap((r) => { const e = r.pleno; return `<div class="grid g4" style="margin-bottom:16px">${kpi('Data masuk', e.total, { c: '#1F56C4', t: 'var(--blue-t)' })}${kpi('Hadir', find(e.kehadiran, /^HADIR$/i), { c: '#13805A', t: 'var(--green-t)' })}${kpi('Tidak hadir', find(e.kehadiran, /TIDAK/i), { c: '#C2362B', t: 'var(--coral-t)' })}${kpi('Belum mengisi', find(e.kehadiran, /BELUM/i), { c: '#9A6200', t: 'var(--amber-t)' })}${kpi('Pasangan butuh kamar', e.pasangan, { c: '#5B4CD1', t: 'var(--violet-t)' })}${kpi('Pastor', e.pastor, { c: '#0B8277', t: 'var(--teal-t)' })}</div><div class="grid g2">${donut('Status kehadiran', e.kehadiran)}${donut('Kelengkapan foto', e.kelengkapanFoto)}${bars('Kategori penugasan BPN', e.kategori)}${bars('Dukungan transportasi', e.transportasi)}${bars('Jadwal kedatangan', e.kedatangan)}${bars('Membawa pasangan', e.bawaPasangan)}</div>`; });
-PAGES['laporan/tc'] = lap((r) => { const t = r.tc; return `<div class="grid g4" style="margin-bottom:16px">${kpi('Pendaftar', t.pendaftar, { c: '#1F56C4', t: 'var(--blue-t)' })}${kpi('Kelompok', t.kelompok, { c: '#0B8277', t: 'var(--teal-t)' })}${kpi('Mentor', t.mentor, { c: '#9A6200', t: 'var(--amber-t)' })}</div><div class="grid g2">${donut('Status pendaftaran', t.statusTC)}${donut('Status SHDR', t.statusSHDR)}${donut('Verifikasi data', t.verifikasi)}${donut('Kelompok usia', t.kelompokUsia)}${donut('Jenis kelamin', t.jenisKelamin)}${bars('Kategori mentor', t.kategoriMentor)}${bars('Pendaftar per keuskupan', t.perKeuskupan, { max: 25 })}</div>`; });
-PAGES['laporan/kepemudaan'] = lap((r) => { const k = r.kepemudaan; return `<div class="grid g4" style="margin-bottom:16px">${kpi('BPK aktif', k.bpkAktif, { c: '#1F56C4', t: 'var(--blue-t)' })}${kpi('Sudah punya PIC', k.bpkPunyaPIC, { c: '#13805A', t: 'var(--green-t)' })}${kpi('Belum punya PIC', k.bpkBelumPIC, { c: '#C2362B', t: 'var(--coral-t)' })}${kpi('PDPKK terdata', k.pdpkkTotal, { c: '#0B8277', t: 'var(--teal-t)' })}</div><div class="grid g2">${donut('Jenis PDPKK', k.pdpkkJenis)}${bars('Status peserta TC per BPK', k.statusPesertaTC)}</div>`; });
+PAGES['laporan/pleno'] = lap((r) => {
+  const e = r.pleno, rw = e.rows || [], D2 = (get, rows = rw) => ({ rows, get, cols: C.pleno }), all = (t, rows) => () => openDrill(t, rows, C.pleno);
+  return `<div class="grid g4" style="margin-bottom:16px">${kpi('Data masuk', e.total, { c: '#1F56C4', t: 'var(--blue-t)', go: all('Semua data pleno', rw) })}${kpi('Hadir', find(e.kehadiran, /^HADIR$/i), { c: '#13805A', t: 'var(--green-t)', go: all('Hadir', rw.filter((x) => /^HADIR$/i.test(x.kehadiran))) })}${kpi('Tidak hadir', find(e.kehadiran, /TIDAK/i), { c: '#C2362B', t: 'var(--coral-t)', go: all('Tidak hadir', rw.filter((x) => /TIDAK/i.test(x.kehadiran))) })}${kpi('Belum mengisi', find(e.kehadiran, /BELUM/i), { c: '#9A6200', t: 'var(--amber-t)', go: all('Belum mengisi', rw.filter((x) => /BELUM/i.test(x.kehadiran))) })}${kpi('Pasangan butuh kamar', e.pasangan, { c: '#5B4CD1', t: 'var(--violet-t)', go: all('Peserta dengan pasangan', rw.filter((x) => x.pasangan)) })}${kpi('Pastor', e.pastor, { c: '#0B8277', t: 'var(--teal-t)', go: all('Pastor', rw.filter((x) => x.pastor)) })}</div><div class="grid g2">${donut('Status kehadiran', e.kehadiran, D2((x) => x.kehadiran))}${donut('Kelengkapan foto', e.kelengkapanFoto, D2((x) => x.foto))}${bars('Kategori penugasan BPN', e.kategori, { drill: D2((x) => split(x.kategori)) })}${bars('Dukungan transportasi', e.transportasi, { drill: D2((x) => x.transport) })}${bars('Jadwal kedatangan', e.kedatangan, { drill: D2((x) => x.kedatangan) })}${bars('Membawa pasangan', e.bawaPasangan, { drill: D2((x) => x.pasangan) })}</div>`;
+});
+PAGES['laporan/tc'] = lap((r) => {
+  const t = r.tc, rw = t.rows || [], mr = t.mentorRows || [], D2 = (get) => ({ rows: rw, get, cols: C.tc });
+  return `<div class="grid g4" style="margin-bottom:16px">${kpi('Pendaftar', t.pendaftar, { c: '#1F56C4', t: 'var(--blue-t)', go: () => openDrill('Pendaftar TC SHDR', rw, C.tc) })}${kpi('Kelompok', t.kelompok, { c: '#0B8277', t: 'var(--teal-t)' })}${kpi('Mentor', t.mentor, { c: '#9A6200', t: 'var(--amber-t)', go: () => openDrill('Mentor TC SHDR', mr, C.mentor) })}</div><div class="grid g2">${donut('Status pendaftaran', t.statusTC, D2((x) => x.statusTC))}${donut('Status SHDR', t.statusSHDR, D2((x) => x.statusSHDR))}${donut('Verifikasi data', t.verifikasi, D2((x) => x.verifikasi))}${donut('Kelompok usia', t.kelompokUsia, D2((x) => x.usia))}${donut('Jenis kelamin', t.jenisKelamin, D2((x) => x.gender))}${bars('Kategori mentor', t.kategoriMentor, { drill: { rows: mr, get: (x) => x.kategori, cols: C.mentor } })}${bars('Pendaftar per keuskupan', t.perKeuskupan, { max: 25, drill: D2((x) => split(x.keuskupan)) })}</div>`;
+});
+PAGES['laporan/kepemudaan'] = lap((r) => {
+  const k = r.kepemudaan, br = k.bpkRows || [], pr = k.pdRows || [], act = br.filter((x) => x.aktif);
+  return `<div class="grid g4" style="margin-bottom:16px">${kpi('BPK aktif', k.bpkAktif, { c: '#1F56C4', t: 'var(--blue-t)', go: () => openDrill('BPK aktif', act, C.bpk) })}${kpi('Sudah punya PIC', k.bpkPunyaPIC, { c: '#13805A', t: 'var(--green-t)', go: () => openDrill('BPK yang sudah punya PIC Kepemudaan', act.filter((x) => x.pic), C.bpk) })}${kpi('Belum punya PIC', k.bpkBelumPIC, { c: '#C2362B', t: 'var(--coral-t)', go: () => openDrill('BPK yang belum punya PIC Kepemudaan', act.filter((x) => !x.pic), C.bpk) })}${kpi('PDPKK terdata', k.pdpkkTotal, { c: '#0B8277', t: 'var(--teal-t)', go: () => openDrill('PDPKK terdata', pr, C.pdr) })}</div><div class="grid g2">${donut('Jenis PDPKK', k.pdpkkJenis, { rows: pr, get: (x) => x.jenis, cols: C.pdr })}${bars('Status peserta TC per BPK', k.statusPesertaTC, { drill: { rows: br, get: (x) => x.statusTC, cols: C.bpk } })}</div>`;
+});
+
+/* ===== Drill-down: klik angka/grafik membuka daftar datanya ===== */
+function matchRows(rows, get, label) {
+  return rows.filter((r) => { let v = get(r); v = Array.isArray(v) ? v : [v]; v = v.filter(Boolean); return label === '' ? true : label === '(kosong)' ? !v.length : v.includes(label); });
+}
+function openDrill(title, rows, cols) {
+  const text = (r) => cols.map(([, f]) => String(f(r)).replace(/<[^>]*>/g, ' ')).join(' ').toLowerCase();
+  modal(`<h2>${esc(title)}</h2><div class="note" id="dn"></div><input id="dq" placeholder="Cari di daftar ini…" style="width:100%;box-sizing:border-box;margin:8px 0"><div class="tw" id="dt" style="max-height:60vh;overflow:auto"></div>`, true);
+  const draw = () => {
+    const q = $('#dq').value.toLowerCase(), list = rows.filter((r) => !q || text(r).includes(q));
+    $('#dn').textContent = `${nf.format(list.length)} data${list.length > 400 ? ' (menampilkan 400 pertama)' : ''}`;
+    $('#dt').innerHTML = `<table><thead><tr>${cols.map(([h]) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${list.slice(0, 400).map((r) => `<tr${r.id && r.pelaksanaTipe !== undefined ? ` class="prow" data-pid="${r.id}"` : ''}>${cols.map(([, f]) => `<td>${f(r)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${cols.length}"><div class="empty">Tidak ada data.</div></td></tr>`}</tbody></table>`;
+  };
+  $('#dq').addEventListener('input', draw); draw();
+}
+const C = { // kolom siap pakai
+  proker: [['Waktu', (p) => `<b>${esc(waktu(p))}</b>`], ['Program', (p) => `<b>${esc(p.program || p.label)}</b>${p.detil ? `<div class="sub">${esc(p.detil)}</div>` : ''}`], ['Dilayani', (p) => bpkLinks(p.penerima) || '–'], ['Melayani', (p) => bpkLinks(p.pelaksana) || (p.pelaksanaTipe === 'BPN' ? 'BPN' : '–')], ['Status', (p) => stChips(p)], ['Anggaran', (p) => rp(p.anggaran)]],
+  pd: [['Nama PD', (x) => `<b>${esc(x.nama)}</b>`], ['Keuskupan', (x) => esc(x.keuskupan || '–')], ['Jenis', (x) => esc(x.jenis || '–')], ['Koordinator', (x) => esc((x.koordinator || []).map((k) => k.nama).join(', ') || '–')]],
+  pdr: [['Nama PD', (x) => `<b>${esc(x.nama)}</b>`], ['Keuskupan', (x) => esc(x.keuskupan || '–')], ['Jenis', (x) => esc(x.jenis || '–')]],
+  orang: [['Nama', (x) => `<b>${esc(x.nama || '–')}</b>`], ['Keuskupan', (x) => esc(x.keuskupan || '–')]],
+  tc: [['Nama', (x) => `<b>${esc(x.nama || '–')}</b>`], ['Keuskupan', (x) => esc(x.keuskupan || '–')], ['Status TC', (x) => esc(x.statusTC || '–')], ['SHDR', (x) => esc(x.statusSHDR || '–')], ['Verifikasi', (x) => esc(x.verifikasi || '–')], ['Usia', (x) => esc(x.usia || '–')]],
+  pleno: [['Nama', (x) => `<b>${esc(x.nama || '–')}</b>`], ['Keuskupan', (x) => esc(x.keuskupan || '–')], ['Kehadiran', (x) => esc(x.kehadiran || '–')], ['Foto', (x) => esc(x.foto || '–')], ['Kategori', (x) => esc(x.kategori || '–')], ['Pasangan', (x) => esc(x.pasangan || '–')]],
+  mentor: [['Mentor', (x) => `<b>${esc(x.nama || '–')}</b>`], ['Kategori', (x) => esc(x.kategori || '–')]],
+  bpk: [['Keuskupan', (x) => `<b>${esc(x.nama)}</b>`], ['Status BPK', (x) => (x.aktif ? 'Aktif' : 'Tidak aktif')], ['PIC Kepemudaan', (x) => (x.pic ? 'Ada' : 'Belum ada')], ['Status peserta TC', (x) => esc(x.statusTC || '–')]],
+};
+const split = (v) => String(v || '').split(', ').filter(Boolean);
 
 /* ===== Modal, menu program, profil BPK ===== */
 const PBmap = () => { if (!D._pb) { D._pb = {}; Object.values(D.bpkProfil || {}).forEach((b) => { D._pb[b.nama] = b; }); } return D._pb; };
@@ -293,6 +337,8 @@ function showMenu(id, ev) {
   m.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; closeMenu(); (b.dataset.a === 'edit' ? openEdit : openDetail)(id); });
 }
 document.addEventListener('click', (e) => {
+  const dd = e.target.closest('[data-dr]');
+  if (dd && DR[+dd.dataset.dr]) { closeMenu(); return DR[+dd.dataset.dr](dd.dataset.l); }
   const a = e.target.closest('a.bpk');
   if (a) { e.preventDefault(); e.stopPropagation(); closeMenu(); return openBpk(a.dataset.bpk); }
   if (e.target.closest('#pmenu')) return;
@@ -400,12 +446,32 @@ PAGES['admin/pengguna'] = () => {
   <p class="note" style="margin-top:12px"><b>Peran:</b> Admin (semua + administrasi) · Editor BPN (semua menu, boleh edit) · Pengurus BPN Harian (semua menu, hanya lihat) · Koordinator BPK (hanya program, PD, dan data keuskupannya + data Pengurus BPN) · Pengamat (hanya lihat).</p></div>`;
 };
 
+/* ===== Ganti password ===== */
+function showChangePw(forced) {
+  const o = modal(`<h2>${forced ? 'Buat password baru' : 'Ganti password'}</h2><p class="sub">${forced ? 'Demi keamanan, ganti password bawaan Anda sebelum melanjutkan.' : ''} Minimal 8 karakter, berisi huruf dan angka.</p>
+    <form id="pf" class="eform" style="grid-template-columns:1fr">${forced ? '' : '<div><label>Password lama</label><input type="password" name="lama" autocomplete="current-password" required></div>'}<div><label>Password baru</label><input type="password" name="baru" autocomplete="new-password" minlength="8" required></div><div><label>Ketik ulang password baru</label><input type="password" name="ulang" autocomplete="new-password" minlength="8" required></div>
+    <div class="err" id="pe"></div><div class="mact" style="margin-top:4px"><button class="btn" id="ps" type="submit">Simpan password</button></div></form>`);
+  if (forced) { o.querySelector('.x').remove(); o.onmousedown = null; o.addEventListener('mousedown', (e) => e.stopPropagation(), true); }
+  $('#pf').addEventListener('submit', async (ev) => {
+    ev.preventDefault(); const f = ev.target; $('#pe').textContent = '';
+    if (f.baru.value !== f.ulang.value) { $('#pe').textContent = 'Kedua password tidak sama'; return; }
+    $('#ps').disabled = true; $('#ps').textContent = 'Menyimpan…';
+    try {
+      const r = await fetch('/api/password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ lama: f.lama ? f.lama.value : '', baru: f.baru.value, ulang: f.ulang.value }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || 'Gagal menyimpan');
+      closeModal(); if (forced) { await load(); } else { modal('<h2>Password diperbarui ✓</h2><p>Gunakan password baru pada saat masuk berikutnya.</p>'); }
+    } catch (e) { $('#pe').textContent = e.message; $('#ps').disabled = false; $('#ps').textContent = 'Simpan password'; }
+  });
+}
+
 /* ===== router ===== */
 const tabsOf = (m) => (m.tabs ? m.tabs.filter(([id]) => (D.perm[`${m.id}/${id}`] || 0) >= 1) : []);
 const visible = () => MENU.filter((m) => (m.tabs ? tabsOf(m).length : (D.perm[m.id] || 0) >= 1));
 function route() { const ms = visible(); const [m = 'dashboard', t] = location.hash.replace(/^#\/?/, '').split('/'); const menu = ms.find((x) => x.id === m) || ms[0]; if (!menu) return { menu: null, tab: null, tabs: [] }; const tabs = tabsOf(menu); return { menu, tabs, tab: menu.tabs ? (tabs.find((x) => x[0] === t) || tabs[0])[0] : null }; }
 function render() {
   if (!D) return;
+  DR = [];
   const { menu, tab, tabs } = route();
   if (!menu) { $('#nav').innerHTML = ''; $('#page').innerHTML = '<div class="empty">Akun Anda belum diberi akses ke menu apa pun. Hubungi Admin BPN.</div>'; return; }
   $('#nav').innerHTML = visible().map((m) => `<a href="#/${m.id}" class="${m.id === menu.id ? 'on' : ''}"><svg viewBox="0 0 24 24">${m.icon}</svg>${esc(m.label)}${m.id === menu.id ? '' : `<span class="dot" style="background:${m.c}"></span>`}</a>`).join('');
@@ -420,6 +486,7 @@ function render() {
 async function load(refresh) {
   const r = await fetch('/api/data' + (refresh ? '?refresh=1' : ''), { credentials: 'same-origin' });
   if (r.status === 401) return showLogin();
+  if (r.status === 403) { const j = await r.clone().json().catch(() => ({})); if (j.mustChange) { $('#login').classList.add('hide'); $('#app').classList.add('hide'); return showChangePw(true); } }
   if (!r.ok) { $('#login').classList.add('hide'); $('#app').classList.remove('hide'); $('#page').innerHTML = '<div class="empty">Gagal memuat data. Coba muat ulang.</div>'; return; }
   D = await r.json(); if (refresh) { R = null; ADM = null; }
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
@@ -439,5 +506,16 @@ $('#lf').addEventListener('submit', async (ev) => {
 });
 $('#rf').onclick = async () => { $('#rf').disabled = true; $('#rf').textContent = 'Memuat…'; await load(true); $('#rf').disabled = false; $('#rf').textContent = 'Muat ulang'; };
 $('#lo').onclick = async () => { await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); showLogin(); };
+$('#pwbtn')?.addEventListener('click', () => showChangePw(false));
 $('#burger').onclick = () => $('#side').classList.toggle('open');
-load();
+(async () => {
+  const inv = new URLSearchParams(location.search).get('invite');
+  if (inv) {
+    history.replaceState(null, '', location.pathname + location.hash);
+    try {
+      const r = await fetch('/api/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ token: inv }) });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); showLogin(); $('#le').textContent = j.error || 'Tautan undangan tidak valid'; return; }
+    } catch { /* lanjut ke login biasa */ }
+  }
+  load();
+})();

@@ -53,7 +53,7 @@ async function build() {
   pejabat.forEach((r) => (r.fields.fldCYWlWFYtnkjv6Z || []).forEach((i) => pid.add(i)));
   const [persons, pewarta] = await Promise.all([
     listByIds(T.person, [...pid], ['fldVU2gofcKEhWHmB', 'fldstVCm8Oa3tyxNA', 'fldGsFt4GflTXoTa0', 'fldhjOTrQfLGC6hWj', 'fldwJ7RnXW1nLaOcv', 'fld3A1rRGfWxbuase', 'fldIuYdJWnN77zoaT']),
-    fetchAll(T.person, ['fldVU2gofcKEhWHmB'], { filterByFormula: "OR(LEN({Pengajar Modul}&'')>0, LEN({Spesialiasi Pengajar SHDR}&'')>0)" }).catch(() => null),
+    fetchAll(T.person, ['fldVU2gofcKEhWHmB', 'fldwJ7RnXW1nLaOcv'], { filterByFormula: "OR(LEN({Pengajar Modul}&'')>0, LEN({Spesialiasi Pengajar SHDR}&'')>0)" }).catch(() => null),
   ]);
   const P = {};
   persons.forEach((r) => {
@@ -91,6 +91,7 @@ async function build() {
     generatedAt: new Date().toISOString(),
     today: iso(now),
     kpis,
+    pewartaList: (pewarta || []).map((r) => ({ nama: String(r.fields.fldVU2gofcKEhWHmB || '').trim(), keuskupan: L(r.fields.fldwJ7RnXW1nLaOcv).join(', ') })).sort((a, b) => a.nama.localeCompare(b.nama, 'id')),
     proker: proker.map((r) => {
       const f = r.fields;
       return {
@@ -137,6 +138,7 @@ module.exports = async (req, res) => {
   try {
     const acc = await getAccess(s);
     if (!acc) return res.status(401).json({ error: 'Akun tidak aktif' });
+    if (acc.mustChange) return res.status(403).json({ mustChange: true, error: 'Ganti password terlebih dahulu' });
     if (!cache.data || Date.now() - cache.at > TTL || (req.query.refresh === '1' && Date.now() - cache.at > 10000)) cache = { at: Date.now(), data: await build() };
     const d = cache.data, P = acc.perm, ok = (k) => (P[k] || 0) >= 1;
     const anyOf = (m) => Object.keys(P).some((k) => (k === m || k.startsWith(m + '/')) && P[k] >= 1);
@@ -146,6 +148,7 @@ module.exports = async (req, res) => {
     const body = {
       user: { nama: acc.nama, email: acc.email, level: acc.peran, peran: acc.peran, scope: scopeNames ? [...scopeNames] : null },
       perm: P, opsi: OPSI(d.proker), generatedAt: d.generatedAt, today: d.today,
+      pewartaList: ok('dashboard') && !scopeNames ? d.pewartaList : [],
       kpis: ok('dashboard') ? d.kpis : { bpk: { now: 0, prev: 0, total: 0 }, pdpkk: { now: 0, prev: 0 }, pewarta: null },
       proker: anyOf('proker') || ok('dashboard') ? d.proker.filter((p) => inScope([...p.penerima, ...p.pelaksana])) : [],
       pengurus: anyOf('pengurus') ? d.pengurus : [],

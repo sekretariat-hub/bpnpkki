@@ -46,7 +46,7 @@ module.exports = async (req, res) => {
     }
     setSession(res, { email, nama: f[F.nama] || email, level: (f[F.level] && f[F.level].name) || f[F.level] || 'Pengurus' });
     update(T, rec.id, { [F.lastLogin]: new Date().toISOString() }).catch(() => {});
-    return res.status(200).json({ ok: true });
+    return res.status(200).json({ ok: true, mustChange: !!f[F.mustChange] });
   } catch (e) {
     console.error('login error', e.message);
     const m = String(e.message);

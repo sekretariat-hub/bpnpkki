@@ -183,3 +183,5 @@ details.grp[open]>summary{border-bottom:1px solid var(--line);background:#FAFBFE
 code.pw{font-size:18px;background:#F1F5FF;padding:6px 10px;border-radius:8px;letter-spacing:.05em}
 .sres{position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid #DCE4F2;border-radius:10px;z-index:20;box-shadow:0 8px 24px rgba(20,40,90,.12)}.sres .opt{display:block;width:100%;text-align:left;border:0;background:none;padding:10px 12px;cursor:pointer;font:inherit}.sres .opt:hover{background:#EEF3FF}
 @media(max-width:640px){.eform,.pejs{grid-template-columns:1fr}.kv{grid-template-columns:1fr}}
+.clk{cursor:pointer}.card.kpi.clk:hover{box-shadow:0 6px 20px rgba(31,86,196,.18);transform:translateY(-1px)}.bar.clk:hover,.lg .clk:hover,.cols .c.clk:hover{background:#F3F7FF;border-radius:8px}
+.pmenu{z-index:120}
