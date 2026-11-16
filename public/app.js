@@ -390,9 +390,9 @@ function profilForm() {
   <div class="card" style="margin-top:16px"><h3>Domisili</h3><div class="eform">
     <div><label>Keuskupan domisili</label><select id="pf_kus"><option value="">Pilih…</option>${o.keuskupan.map((k) => `<option value="${k.id}"${k.id === p.kus ? ' selected' : ''}>${esc(k.nama)}</option>`).join('')}</select></div>
     <div style="position:relative"><label>Kota / Kabupaten</label><input id="pf_kota" placeholder="Ketik nama kota/kabupaten…" value="${esc(p.kota ? p.kota.nama + (p.kota.prov ? ', ' + p.kota.prov : '') : '')}"><div id="pf_kotar" class="sres"></div></div>
-    <div><label>Paroki</label><select id="pf_par" disabled><option value="">Pilih keuskupan dulu</option></select><input id="pf_parb" placeholder="Ketik nama paroki Anda" style="display:none;margin-top:6px"></div>
+    <div><label>Paroki</label>${cbHtml('par', 'Ketik untuk mencari paroki…')}<input id="pf_parb" placeholder="Ketik nama paroki Anda" style="display:none;margin-top:6px"></div>
     <div><label>Alamat surat</label><input id="pf_alamat" value="${esc(p.alamat)}"></div></div></div>
-  <div class="card" style="margin-top:16px"><h3>Persekutuan Doa (PD)</h3><div class="eform"><div class="full"><label>Asal PD</label><select id="pf_pd" disabled><option value="">Pilih keuskupan dulu</option></select><p class="note" style="margin:6px 0 0">PD Anda tidak ada di daftar? <a href="#" id="pf_pdb" style="font-weight:700">Tambah PD baru</a> (sistem mengecek dulu supaya tidak dobel).</p></div></div></div>
+  <div class="card" style="margin-top:16px"><h3>Persekutuan Doa (PD)</h3><div class="eform"><div class="full"><label>Asal PD</label>${cbHtml('pd', 'Ketik untuk mencari PD…')}<p class="note" style="margin:6px 0 0">PD Anda tidak ada di daftar? <a href="#" id="pf_pdb" style="font-weight:700">Tambah PD baru</a> (sistem mengecek dulu supaya tidak dobel).</p></div></div></div>
   <div class="card" style="margin-top:16px"><h3>Pelayanan</h3><p class="note">Pilih pelayanan yang Anda jalani. Memilih <b>Pewarta</b> atau <b>Pengajar</b> memunculkan pertanyaan modul dan bab.</p>
     <div class="ckg">${o.pelayanan.map((g) => `<label><input type="checkbox" name="pel" value="${esc(g.id)}" data-n="${esc(g.nama)}"${p.pelayanan.includes(g.id) ? ' checked' : ''}> <span>${esc(g.nama)}</span></label>`).join('')}</div>
     <div id="pf_ajar" style="${o.pelayanan.some((g) => p.pelayanan.includes(g.id) && PENGAJAR.test(g.nama)) ? '' : 'display:none'};margin-top:14px;padding-top:12px;border-top:1px solid #EEF2FA">
@@ -402,24 +402,42 @@ function profilForm() {
   <div class="err" id="pf_e"></div><div class="mact" style="margin-top:12px"><button class="ghost" type="button" id="pf_batal">Batal</button><button class="btn" id="pf_s" type="submit" style="width:auto;margin:0">Simpan profil</button></div></form>`;
 }
 
+const cbHtml = (key, ph) => `<div style="position:relative"><input id="pf_${key}_q" placeholder="${esc(ph)}" autocomplete="off" disabled><input type="hidden" id="pf_${key}"><div id="pf_${key}_r" class="sres" style="display:none;max-height:260px;overflow:auto"></div></div>`;
+// Kolom pilihan yang bisa diketik untuk mencari (daftar panjang seperti PD dan paroki).
+function combo(key, onPick) {
+  const q = $('#pf_' + key + '_q'), h = $('#pf_' + key), box = $('#pf_' + key + '_r'), st = { items: [] };
+  const pick = (id) => { const x = st.items.find((i) => i.id === id); if (!x) return; h.value = id; q.value = x.nama; box.style.display = 'none'; onPick && onPick(id); };
+  const show = () => {
+    const t = q.value.trim().toLowerCase(), list = st.items.filter((x) => x.fixed || !t || x.cari.includes(t)).slice(0, 80);
+    box.innerHTML = list.map((x) => `<button type="button" class="opt" data-i="${esc(x.id)}">${esc(x.label)}</button>`).join('') || '<div class="sub" style="padding:8px 12px">Tidak ditemukan.</div>';
+    box.style.display = ''; box.querySelectorAll('.opt').forEach((b) => b.addEventListener('mousedown', (ev) => { ev.preventDefault(); pick(b.dataset.i); }));
+  };
+  q.addEventListener('input', () => { h.value = ''; onPick && onPick(''); show(); });
+  q.addEventListener('focus', show);
+  q.addEventListener('blur', () => setTimeout(() => { box.style.display = 'none'; }, 150));
+  st.set = (items, cur) => { st.items = items; h.value = ''; q.value = ''; if (cur) pick(cur); };
+  st.enable = (on, ph) => { q.disabled = !on; q.placeholder = ph; };
+  st.pick = pick;
+  return st;
+}
 function bindProfil() {
   const f = $('#pff'); if (!f || f._b) return; f._b = true;
   const P = S.prof, p = P.profil, v = (id) => $('#pf_' + id).value;
   let kota = p.kota ? p.kota.id : '';
+  const cbPar = combo('par', (id) => { $('#pf_parb').style.display = id === '__baru' ? '' : 'none'; }), cbPd = combo('pd');
   const fillPilihan = async (kus, curPar, curPd) => {
-    const par = $('#pf_par'), pd = $('#pf_pd');
-    if (!kus) { par.disabled = pd.disabled = true; par.innerHTML = pd.innerHTML = '<option value="">Pilih keuskupan dulu</option>'; return; }
-    par.disabled = pd.disabled = true; par.innerHTML = pd.innerHTML = '<option>Memuat…</option>';
+    if (!kus) { cbPar.set([], ''); cbPd.set([], ''); cbPar.enable(false, 'Pilih keuskupan dulu'); cbPd.enable(false, 'Pilih keuskupan dulu'); return; }
+    cbPar.enable(false, 'Memuat…'); cbPd.enable(false, 'Memuat…');
     const [a, b] = await Promise.all([fj('/api/profil?act=paroki&kus=' + kus), fj('/api/profil?act=pd&kus=' + kus)]);
-    par.innerHTML = `<option value="">Pilih paroki…</option>${(a.paroki || []).map((x) => `<option value="${x.id}"${x.id === curPar ? ' selected' : ''}>${esc(x.nama)}</option>`).join('')}<option value="__baru">— Paroki saya tidak ada di daftar —</option>`;
-    pd.innerHTML = `<option value="">Pilih PD…</option>${(b.pd || []).map((x) => `<option value="${x.id}"${x.id === curPd ? ' selected' : ''}>${esc(x.nama + (x.koord ? ' · Koord: ' + x.koord : ''))}</option>`).join('')}`;
-    if (curPd && !pd.value && p.pd) pd.insertAdjacentHTML('beforeend', `<option value="${p.pd.id}" selected>${esc(p.pd.nama)}</option>`);
-    if (curPar && !par.value && p.paroki) par.insertAdjacentHTML('afterbegin', `<option value="${p.paroki.id}" selected>${esc(p.paroki.nama)}</option>`);
-    par.disabled = pd.disabled = false;
+    const par = (a.paroki || []).map((x) => ({ id: x.id, nama: x.nama, label: x.nama, cari: x.nama.toLowerCase() }));
+    if (curPar && p.paroki && !par.some((x) => x.id === curPar)) par.unshift({ id: p.paroki.id, nama: p.paroki.nama, label: p.paroki.nama, cari: p.paroki.nama.toLowerCase() });
+    par.push({ id: '__baru', nama: '— Paroki saya tidak ada di daftar —', label: '— Paroki saya tidak ada di daftar —', cari: '', fixed: true });
+    const pd = (b.pd || []).map((x) => ({ id: x.id, nama: x.nama, label: x.nama + (x.koord ? ' · Koord: ' + x.koord : ''), cari: (x.nama + ' ' + x.koord).toLowerCase() }));
+    if (curPd && p.pd && !pd.some((x) => x.id === curPd)) pd.unshift({ id: p.pd.id, nama: p.pd.nama, label: p.pd.nama, cari: p.pd.nama.toLowerCase() });
+    cbPar.set(par, curPar); cbPd.set(pd, curPd); cbPar.enable(true, 'Ketik untuk mencari paroki…'); cbPd.enable(true, 'Ketik untuk mencari PD…');
   };
   fillPilihan(p.kus, p.paroki && p.paroki.id, p.pd && p.pd.id);
   $('#pf_kus').addEventListener('change', () => fillPilihan(v('kus'), '', ''));
-  $('#pf_par').addEventListener('change', () => { $('#pf_parb').style.display = v('par') === '__baru' ? '' : 'none'; });
   const kq = $('#pf_kota'), kb = $('#pf_kotar');
   kq.addEventListener('input', () => { clearTimeout(kq._t); kota = ''; if (kq.value.trim().length < 2) { kb.innerHTML = ''; return; } kq._t = setTimeout(async () => { const j = await fj('/api/profil?act=kota&q=' + encodeURIComponent(kq.value.trim())); kb.innerHTML = (j.kota || []).map((x) => `<button type="button" class="opt" data-i="${esc(x.id)}" data-n="${esc(x.nama + (x.prov ? ', ' + x.prov : ''))}"><b>${esc(x.nama)}</b> <span class="sub">${esc(x.prov)}</span></button>`).join('') || '<div class="sub" style="padding:8px 12px">Tidak ditemukan.</div>'; kb.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => { kota = b.dataset.i; kq.value = b.dataset.n; kb.innerHTML = ''; })); }, 300); });
   f.querySelectorAll('input[name=pel]').forEach((c) => c.addEventListener('change', () => { $('#pf_ajar').style.display = [...f.querySelectorAll('input[name=pel]:checked')].some((x) => PENGAJAR.test(x.dataset.n)) ? '' : 'none'; }));
@@ -429,11 +447,13 @@ function bindProfil() {
     try { const j = await post('/api/profil', { act: 'foto', id: P.pid || undefined, file: await resizeImg(file) }); Object.assign(S.prof, { profil: j.profil, kurang: j.kurang }); if (P.milik && D) D.pr = { kurang: j.kurang, lengkap: !j.kurang.length }; $('#pf_img').outerHTML = `<img class="pfoto" id="pf_img" src="${esc(j.profil.foto)}" alt="">`; $('#pf_fe').textContent = '✓ Foto tersimpan'; }
     catch (e) { $('#pf_fe').textContent = e.message; }
   });
-  $('#pf_pdb').addEventListener('click', (ev) => { ev.preventDefault(); formPdBaru(v('kus'), (j) => { const pd = $('#pf_pd'); if (![...pd.options].some((o) => o.value === j.pd.id)) pd.insertAdjacentHTML('beforeend', `<option value="${j.pd.id}">${esc(j.pd.nama)}</option>`); pd.value = j.pd.id; pd.disabled = false; }); });
+  $('#pf_pdb').addEventListener('click', (ev) => { ev.preventDefault(); formPdBaru(v('kus'), (j) => { if (!cbPd.items.some((x) => x.id === j.pd.id)) cbPd.items.unshift({ id: j.pd.id, nama: j.pd.nama, label: j.pd.nama, cari: j.pd.nama.toLowerCase() }); cbPd.enable(true, 'Ketik untuk mencari PD…'); cbPd.pick(j.pd.id); }); });
   f.addEventListener('submit', async (ev) => {
     ev.preventDefault(); const e = $('#pf_e'), s = $('#pf_s'); e.textContent = ''; s.disabled = true; s.textContent = 'Menyimpan…';
     try {
       if (v('kota') && !kota) throw new Error('Pilih kota/kabupaten dari daftar yang muncul');
+      if ($('#pf_par_q').value.trim() && !v('par')) throw new Error('Pilih paroki dari daftar yang muncul');
+      if ($('#pf_pd_q').value.trim() && !v('pd')) throw new Error('Pilih PD dari daftar yang muncul (atau pilih "Tambah PD baru")');
       let paroki = v('par');
       if (paroki === '__baru') { if (!v('parb').trim()) throw new Error('Ketik nama paroki Anda'); if (!v('kus')) throw new Error('Pilih keuskupan dulu'); paroki = (await post('/api/profil', { act: 'parokibaru', id: P.pid || undefined, data: { nama: v('parb'), kus: v('kus') } })).paroki.id; }
       const chk = (n) => [...f.querySelectorAll(`input[name=${n}]:checked`)].map((x) => x.value);
