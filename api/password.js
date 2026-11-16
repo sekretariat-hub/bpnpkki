@@ -15,7 +15,11 @@ module.exports = async (req, res) => {
   if (baru.length < 8) return res.status(400).json({ error: 'Password minimal 8 karakter' });
   if (!/[A-Za-z]/.test(baru) || !/\d/.test(baru)) return res.status(400).json({ error: 'Password harus berisi huruf dan angka' });
   try {
-    const rows = await fetchAll(T, Object.values(F), { filterByFormula: `RECORD_ID()='${String(s.rid || '').replace(/[^A-Za-z0-9]/g, '')}'`, maxRecords: '1' });
+    // Sesi lama (sebelum login WhatsApp) belum punya rid: cari lewat email.
+    const rid = String(s.rid || '').replace(/[^A-Za-z0-9]/g, '');
+    const em = String(s.email || '').toLowerCase().replace(/\\/g, '').replace(/'/g, "\\'");
+    const formula = rid ? `RECORD_ID()='${rid}'` : `LOWER({Email})='${em}'`;
+    const rows = await fetchAll(T, Object.values(F), { filterByFormula: formula, maxRecords: '1' });
     const rec = rows[0];
     if (!rec || !rec.fields[F.aktif]) return res.status(401).json({ error: 'Akun tidak aktif' });
     const must = !!rec.fields[F.mustChange];
