@@ -194,3 +194,5 @@ code.pw{font-size:18px;background:#F1F5FF;padding:6px 10px;border-radius:8px;let
 .pt{cursor:pointer}.pt:hover .dot,.pt:focus .dot{r:7;fill:#E0661A}.pt:focus{outline:none}
 .maptip{position:absolute;pointer-events:none;background:#12295F;color:#fff;font-size:12px;padding:3px 8px;border-radius:6px;opacity:0;transition:opacity .1s;white-space:nowrap}
 .lg{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin:0 2px 0 6px}
+.okmsg{background:#E3F6EC;color:#0E6B49;border-radius:10px;padding:10px 12px;margin:6px 0;font-weight:600}
+.errmsg{background:#FDECEC;color:#A32727;border-radius:10px;padding:10px 12px;margin:6px 0}
