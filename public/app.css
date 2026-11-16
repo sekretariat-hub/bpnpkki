@@ -196,3 +196,4 @@ code.pw{font-size:18px;background:#F1F5FF;padding:6px 10px;border-radius:8px;let
 .lg{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin:0 2px 0 6px}
 .okmsg{background:#E3F6EC;color:#0E6B49;border-radius:10px;padding:10px 12px;margin:6px 0;font-weight:600}
 .errmsg{background:#FDECEC;color:#A32727;border-radius:10px;padding:10px 12px;margin:6px 0}
+.card.kpi.sel{outline:2px solid var(--c);box-shadow:0 6px 20px rgba(31,86,196,.15)}

@@ -26,7 +26,7 @@ const dat = (id, l) => (id === null ? '' : ` data-dr="${id}" data-l="${esc(l)}"`
 /* ===== state ===== */
 let D = null, R = null, ADM = null; // data, laporan, admin
 const S = { pf: { tahun: '', bulan: '', status: '', acc: '', metode: '', q: '', role: 'penerima', scope: 'resmi' }, sort: { k: 'waktu', d: 1 },
-  pdf: { kus: '', jenis: '', q: '' }, tf: { status: 'AKTIF', kat: '', bidang: '', q: '' }, showDone: false };
+  pdf: { kus: '', jenis: '', q: '' }, pg: { g: 'harian', kus: '', jab: '', q: '' }, tf: { status: 'AKTIF', kat: '', bidang: '', q: '' }, showDone: false };
 
 /* ===== menu ===== */
 const I = {
@@ -213,9 +213,37 @@ PAGES['proker/acc'] = () => {
 
 /* --- Pengurus --- */
 PAGES.pengurus = () => {
-  const rows = D.pengurus.filter((x) => x.orang.length);
-  return `<div class="grid g4" style="margin-bottom:18px">${kpi('Pengurus BPN', rows.length, { c: '#5B4CD1', t: 'var(--violet-t)' })}${kpi('Keuskupan asal', uniq(rows.flatMap((x) => x.orang.map((o) => o.keuskupan)).filter(Boolean)).length, { c: '#0B8277', t: 'var(--teal-t)' })}</div>
-  <div class="people">${rows.flatMap((x) => x.orang.map((o) => person(o, x.jabatan))).join('') || '<div class="empty">Belum ada data pengurus.</div>'}</div>`;
+  // Satu orang bisa ada di beberapa kelompok (tumpang tindih diperbolehkan).
+  const K = D.kelompok || { inti: [], tim: [] };
+  const grp = {
+    harian: D.pengurus.filter((x) => x.orang.length).flatMap((x) => x.orang.map((o) => ({ o, jab: x.jabatan, rank: x.rank }))),
+    inti: K.inti.map((x) => ({ o: x.orang, jab: x.jabatan.join(', '), rank: 0 })),
+    tim: K.tim.map((x) => ({ o: x.orang, jab: x.jabatan, rank: 0 })),
+  };
+  const LBL = { harian: 'BPN Harian', inti: 'BPN Inti', tim: 'Tim Kerja' };
+  const uniqN = (g) => new Set(grp[g].map((x) => x.o.id)).size;
+  const draw = () => {
+    const f = S.pg, q = f.q.toLowerCase();
+    const list = grp[f.g].filter((x) => (!f.kus || x.o.keuskupan === f.kus) && (!f.jab || x.jab.split(/, | · /).includes(f.jab)) && (!q || `${x.o.nama} ${x.o.panggilan || ''} ${x.jab} ${x.o.keuskupan}`.toLowerCase().includes(q)));
+    const seen = new Set(), rows = list.filter((x) => (seen.has(x.o.id) ? false : seen.add(x.o.id)));
+    $('#pgn').textContent = `${nf.format(rows.length)} orang${rows.length !== uniqN(f.g) ? ` dari ${nf.format(uniqN(f.g))}` : ''} · ${LBL[f.g]}`;
+    $('#pgr').innerHTML = rows.map((x) => person(x.o, grp[f.g].filter((y) => y.o.id === x.o.id).map((y) => y.jab).filter(Boolean).join(' · '))).join('') || '<div class="empty">Tidak ada yang sesuai filter.</div>';
+    document.querySelectorAll('[data-g]').forEach((el) => el.classList.toggle('sel', el.dataset.g === f.g));
+    const opts = (arr, cur) => `<option value="">Semua</option>${arr.map((v) => `<option${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join('')}`;
+    $('#pgk').innerHTML = opts(uniq(grp[f.g].map((x) => x.o.keuskupan).filter(Boolean)).sort(cmp), f.kus);
+    $('#pgj').innerHTML = opts(uniq(grp[f.g].flatMap((x) => x.jab.split(/, | · /)).filter(Boolean)).sort(cmp), f.jab);
+  };
+  setTimeout(() => {
+    document.querySelectorAll('[data-g]').forEach((el) => el.addEventListener('click', () => { S.pg = { g: el.dataset.g, kus: '', jab: '', q: S.pg.q }; $('#pgq').value = S.pg.q; draw(); }));
+    $('#pgk').addEventListener('change', (e) => { S.pg.kus = e.target.value; draw(); });
+    $('#pgj').addEventListener('change', (e) => { S.pg.jab = e.target.value; draw(); });
+    $('#pgq').value = S.pg.q; $('#pgq').addEventListener('input', (e) => { S.pg.q = e.target.value; draw(); });
+    draw();
+  });
+  const card = (g, c, t) => `<div class="card kpi clk" data-g="${g}" style="--c:${c};--t:${t}"><div class="l">${LBL[g]}</div><div class="n">${nf.format(uniqN(g))}</div><div class="note">${g === 'harian' ? 'Susunan pengurus BPN' : g === 'inti' ? 'Koordinator BPK yang menjabat aktif' : 'Anggota tim kerja di bawah koordinator seksi'}</div></div>`;
+  return `<div class="grid g3" style="margin-bottom:14px">${card('harian', '#5B4CD1', 'var(--violet-t)')}${card('inti', '#1F56C4', 'var(--blue-t)')}${card('tim', '#0B8277', 'var(--teal-t)')}</div>
+  <div class="filters"><div class="q"><label>Cari</label><input id="pgq" placeholder="Nama / jabatan / keuskupan…"></div><div><label>Keuskupan</label><select id="pgk"></select></div><div><label>Jabatan</label><select id="pgj"></select></div></div>
+  <div class="note" id="pgn" style="margin:2px 0 10px"></div><div class="people" id="pgr"></div>`;
 };
 
 /* --- Koordinator PD --- */

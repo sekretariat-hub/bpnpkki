@@ -86,6 +86,12 @@ async function build() {
   });
   Object.values(profil).forEach((b) => b.pejabat.sort((x, y) => Number(y.koordinator) - Number(x.koordinator)));
 
+  // BPN Inti = koordinator BPK yang menjabat aktif (bukan wakil)
+  const inti = {};
+  Object.values(profil).forEach((b) => b.pejabat.filter((x) => x.koordinator && !/wakil/i.test(x.jabatan)).forEach((x) => {
+    const k = (inti[x.orang.id] = inti[x.orang.id] || { orang: x.orang, jabatan: [] }); k.jabatan.push(`Koordinator BPK ${b.nama}`.trim());
+  }));
+
   const out = {
     bpkProfil: profil,
     generatedAt: new Date().toISOString(),
@@ -114,6 +120,7 @@ async function build() {
         jabatanBpn: L(f.fldXQjbXYwlQGFkXH), jabatanBpk: L(f.fldc19IS7qf3hUFdP),
       };
     }),
+    kelompok: { inti: Object.values(inti) },
     pdpkk: pdpkk.map((r) => ({
       id: r.id, nama: String(r.fields.fldzIeY3YMiHMo4ky || '').trim(), keuskupan: first(r.fields.fldWcO7mYhPFpFXlA), jenis: first(r.fields.fldq43MYnCIKg34ts),
       koordinator: person(r.fields.fldxlRQG4ikb8coP2), jumlahUmat: (r.fields.fldYgMqtmX7AbHfU3 || []).length,
@@ -154,6 +161,7 @@ module.exports = async (req, res) => {
       proker: anyOf('proker') || ok('dashboard') ? d.proker.filter((p) => inScope([...p.penerima, ...p.pelaksana])) : [],
       pengurus: anyOf('pengurus') ? d.pengurus : [],
       tim: anyOf('tim') ? d.tim : [],
+      kelompok: anyOf('pengurus') ? { inti: d.kelompok.inti, tim: d.tim.filter((t) => t.orang).map((t) => ({ orang: t.orang, jabatan: [...t.jabatanBpn, ...t.seksi].filter(Boolean).join(' · '), seksi: t.seksi })) } : { inti: [], tim: [] },
       pdpkk: anyOf('pd') ? d.pdpkk.filter((x) => !scopeNames || scopeNames.has(x.keuskupan)) : [],
       bpkList: d.bpkList, event: ok('dashboard') && !scopeNames ? d.event : [], tugas: ok('dashboard') && !scopeNames ? d.tugas : [],
       bpkProfil: anyOf('proker') || anyOf('pd') ? Object.fromEntries(Object.entries(d.bpkProfil).filter(([id]) => !acc.bpkIds || acc.bpkIds.includes(id))) : {},
