@@ -207,3 +207,4 @@ tr.clk{cursor:pointer}tr.clk:hover{background:#F3F7FF}
 .pform .warnbox ul{margin:6px 0 10px 18px;padding:0}.pform .mact,.mact{display:flex;gap:10px;justify-content:flex-end}
 .me a#meprof{display:block;margin-top:3px;font-size:12px;font-weight:700;color:var(--navy);text-decoration:none}.me a#meprof:hover{text-decoration:underline}.me a#meprof.on{color:#E0661A}
 .kv>div{min-width:0;overflow-wrap:anywhere}.kv .chip{white-space:normal;text-align:left}
+.warnbox label.chk{display:flex;gap:8px;align-items:center;margin:8px 0 0;font-weight:700;color:inherit}.warnbox label.chk input{width:auto;margin:0}

@@ -318,7 +318,7 @@ function formPejabat(bpkId, jabId) {
     <div><label>Jenis kelamin</label><select name="jk" required><option value="">Pilih…</option><option>Pria</option><option>Wanita</option></select></div>
     <div class="err" id="pje"></div><div class="mact"><button class="btn" id="pjs" type="submit">Simpan &amp; kirim undangan WA</button></div></form>`);
   const f = $('#pjf'), box = $('#pjak');
-  const ak = () => { const cur = pr.pejabat.filter((x) => x.jabatanId === f.elements.jab.value); box.innerHTML = cur.length ? `<div class="warnbox">Sudah ada ${cur.length} pemegang jabatan ini. Centang bila ia digantikan (jabatannya diakhiri hari ini, datanya tetap tersimpan sebagai riwayat):${cur.map((x) => `<label class="chk"><input type="checkbox" name="akh" value="${x.pid}"> ${esc(x.orang.nama)}</label>`).join('')}</div>` : ''; };
+  const ak = () => { const cur = pr.pejabat.filter((x) => x.jabatanId === f.elements.jab.value); box.innerHTML = cur.length ? `<div class="warnbox">Jabatan ini sudah ada pemegangnya. <b>Centang namanya</b> bila orang baru ini <b>menggantikannya</b>: jabatan yang lama otomatis diakhiri hari ini dan masuk riwayat (datanya tidak dihapus). <b>Jangan dicentang</b> bila jabatan ini boleh dipegang lebih dari satu orang:${cur.map((x) => `<label class="chk"><input type="checkbox" name="akh" value="${x.pid}"> ${esc(x.orang.nama)}</label>`).join('')}</div>` : ''; };
   f.elements.jab.addEventListener('change', ak); ak();
   f.addEventListener('submit', async (ev) => {
     ev.preventDefault(); $('#pje').textContent = ''; $('#pjs').disabled = true; $('#pjs').textContent = 'Menyimpan…';
