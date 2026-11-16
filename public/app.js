@@ -271,12 +271,12 @@ function gantiPengurus(pid, oid) {
     <div><label>Berakhir pada tanggal</label><input type="date" name="tgl" value="${new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10)}"></div>
     <div class="err" id="ge"></div><div class="mact"><button class="btn" id="gs" type="submit">Simpan</button></div></form>`);
   const q = $('#gq'), box = $('#gr');
-  q.addEventListener('input', () => { clearTimeout(q._t); pick = ''; if (q.value.trim().length < 2) { box.innerHTML = ''; return; } q._t = setTimeout(async () => { const j = await fetch('/api/orang?q=' + encodeURIComponent(q.value.trim()), { credentials: 'same-origin' }).then((r) => r.json()).catch(() => ({ orang: [] })); box.innerHTML = (j.orang || []).map((r) => `<button type="button" class="opt" data-i="${esc(r.id)}" data-n="${esc(r.nama)}"><b>${esc(r.nama)}</b></button>`).join('') || '<div class="sub">Tidak ada yang cocok.</div>'; box.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => { pick = b.dataset.i; q.value = b.dataset.n; box.innerHTML = ''; })); }, 300); });
+  q.addEventListener('input', () => { clearTimeout(q._t); pick = ''; if (q.value.trim().length < 2) { box.innerHTML = ''; return; } q._t = setTimeout(async () => { const j = await fetch('/api/pejabat?q=' + encodeURIComponent(q.value.trim()), { credentials: 'same-origin' }).then((r) => r.json()).catch(() => ({ orang: [] })); box.innerHTML = (j.orang || []).map((r) => `<button type="button" class="opt" data-i="${esc(r.id)}" data-n="${esc(r.nama)}"><b>${esc(r.nama)}</b></button>`).join('') || '<div class="sub">Tidak ada yang cocok.</div>'; box.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => { pick = b.dataset.i; q.value = b.dataset.n; box.innerHTML = ''; })); }, 300); });
   $('#gf').addEventListener('submit', async (ev) => {
     ev.preventDefault(); if (q.value.trim() && !pick) { $('#ge').textContent = 'Pilih nama pengganti dari daftar, atau kosongkan.'; return; }
     if (!confirm(pick ? `Ganti ${o.nama} dengan ${q.value}?` : `Akhiri jabatan ${o.nama}?`)) return;
     $('#gs').disabled = true;
-    try { await post('/api/pengurus', { id: pid, lamaId: oid, baruId: pick, tanggal: ev.target.tgl.value }); closeModal(); await load(true); } catch (e) { $('#ge').textContent = e.message; $('#gs').disabled = false; }
+    try { await post('/api/pejabat', { action: 'pengurus', id: pid, lamaId: oid, baruId: pick, tanggal: ev.target.tgl.value }); closeModal(); await load(true); } catch (e) { $('#ge').textContent = e.message; $('#gs').disabled = false; }
   });
 }
 async function previewProfil() {

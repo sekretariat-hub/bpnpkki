@@ -16,7 +16,7 @@ const aktifRow = (r) => /aktif/i.test(nm(r.fields[PJ.status])) && !/tidak/i.test
 
 const pesan = ({ nama, jabatan, bpk, oleh, olehJab, link }) => `Shalom ${String(nama).split(' ')[0]},\n\nNama Anda telah didata sebagai *${jabatan}* BPK ${bpk} oleh ${oleh}${olehJab ? ` (${olehJab})` : ''}.\n\nIni adalah pesan dari *Sistem Informasi BPN PKK Indonesia* (Badan Pelayanan Nasional Pembaruan Karismatik Katolik Indonesia). Kami mengundang Anda untuk bisa masuk ke sistem informasi BPN lewat tautan berikut:\n${link}\n\nSetelah tautan dibuka, Anda diminta membuat akun dan melengkapi profil terlebih dahulu.\n\nJika Anda merasa tidak mengenal hal ini, abaikan saja pesan ini.`;
 
-module.exports = async (req, res) => {
+const pejabat = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'Metode tidak diizinkan' });
   const s = getSession(req);
@@ -77,4 +77,13 @@ module.exports = async (req, res) => {
     console.error('pejabat error', e.message);
     return res.status(502).json({ error: 'Gagal menyimpan ke Airtable' });
   }
+};
+
+// Satu fungsi untuk tiga urusan (batas 12 fungsi paket Hobby): GET cari orang, POST action=pengurus ganti pengurus, selain itu pendataan pejabat BPK.
+const hOrang = require('../lib/h-orang'), hPengurus = require('../lib/h-pengurus');
+module.exports = async (req, res) => {
+  if (req.method === 'GET') return hOrang(req, res);
+  const b = typeof req.body === 'string' ? (() => { try { return JSON.parse(req.body || '{}'); } catch { return {}; } })() : req.body || {};
+  if (b.action === 'pengurus') return hPengurus(req, res);
+  return pejabat(req, res);
 };
