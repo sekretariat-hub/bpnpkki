@@ -20,7 +20,7 @@ const sum = (a, f) => a.reduce((s, x) => s + (f(x) || 0), 0);
 const cmp = (a, b) => String(a).localeCompare(String(b), 'id');
 
 /* ===== state ===== */
-let D = null, R = null; // data, laporan
+let D = null, R = null, ADM = null; // data, laporan, admin
 const S = { pf: { tahun: '', bulan: '', status: '', acc: '', metode: '', q: '', role: 'penerima', scope: 'resmi' }, sort: { k: 'waktu', d: 1 },
   pdf: { kus: '', jenis: '', q: '' }, tf: { status: 'AKTIF', kat: '', bidang: '', q: '' }, showDone: false };
 
@@ -32,6 +32,7 @@ const I = {
   pd: '<circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.6"/><path d="M3 20c.6-3.5 3-5.5 6-5.5s5.400 2 6 5.500"/><path d="M15.500 14.800c2.700-.4 4.800 1.300 5.500 4.200"/>',
   team: '<rect x="9" y="3" width="6" height="5" rx="1.500"/><rect x="3" y="16" width="6" height="5" rx="1.500"/><rect x="15" y="16" width="6" height="5" rx="1.500"/><path d="M12 8v4M6 16v-4h12v4"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/>',
 };
 const MENU = [
   { id: 'dashboard', label: 'Dashboard', icon: I.home, sub: 'Agenda terdekat dan angka kunci', c: '#3B82F6' },
@@ -40,6 +41,7 @@ const MENU = [
   { id: 'pd', label: 'Koordinator PD', icon: I.pd, sub: 'Persekutuan Doa dan koordinatornya', c: '#14B8A6', tabs: [['daftar', 'Daftar PD'], ['ringkasan', 'Ringkasan']] },
   { id: 'tim', label: 'Tim Kerja BPN', icon: I.team, sub: 'Siapa saja yang bertugas di BPN', c: '#FF7A6B', tabs: [['bagan', 'Bagan Tim Aktif'], ['daftar', 'Daftar Tim Kerja']] },
   { id: 'laporan', label: 'Laporan', icon: I.chart, sub: 'Ringkasan kegiatan', c: '#34C28A', tabs: [['pleno', 'Pleno & Golden Jubilee'], ['tc', 'TC SHDR'], ['kepemudaan', 'Kepemudaan']] },
+  { id: 'admin', label: 'Administrasi', icon: I.key, sub: 'Kelola pengguna dan hak akses', c: '#6B7A99', tabs: [['pengguna', 'Pengguna & Hak Akses']] },
 ];
 
 /* ===== komponen ===== */
@@ -68,7 +70,7 @@ const kpi = (label, n, { c = 'var(--navy)', t = 'var(--blue-t)', delta, note } =
   if (delta) { const diff = delta.now - delta.prev; d = diff > 0 ? `<div class="d up">▲ +${nf.format(diff)} dari bulan lalu</div>` : diff < 0 ? `<div class="d down">▼ ${nf.format(diff)} dari bulan lalu</div>` : '<div class="d flat">● Sama dengan bulan lalu</div>'; }
   return `<div class="card kpi" style="--c:${c};--t:${t}"><div class="l">${esc(label)}</div><div class="n">${nf.format(n)}</div>${d}${note ? `<div class="note">${esc(note)}</div>` : ''}</div>`;
 };
-const person = (p, jab) => `<div class="card pc">${av(p.nama)}<div style="min-width:0"><div class="n">${esc(p.nama)}</div><div class="j">${esc(jab || '')}</div><div class="j">${esc(p.keuskupan)}</div>${p.wa ? `<a class="wa" target="_blank" rel="noopener" href="https://wa.me/${esc(p.wa.replace(/\D/g, ''))}">WhatsApp</a>` : ''}</div></div>`;
+const person = (p, jab) => `<div class="card pc">${av(p.nama)}<div style="min-width:0"><div class="n">${esc(p.nama)}</div><div class="j">${esc(jab || '')}</div><div class="j">${esc(p.keuskupan)}</div><div class="acts">${p.adaWa ? `<a class="wa" target="_blank" rel="noopener" href="/api/wa?p=${esc(p.id)}">WhatsApp</a>` : ''}${p.email ? `<a class="wa em" href="mailto:${esc(p.email)}">Email</a>` : ''}</div></div></div>`;
 
 /* ===== Program Kerja: status ===== */
 const TONE_STATUS = { 'BELUM DIMULAI': 'gray', 'ON PROGRESS': 'amber', SELESAI: 'green', DIBATALKAN: 'violet' };
@@ -124,7 +126,7 @@ PAGES.dashboard = () => {
   const tasks = D.tugas.filter((x) => x.tenggat && x.tenggat >= t && x.tenggat <= lim && x.status !== 'Selesai').sort((a, b) => cmp(a.tenggat, b.tenggat));
   const dbox = (iso) => { const [, m, d] = iso.split('-'); return `<div class="date"><b>${+d}</b><span>${BLN3[+m - 1]}</span></div>`; };
   const fixed = [...events.map((e) => ({ d: e.tanggal, t: e.nama, s: 'Agenda BPN', tone: 'blue' })), ...tasks.map((x) => ({ d: x.tenggat, t: x.nama, s: `Tenggat tugas${x.seksi.length ? ' · ' + x.seksi[0] : ''}`, tone: 'coral' }))].sort((a, b) => cmp(a.d, b.d));
-  const pLine = (p) => `<div class="tli"><div style="flex:1;min-width:0"><div class="t">${esc(p.program || p.label)}${p.detil ? ` <span class="s">· ${esc(p.detil)}</span>` : ''}</div><div class="s">${p.penerima.length ? 'Dilayani: ' + esc(p.penerima.join(', ')) : 'Penerima belum diisi'}${p.pelaksana.length ? ' · Melayani: ' + esc(p.pelaksana.join(', ')) : ''}</div></div><div>${chip(p.metode || '—', 'blue')}</div></div>`;
+  const pLine = (p) => `<div class="tli prow" data-pid="${p.id}"><div style="flex:1;min-width:0"><div class="t">${esc(p.program || p.label)}${p.detil ? ` <span class="s">· ${esc(p.detil)}</span>` : ''}</div><div class="s">${p.penerima.length ? 'Dilayani: ' + esc(p.penerima.join(', ')) : 'Penerima belum diisi'}${p.pelaksana.length ? ' · Melayani: ' + esc(p.pelaksana.join(', ')) : ''}</div></div><div>${chip(p.metode || '—', 'blue')}</div></div>`;
   return `<div class="hero"><div><h2>Halo, ${esc((D.user.nama || '').split(' ')[0])} 👋</h2><p>${esc(fdate(t))} · Semoga pelayanan hari ini berbuah.</p></div></div>
   <div class="grid g4" style="margin-bottom:18px">
     ${kpi('BPK di Indonesia', k.bpk.now, { c: '#1F56C4', t: 'var(--blue-t)', delta: k.bpk, note: `dari ${k.bpk.total} keuskupan terdata` })}
@@ -151,7 +153,7 @@ function rowsFor(p, role) {
   return arr.map((k) => ({ k, p, share: p.anggaran / arr.length }));
 }
 function tableRows(entries, role) {
-  return `<div class="tw"><table><thead><tr><th>Waktu</th><th>Program</th><th>${role === 'penerima' ? 'Dilayani oleh' : 'Melayani'}</th><th>Metode</th><th>Sumber dana</th><th class="num">Anggaran</th><th>Status</th></tr></thead><tbody>${entries.map(({ p, share }) => `<tr><td class="sub" style="white-space:nowrap"><b style="color:var(--ink)">${esc(waktu(p))}</b></td><td><b>${esc(p.program || p.label)}</b>${p.detil ? `<div class="sub">${esc(p.detil)}</div>` : ''}${p.catatan ? `<div class="sub">📝 ${esc(p.catatan)}</div>` : ''}<div class="sub">${esc(p.seksi.join(', '))}</div></td><td>${esc((role === 'penerima' ? p.pelaksana : p.penerima).join(', ') || (p.pelaksanaTipe === 'BPN' ? 'BPN' : '–'))}</td><td>${esc(p.metode || '–')}</td><td class="sub">${esc(p.sumberDana || '–')}</td><td class="num">${rp(share)}</td><td>${stChips(p)}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="tw"><table><thead><tr><th>Waktu</th><th>Program</th><th>${role === 'penerima' ? 'Dilayani oleh' : 'Melayani'}</th><th>Metode</th><th>Sumber dana</th><th class="num">Anggaran</th><th>Status</th></tr></thead><tbody>${entries.map(({ p, share }) => `<tr class="prow" data-pid="${p.id}"><td class="sub" style="white-space:nowrap"><b style="color:var(--ink)">${esc(waktu(p))}</b></td><td><b>${esc(p.program || p.label)}</b>${p.detil ? `<div class="sub">${esc(p.detil)}</div>` : ''}${p.catatan ? `<div class="sub">📝 ${esc(p.catatan)}</div>` : ''}<div class="sub">${esc(p.seksi.join(', '))}</div></td><td>${bpkLinks(role === 'penerima' ? p.pelaksana : p.penerima) || (p.pelaksanaTipe === 'BPN' ? 'BPN' : '–')}</td><td>${esc(p.metode || '–')}</td><td class="sub">${esc(p.sumberDana || '–')}</td><td class="num">${rp(share)}</td><td>${stChips(p)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 PAGES['proker/keuskupan'] = () => {
   const draw = () => {
@@ -170,7 +172,7 @@ PAGES['proker/semua'] = () => {
   const cols = [['waktu', 'Waktu'], ['program', 'Program'], ['', 'Dilayani'], ['', 'Melayani'], ['', 'Metode'], ['anggaran', 'Anggaran'], ['', 'Status']];
   const draw = () => {
     const rows = filtered().sort((a, b) => { const k = S.sort.k; const v = k === 'anggaran' ? a.anggaran - b.anggaran : k === 'program' ? cmp(a.program, b.program) : cmp(sortKey(a), sortKey(b)); return v * S.sort.d; });
-    $('#res').innerHTML = prokerKpis(rows) + `<div class="tw"><table><thead><tr>${cols.map(([k, l]) => `<th class="${k ? 's' : ''}" data-k="${k}">${l}${S.sort.k === k ? (S.sort.d > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody>${rows.map((p) => `<tr><td style="white-space:nowrap"><b>${esc(waktu(p))}</b></td><td><b>${esc(p.program || p.label)}</b>${p.detil ? `<div class="sub">${esc(p.detil)}</div>` : ''}${p.catatan ? `<div class="sub">📝 ${esc(p.catatan)}</div>` : ''}</td><td>${esc(p.penerima.join(', ') || '–')}</td><td>${esc(p.pelaksana.join(', ') || (p.pelaksanaTipe === 'BPN' ? 'BPN' : '–'))}</td><td>${esc(p.metode || '–')}</td><td class="num">${rp(p.anggaran)}</td><td>${stChips(p)}</td></tr>`).join('') || '<tr><td colspan="7"><div class="empty">Tidak ada program yang sesuai filter.</div></td></tr>'}</tbody></table></div>`;
+    $('#res').innerHTML = prokerKpis(rows) + `<div class="tw"><table><thead><tr>${cols.map(([k, l]) => `<th class="${k ? 's' : ''}" data-k="${k}">${l}${S.sort.k === k ? (S.sort.d > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody>${rows.map((p) => `<tr class="prow" data-pid="${p.id}"><td style="white-space:nowrap"><b>${esc(waktu(p))}</b></td><td><b>${esc(p.program || p.label)}</b>${p.detil ? `<div class="sub">${esc(p.detil)}</div>` : ''}${p.catatan ? `<div class="sub">📝 ${esc(p.catatan)}</div>` : ''}</td><td>${bpkLinks(p.penerima) || '–'}</td><td>${bpkLinks(p.pelaksana) || (p.pelaksanaTipe === 'BPN' ? 'BPN' : '–')}</td><td>${esc(p.metode || '–')}</td><td class="num">${rp(p.anggaran)}</td><td>${stChips(p)}</td></tr>`).join('') || '<tr><td colspan="7"><div class="empty">Tidak ada program yang sesuai filter.</div></td></tr>'}</tbody></table></div>`;
     document.querySelectorAll('th.s').forEach((th) => th.addEventListener('click', () => { S.sort = { k: th.dataset.k, d: S.sort.k === th.dataset.k ? -S.sort.d : 1 }; draw(); }));
   };
   setTimeout(() => { bindFilters(draw); draw(); });
@@ -204,7 +206,7 @@ PAGES['proker/acc'] = () => {
 PAGES.pengurus = () => {
   const rows = D.pengurus.filter((x) => x.orang.length);
   return `<div class="grid g4" style="margin-bottom:18px">${kpi('Pengurus BPN', rows.length, { c: '#5B4CD1', t: 'var(--violet-t)' })}${kpi('Keuskupan asal', uniq(rows.flatMap((x) => x.orang.map((o) => o.keuskupan)).filter(Boolean)).length, { c: '#0B8277', t: 'var(--teal-t)' })}</div>
-  <div class="people">${rows.flatMap((x) => x.orang.map((o) => person(o, x.jabatan))).join('') || '<div class="empty">Belum ada data pengurus.</div>'}</div>${D.user.level !== 'Admin' ? '<p class="note" style="margin-top:14px">Nomor WhatsApp hanya tampil untuk Admin.</p>' : ''}`;
+  <div class="people">${rows.flatMap((x) => x.orang.map((o) => person(o, x.jabatan))).join('') || '<div class="empty">Belum ada data pengurus.</div>'}</div>`;
 };
 
 /* --- Koordinator PD --- */
@@ -212,7 +214,7 @@ const pdRows = () => { const f = S.pdf, q = f.q.toLowerCase(); return D.pdpkk.fi
 PAGES['pd/daftar'] = () => {
   const draw = () => {
     const rows = pdRows().sort((a, b) => cmp(a.keuskupan, b.keuskupan) || cmp(a.nama, b.nama));
-    $('#res').innerHTML = `<div class="note" style="margin-bottom:8px">${rows.length} PD</div><div class="tw"><table><thead><tr><th>Nama PD</th><th>Keuskupan</th><th>Jenis</th><th>Koordinator</th><th class="num">Umat</th></tr></thead><tbody>${rows.map((x) => `<tr><td><b>${esc(x.nama)}</b></td><td>${esc(x.keuskupan || '–')}</td><td>${chip(x.jenis || '–', x.jenis?.includes('Anak') ? 'amber' : x.jenis?.includes('Muda') ? 'teal' : 'blue')}</td><td>${x.koordinator.map((k) => `<div>${esc(k.nama)} ${k.wa ? `<a class="wa" target="_blank" rel="noopener" href="https://wa.me/${esc(k.wa.replace(/\D/g, ''))}">WA</a>` : ''}</div>`).join('') || '<span class="sub">–</span>'}</td><td class="num">${x.jumlahUmat || '–'}</td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">Tidak ada PD yang sesuai.</div></td></tr>'}</tbody></table></div>`;
+    $('#res').innerHTML = `<div class="note" style="margin-bottom:8px">${rows.length} PD</div><div class="tw"><table><thead><tr><th>Nama PD</th><th>Keuskupan</th><th>Jenis</th><th>Koordinator</th><th class="num">Umat</th></tr></thead><tbody>${rows.map((x) => `<tr><td><b>${esc(x.nama)}</b></td><td>${esc(x.keuskupan || '–')}</td><td>${chip(x.jenis || '–', x.jenis?.includes('Anak') ? 'amber' : x.jenis?.includes('Muda') ? 'teal' : 'blue')}</td><td>${x.koordinator.map((k) => `<div>${esc(k.nama)} ${k.adaWa ? `<a class="wa" target="_blank" rel="noopener" href="/api/wa?p=${esc(k.id)}">WA</a>` : ''}</div>`).join('') || '<span class="sub">–</span>'}</td><td class="num">${x.jumlahUmat || '–'}</td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">Tidak ada PD yang sesuai.</div></td></tr>'}</tbody></table></div>`;
   };
   setTimeout(() => {
     document.querySelectorAll('[data-pd]').forEach((el) => { el.value = S.pdf[el.dataset.pd]; el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', () => { S.pdf[el.dataset.pd] = el.value; draw(); }); });
@@ -264,14 +266,151 @@ PAGES['laporan/pleno'] = lap((r) => { const e = r.pleno; return `<div class="gri
 PAGES['laporan/tc'] = lap((r) => { const t = r.tc; return `<div class="grid g4" style="margin-bottom:16px">${kpi('Pendaftar', t.pendaftar, { c: '#1F56C4', t: 'var(--blue-t)' })}${kpi('Kelompok', t.kelompok, { c: '#0B8277', t: 'var(--teal-t)' })}${kpi('Mentor', t.mentor, { c: '#9A6200', t: 'var(--amber-t)' })}</div><div class="grid g2">${donut('Status pendaftaran', t.statusTC)}${donut('Status SHDR', t.statusSHDR)}${donut('Verifikasi data', t.verifikasi)}${donut('Kelompok usia', t.kelompokUsia)}${donut('Jenis kelamin', t.jenisKelamin)}${bars('Kategori mentor', t.kategoriMentor)}${bars('Pendaftar per keuskupan', t.perKeuskupan, { max: 25 })}</div>`; });
 PAGES['laporan/kepemudaan'] = lap((r) => { const k = r.kepemudaan; return `<div class="grid g4" style="margin-bottom:16px">${kpi('BPK aktif', k.bpkAktif, { c: '#1F56C4', t: 'var(--blue-t)' })}${kpi('Sudah punya PIC', k.bpkPunyaPIC, { c: '#13805A', t: 'var(--green-t)' })}${kpi('Belum punya PIC', k.bpkBelumPIC, { c: '#C2362B', t: 'var(--coral-t)' })}${kpi('PDPKK terdata', k.pdpkkTotal, { c: '#0B8277', t: 'var(--teal-t)' })}</div><div class="grid g2">${donut('Jenis PDPKK', k.pdpkkJenis)}${bars('Status peserta TC per BPK', k.statusPesertaTC)}</div>`; });
 
+/* ===== Modal, menu program, profil BPK ===== */
+const PBmap = () => { if (!D._pb) { D._pb = {}; Object.values(D.bpkProfil || {}).forEach((b) => { D._pb[b.nama] = b; }); } return D._pb; };
+const bpkLinks = (names) => (names || []).map((n) => (PBmap()[n] ? `<a href="#" class="bpk" data-bpk="${esc(n)}">${esc(n)}</a>` : esc(n))).join(', ');
+const canEditP = () => ['keuskupan', 'semua', 'ringkasan', 'acc'].some((t) => (D.perm['proker/' + t] || 0) >= 2);
+function modal(html, wide) {
+  closeModal();
+  const o = document.createElement('div'); o.className = 'ov'; o.id = 'ov';
+  o.innerHTML = `<div class="md${wide ? ' wide' : ''}" role="dialog"><button class="x" aria-label="Tutup">✕</button>${html}</div>`;
+  o.addEventListener('mousedown', (e) => { if (e.target === o) closeModal(); });
+  o.querySelector('.x').onclick = closeModal;
+  document.body.appendChild(o);
+  return o;
+}
+function closeModal() { $('#ov')?.remove(); }
+function closeMenu() { $('#pmenu')?.remove(); }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeMenu(); } });
+
+function showMenu(id, ev) {
+  closeMenu();
+  const m = document.createElement('div'); m.id = 'pmenu'; m.className = 'pmenu';
+  m.innerHTML = `<button data-a="detail">🔍 Lihat detail</button>${canEditP() ? '<button data-a="edit">✏️ Edit program</button>' : ''}`;
+  document.body.appendChild(m);
+  const w = m.offsetWidth, h = m.offsetHeight;
+  m.style.left = Math.min(ev.clientX, innerWidth - w - 8) + 'px'; m.style.top = Math.min(ev.clientY, innerHeight - h - 8) + 'px';
+  m.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; closeMenu(); (b.dataset.a === 'edit' ? openEdit : openDetail)(id); });
+}
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a.bpk');
+  if (a) { e.preventDefault(); e.stopPropagation(); closeMenu(); return openBpk(a.dataset.bpk); }
+  if (e.target.closest('#pmenu')) return;
+  closeMenu();
+  const tr = e.target.closest('.prow');
+  if (tr && !e.target.closest('a,button,input,select,textarea,label')) showMenu(tr.dataset.pid, e);
+});
+
+const row = (l, v) => `<div class="kv"><span>${esc(l)}</span><div>${v || '<span class="sub">–</span>'}</div></div>`;
+function openDetail(id) {
+  const p = D.proker.find((x) => x.id === id); if (!p) return;
+  const sy = syarat(p), tick = (ok, t) => `<div class="rule2 ${ok ? 'ok' : 'no'}">${ok ? '✓' : '✗'} ${esc(t)}</div>`;
+  modal(`<h2>${esc(p.program || p.label)}</h2>${p.detil ? `<p class="sub">${esc(p.detil)}</p>` : ''}${stChips(p)}
+    <div class="kvs">${row('Waktu', esc(waktu(p)))}${row('Dilayani (penerima)', bpkLinks(p.penerima))}${row('Melayani (pelaksana)', bpkLinks(p.pelaksana) || (p.pelaksanaTipe === 'BPN' ? 'BPN' : ''))}${row('Pelaksana', esc(p.pelaksanaTipe))}${row('Metode', esc(p.metode))}${row('Sumber dana', esc(p.sumberDana))}${row('Anggaran dari BPN', p.anggaran ? rp(p.anggaran) : '')}${row('Seksi penanggung jawab', esc(p.seksi.join(', ')))}${row('Jenis kegiatan', esc(p.jenis.join(', ')))}${row('Kaitan modul', esc(p.modul.join(', ')))}${row('Catatan', esc(p.catatan))}</div>
+    <h4>Syarat ACC</h4><div class="rules2">${tick(sy.pelaksana, 'Pelaksana = BPK')}${tick(sy.deal, 'Deal')}${tick(sy.acc, 'ACC disetujui')}</div>
+    ${canEditP() ? '<div class="mact"><button class="btn" id="goedit">✏️ Edit program</button></div>' : ''}`, true);
+  $('#goedit')?.addEventListener('click', () => openEdit(id));
+}
+function openEdit(id) {
+  const p = D.proker.find((x) => x.id === id); if (!p) return;
+  const o = (arr, cur) => ['', ...new Set([...(arr || []), cur].filter(Boolean))].map((v) => `<option value="${esc(v)}"${v === (cur || '') ? ' selected' : ''}>${esc(v || '— kosong —')}</option>`).join('');
+  const sel = (k, label, arr, cur) => `<div><label>${label}</label><select name="${k}">${o(arr, cur)}</select></div>`;
+  modal(`<h2>Edit program</h2><p class="sub">${esc(p.program || p.label)} · ${esc(p.penerima.join(', ') || '–')}</p>
+    <form id="ef" class="eform">
+      ${sel('status', 'Status', D.opsi.status, p.status)}${sel('acc', 'ACC', D.opsi.acc, p.acc)}${sel('tahun', 'Tahun', D.opsi.tahun, p.tahun)}${sel('bulan', 'Bulan', D.opsi.bulan, p.bulan)}${sel('metode', 'Metode pelaksanaan', D.opsi.metode, p.metode)}${sel('sumberDana', 'Sumber dana', D.opsi.sumberDana, p.sumberDana)}
+      <div><label>Anggaran dari BPN (Rp)</label><input name="anggaran" type="number" min="0" step="1" value="${p.anggaran || ''}"></div>
+      <div class="chk"><label><input type="checkbox" name="deal"${p.deal ? ' checked' : ''}> Deal dengan BPK sudah disepakati</label></div>
+      <div class="full"><label>Detil program</label><input name="detil" maxlength="500" value="${esc(p.detil)}"></div>
+      <div class="full"><label>Catatan / label</label><textarea name="catatan" rows="3" maxlength="2000">${esc(p.catatan)}</textarea></div>
+    </form>
+    <p class="note">Penerima, pelaksana, dan program induk diubah di Airtable. Perubahan di sini langsung tersimpan ke Airtable.</p>
+    <div class="err" id="ee"></div><div class="mact"><button class="ghost" id="ec">Batal</button><button class="btn" id="es">Simpan</button></div>`, true);
+  $('#ec').onclick = closeModal;
+  $('#es').onclick = async () => {
+    const f = $('#ef'), v = (n) => f.elements[n].value;
+    const fields = { status: v('status'), acc: v('acc'), tahun: v('tahun'), bulan: v('bulan'), metode: v('metode'), sumberDana: v('sumberDana'), anggaran: v('anggaran'), deal: f.elements.deal.checked, detil: v('detil'), catatan: v('catatan') };
+    $('#es').disabled = true; $('#es').textContent = 'Menyimpan…'; $('#ee').textContent = '';
+    try {
+      const r = await fetch('/api/proker', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ id, fields }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || 'Gagal menyimpan');
+      Object.assign(p, { status: fields.status, acc: fields.acc, tahun: fields.tahun, bulan: fields.bulan, bulanIdx: BLN3 ? ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agust', 'Sept', 'Okt', 'Nov', 'Dec'].indexOf(fields.bulan) : -1, metode: fields.metode, sumberDana: fields.sumberDana, anggaran: Number(fields.anggaran) || 0, deal: fields.deal, detil: fields.detil.trim(), catatan: fields.catatan.trim() });
+      closeModal(); render();
+    } catch (e) { $('#ee').textContent = e.message; $('#es').disabled = false; $('#es').textContent = 'Simpan'; }
+  };
+}
+function pejCard(x, big) {
+  const o = x.orang;
+  const photo = o.foto ? `<img class="ph${big ? ' big' : ''}" src="${esc(o.foto)}" alt="${esc(o.nama)}" loading="lazy">` : `<div class="av${big ? ' bigav' : ''}" style="background:${hue(o.nama)}">${esc(initials(o.nama))}</div>`;
+  return `<div class="pej${big ? ' main' : ''}">${photo}<div class="pi"><b>${esc(o.nama)}</b><span>${esc(x.jabatan || '')}</span><div class="acts">${o.adaWa ? `<a class="wa" target="_blank" rel="noopener" href="/api/wa?p=${esc(o.id)}">💬 WhatsApp</a>` : ''}${o.email ? `<a class="wa em" href="mailto:${esc(o.email)}">✉ Email</a>` : ''}</div></div></div>`;
+}
+function openBpk(nama) {
+  const b = PBmap()[nama];
+  const dil = D.proker.filter((p) => p.penerima.includes(nama)), mel = D.proker.filter((p) => p.pelaksana.includes(nama));
+  const koor = (b ? b.pejabat : []).filter((x) => x.koordinator), lain = (b ? b.pejabat : []).filter((x) => !x.koordinator);
+  modal(`<h2>BPK ${esc(nama)}</h2><div class="chips" style="margin-bottom:12px">${chip(dil.length + ' program dilayani', 'blue')}${chip(mel.length + ' program dilaksanakan', 'teal')}</div>
+    <h4>Koordinator BPK</h4>${koor.length ? koor.map((x) => pejCard(x, true)).join('') : '<div class="empty">Data koordinator belum tersedia.</div>'}
+    ${lain.length ? `<h4>Pengurus BPK lainnya</h4><div class="pejs">${lain.map((x) => pejCard(x, false)).join('')}</div>` : ''}`, true);
+}
+
+/* ===== Administrasi pengguna ===== */
+const LVL = { none: 'Tidak ada akses', view: 'Lihat saja', edit: 'Lihat + Edit' };
+const NAMES = ['none', 'view', 'edit'];
+async function admApi(body) {
+  const r = await fetch('/api/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Gagal');
+  return j;
+}
+const admReload = async () => { ADM = null; render(); };
+function showPw(j, judul) {
+  modal(`<h2>${judul}</h2><p>Berikan password sementara ini kepada pengguna. <b>Password hanya tampil sekali</b>.</p><div class="kvs">${row('Email', esc(j.email))}${row('Password', `<code class="pw">${esc(j.password)}</code>`)}</div><div class="mact"><button class="btn" id="cp">Salin password</button></div>`);
+  $('#cp').onclick = () => { navigator.clipboard?.writeText(j.password); $('#cp').textContent = 'Tersalin ✓'; };
+}
+function openAkses(u) {
+  const pre = ADM.presets[u.peran];
+  const labelOf = (k) => { const [m, t] = k.split('/'); const mm = MENU.find((x) => x.id === m); return t ? '   ↳ ' + (mm.tabs.find((x) => x[0] === t) || [, t])[1] : mm.label; };
+  const keys = Object.keys(ADM.tree).filter((m) => m !== 'admin').flatMap((m) => [m, ...ADM.tree[m].map((t) => `${m}/${t}`)]);
+  const cur = (k) => (u.khusus[k] !== undefined ? u.khusus[k] : NAMES[pre[k]]);
+  modal(`<h2>Hak akses: ${esc(u.nama)}</h2><p class="sub">Peran <b>${esc(u.peran)}</b>. Pilihan di bawah mengubah bawaan peran. Hak <i>Edit</i> saat ini berlaku untuk Program Kerja (mengubah data program).${u.peran === 'Koordinator BPK' ? ' Koordinator BPK hanya melihat data keuskupannya sendiri.' : ''}</p>
+    <div class="tw"><table><thead><tr><th>Menu / tab</th><th>Bawaan peran</th><th>Hak akses</th></tr></thead><tbody>${keys.map((k) => `<tr><td style="white-space:pre"><b>${esc(labelOf(k))}</b></td><td class="sub">${LVL[NAMES[pre[k]]]}</td><td><select data-k="${k}">${NAMES.map((n) => `<option value="${n}"${cur(k) === n ? ' selected' : ''}>${LVL[n]}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>
+    <div class="err" id="ae"></div><div class="mact"><button class="ghost" id="ar">Kembalikan ke bawaan</button><button class="btn" id="as">Simpan</button></div>`, true);
+  $('#ar').onclick = async () => { try { await admApi({ action: 'update', id: u.id, khusus: {} }); closeModal(); admReload(); } catch (e) { $('#ae').textContent = e.message; } };
+  $('#as').onclick = async () => {
+    const khusus = {}; document.querySelectorAll('#ov select[data-k]').forEach((s2) => { if (s2.value !== NAMES[pre[s2.dataset.k]]) khusus[s2.dataset.k] = s2.value; });
+    try { await admApi({ action: 'update', id: u.id, khusus }); closeModal(); admReload(); } catch (e) { $('#ae').textContent = e.message; }
+  };
+}
+PAGES['admin/pengguna'] = () => {
+  if (!ADM) { fetch('/api/admin', { credentials: 'same-origin' }).then((r) => r.json()).then((j) => { if (j.error) throw new Error(j.error); ADM = j; render(); }).catch((e) => { $('#page').innerHTML = `<div class="empty">${esc(e.message || 'Gagal memuat')}</div>`; }); return '<div class="load"><div class="sp"></div><div>Memuat pengguna…</div></div>'; }
+  const edit = (D.perm['admin/pengguna'] || 0) >= 2;
+  setTimeout(() => {
+    document.querySelectorAll('select[data-peran]').forEach((el) => el.addEventListener('change', async () => { try { await admApi({ action: 'update', id: el.dataset.peran, peran: el.value }); admReload(); } catch (e) { alert(e.message); admReload(); } }));
+    document.querySelectorAll('input[data-aktif]').forEach((el) => el.addEventListener('change', async () => { try { await admApi({ action: 'update', id: el.dataset.aktif, aktif: el.checked }); admReload(); } catch (e) { alert(e.message); admReload(); } }));
+    document.querySelectorAll('button[data-akses]').forEach((el) => el.addEventListener('click', () => openAkses(ADM.users.find((u) => u.id === el.dataset.akses))));
+    document.querySelectorAll('button[data-reset]').forEach((el) => el.addEventListener('click', async () => { if (!confirm('Buat password sementara baru untuk pengguna ini?')) return; try { showPw(await admApi({ action: 'reset', id: el.dataset.reset }), 'Password baru'); } catch (e) { alert(e.message); } }));
+    let sel = null;
+    const q = $('#adq'), box = $('#adr');
+    q?.addEventListener('input', () => { clearTimeout(q._t); sel = null; $('#adadd').disabled = true; if (q.value.trim().length < 2) { box.innerHTML = ''; return; } q._t = setTimeout(async () => { const j = await fetch('/api/admin?q=' + encodeURIComponent(q.value.trim()), { credentials: 'same-origin' }).then((r) => r.json()).catch(() => ({ orang: [] })); box.innerHTML = (j.orang || []).map((o) => `<button type="button" class="opt" data-e="${esc(o.email)}" data-n="${esc(o.nama)}"><b>${esc(o.nama)}</b> <span class="sub">${esc(o.email)}</span></button>`).join('') || '<div class="sub">Tidak ada yang cocok (email harus terdaftar di M-Person).</div>'; box.querySelectorAll('.opt').forEach((b2) => b2.addEventListener('click', () => { sel = b2.dataset.e; q.value = `${b2.dataset.n} <${sel}>`; box.innerHTML = ''; $('#adadd').disabled = false; })); }, 300); });
+    $('#adadd')?.addEventListener('click', async () => { if (!sel) return; $('#adadd').disabled = true; try { const j = await admApi({ action: 'create', email: sel, peran: $('#adp').value }); showPw(j, 'Pengguna ditambahkan'); admReload(); } catch (e) { $('#ade').textContent = e.message; $('#adadd').disabled = false; } });
+  });
+  const tgl = (u) => `${esc(u.nama)}<div class="sub">${esc(u.email)}</div>`;
+  return `${edit ? `<div class="card" style="margin-bottom:16px"><h3>Tambah pengguna<small>pilih dari M-Person (email harus terdaftar)</small></h3><div class="filters" style="margin:0"><div class="q" style="position:relative"><label>Cari nama / email</label><input id="adq" autocomplete="off" placeholder="Ketik minimal 2 huruf…"><div id="adr" class="sres"></div></div><div><label>Peran</label><select id="adp">${ADM.peran.map((x) => `<option>${esc(x)}</option>`).join('')}</select></div><div style="flex:none;align-self:end"><button class="btn" id="adadd" disabled>Tambah</button></div></div><div class="err" id="ade"></div></div>` : ''}
+  <div class="card"><h3>Pengguna<small>${ADM.users.length} akun</small></h3><div class="tw"><table><thead><tr><th>Pengguna</th><th>Peran</th><th>Aktif</th><th>Terakhir masuk</th><th></th></tr></thead><tbody>${ADM.users.map((u) => `<tr><td>${tgl(u)}</td><td>${edit ? `<select data-peran="${u.id}">${ADM.peran.map((x) => `<option${x === u.peran ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>` : esc(u.peran)}${Object.keys(u.khusus).length ? ` ${chip('akses khusus', 'amber')}` : ''}</td><td><input type="checkbox" data-aktif="${u.id}" ${u.aktif ? 'checked' : ''} ${edit ? '' : 'disabled'} style="width:auto"></td><td class="sub">${u.lastLogin ? esc(new Date(u.lastLogin).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })) : '–'}</td><td style="white-space:nowrap"><button class="ghost" data-akses="${u.id}">Hak akses</button> ${edit ? `<button class="ghost" data-reset="${u.id}">Reset password</button>` : ''}</td></tr>`).join('')}</tbody></table></div>
+  <p class="note" style="margin-top:12px"><b>Peran:</b> Admin (semua + administrasi) · Editor BPN (semua menu, boleh edit) · Pengurus BPN Harian (semua menu, hanya lihat) · Koordinator BPK (hanya program, PD, dan data keuskupannya + data Pengurus BPN) · Pengamat (hanya lihat).</p></div>`;
+};
+
 /* ===== router ===== */
-function route() { const [m = 'dashboard', t] = location.hash.replace(/^#\/?/, '').split('/'); const menu = MENU.find((x) => x.id === m) || MENU[0]; return { menu, tab: menu.tabs ? (menu.tabs.find((x) => x[0] === t) || menu.tabs[0])[0] : null }; }
+const tabsOf = (m) => (m.tabs ? m.tabs.filter(([id]) => (D.perm[`${m.id}/${id}`] || 0) >= 1) : []);
+const visible = () => MENU.filter((m) => (m.tabs ? tabsOf(m).length : (D.perm[m.id] || 0) >= 1));
+function route() { const ms = visible(); const [m = 'dashboard', t] = location.hash.replace(/^#\/?/, '').split('/'); const menu = ms.find((x) => x.id === m) || ms[0]; if (!menu) return { menu: null, tab: null, tabs: [] }; const tabs = tabsOf(menu); return { menu, tabs, tab: menu.tabs ? (tabs.find((x) => x[0] === t) || tabs[0])[0] : null }; }
 function render() {
   if (!D) return;
-  const { menu, tab } = route();
-  $('#nav').innerHTML = MENU.map((m) => `<a href="#/${m.id}" class="${m.id === menu.id ? 'on' : ''}"><svg viewBox="0 0 24 24">${m.icon}</svg>${esc(m.label)}${m.id === menu.id ? '' : `<span class="dot" style="background:${m.c}"></span>`}</a>`).join('');
+  const { menu, tab, tabs } = route();
+  if (!menu) { $('#nav').innerHTML = ''; $('#page').innerHTML = '<div class="empty">Akun Anda belum diberi akses ke menu apa pun. Hubungi Admin BPN.</div>'; return; }
+  $('#nav').innerHTML = visible().map((m) => `<a href="#/${m.id}" class="${m.id === menu.id ? 'on' : ''}"><svg viewBox="0 0 24 24">${m.icon}</svg>${esc(m.label)}${m.id === menu.id ? '' : `<span class="dot" style="background:${m.c}"></span>`}</a>`).join('');
   $('#ptitle').textContent = menu.label; $('#psub').textContent = menu.sub;
-  $('#tabs').innerHTML = menu.tabs ? menu.tabs.map(([id, l]) => `<a href="#/${menu.id}/${id}" class="${id === tab ? 'on' : ''}">${esc(l)}</a>`).join('') : '';
+  $('#tabs').innerHTML = menu.tabs ? tabs.map(([id, l]) => `<a href="#/${menu.id}/${id}" class="${id === tab ? 'on' : ''}">${esc(l)}</a>`).join('') : '';
   const fn = PAGES[tab ? `${menu.id}/${tab}` : menu.id];
   $('#page').innerHTML = fn ? fn() : '<div class="empty">Halaman tidak ditemukan.</div>';
   $('#done')?.addEventListener('change', (e) => { S.showDone = e.target.checked; render(); });
@@ -282,7 +421,7 @@ async function load(refresh) {
   const r = await fetch('/api/data' + (refresh ? '?refresh=1' : ''), { credentials: 'same-origin' });
   if (r.status === 401) return showLogin();
   if (!r.ok) { $('#login').classList.add('hide'); $('#app').classList.remove('hide'); $('#page').innerHTML = '<div class="empty">Gagal memuat data. Coba muat ulang.</div>'; return; }
-  D = await r.json(); if (refresh) R = null;
+  D = await r.json(); if (refresh) { R = null; ADM = null; }
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
   $('#mename').textContent = D.user.nama; $('#melevel').textContent = D.user.level; $('#meav').style.background = hue(D.user.nama); $('#meav').textContent = initials(D.user.nama);
   render();

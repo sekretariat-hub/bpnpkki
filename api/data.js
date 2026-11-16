@@ -3,11 +3,12 @@
 const { fetchAll, listByIds } = require('../lib/airtable');
 const { getSession } = require('../lib/auth');
 const { labels } = require('../lib/aggregate');
+const { getAccess } = require('../lib/access');
 
 const T = {
   proker: 'tblJVp60qiZ4mz40v', program: 'tblqlr84XesZvbEJi', bpk: 'tblgj0UYB9w7UWWnv', seksi: 'tblyGzVk36H6eGrFt',
   bidang: 'tblOkJcrqWIqc7kQz', jabBpk: 'tbldxeUpwRdy3ghib', pengurus: 'tblRzqA9mzvDBWgSZ', tim: 'tblDpFOHsHMntZwWk',
-  pdpkk: 'tblhmeuR1qFHxUIId', person: 'tbl21zOSogH7Anlu2', event: 'tblXXCoICRKHWKxV4', task: 'tblpFsvyTnpzL3ghc',
+  pdpkk: 'tblhmeuR1qFHxUIId', pejabat: 'tblGR9a8J4UOyJGep', person: 'tbl21zOSogH7Anlu2', event: 'tblXXCoICRKHWKxV4', task: 'tblpFsvyTnpzL3ghc',
 };
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agust', 'Sept', 'Okt', 'Nov', 'Dec'];
 const ID_RE = /^rec[A-Za-z0-9]{14}$/;
@@ -20,7 +21,7 @@ const iso = (d) => d.toISOString().slice(0, 10);
 
 async function build() {
   // Gelombang 1: tabel referensi kecil + data utama
-  const [bpk, seksi, bidang, program, jabBpk, pengurus, proker, tim, pdpkk, event, task] = await Promise.all([
+  const [bpk, seksi, bidang, program, jabBpk, pengurus, proker, tim, pdpkk, event, task, pejabat] = await Promise.all([
     fetchAll(T.bpk, ['fldxvUJvguk6J81mP', 'fldcvLPHh5A9E3S0G', 'fldvPkDbxZn38WFrJ']),
     fetchAll(T.seksi, ['fldlNoAUIJ9jKfZll', 'fldHR7n95OKVB50jx']),
     fetchAll(T.bidang, ['fld92od5eBugVo19p']),
@@ -32,6 +33,7 @@ async function build() {
     fetchAll(T.pdpkk, ['fldzIeY3YMiHMo4ky', 'fldWcO7mYhPFpFXlA', 'fldq43MYnCIKg34ts', 'fldxlRQG4ikb8coP2', 'fldYgMqtmX7AbHfU3']),
     fetchAll(T.event, ['flduBRbHd5qS10GGC', 'fldqLzgGmTFR7CkMV', 'fld4fFsOg9vwjxzYw']),
     fetchAll(T.task, ['fldry0ymZWhzbsvN7', 'fldFTszJpZtVvuBRs', 'fldPliH590gA6RsPc', 'fldXsegGJCM9Rk065', 'fldQ62QG6uFvzHHBx', 'fldNwimQQb6Ms1Rhv']),
+    fetchAll(T.pejabat, ['fldrGASVYBRTS7v8o', 'fldCYWlWFYtnkjv6Z', 'fldAsSxbg8bZRkrru', 'fldyWZFFnXeN8CMlk']),
   ]);
 
   // Peta ID -> nama
@@ -48,14 +50,15 @@ async function build() {
   tim.forEach((r) => (r.fields.fldomDq2DVSouEZRg || []).forEach((i) => pid.add(i)));
   pdpkk.forEach((r) => (r.fields.fldxlRQG4ikb8coP2 || []).forEach((i) => pid.add(i)));
   task.forEach((r) => (r.fields.fldNwimQQb6Ms1Rhv || []).forEach((i) => pid.add(i)));
+  pejabat.forEach((r) => (r.fields.fldCYWlWFYtnkjv6Z || []).forEach((i) => pid.add(i)));
   const [persons, pewarta] = await Promise.all([
-    listByIds(T.person, [...pid], ['fldVU2gofcKEhWHmB', 'fldstVCm8Oa3tyxNA', 'fldGsFt4GflTXoTa0', 'fldhjOTrQfLGC6hWj', 'fldwJ7RnXW1nLaOcv', 'fld3A1rRGfWxbuase']),
+    listByIds(T.person, [...pid], ['fldVU2gofcKEhWHmB', 'fldstVCm8Oa3tyxNA', 'fldGsFt4GflTXoTa0', 'fldhjOTrQfLGC6hWj', 'fldwJ7RnXW1nLaOcv', 'fld3A1rRGfWxbuase', 'fldIuYdJWnN77zoaT']),
     fetchAll(T.person, ['fldVU2gofcKEhWHmB'], { filterByFormula: "OR(LEN({Pengajar Modul}&'')>0, LEN({Spesialiasi Pengajar SHDR}&'')>0)" }).catch(() => null),
   ]);
   const P = {};
   persons.forEach((r) => {
     const f = r.fields;
-    P[r.id] = { id: r.id, nama: String(f.fldVU2gofcKEhWHmB || '').trim(), panggilan: f.fldstVCm8Oa3tyxNA || '', wa: f.fldGsFt4GflTXoTa0 || '', email: f.fldhjOTrQfLGC6hWj || '', keuskupan: L(f.fldwJ7RnXW1nLaOcv)[0] || '', gender: first(f.fld3A1rRGfWxbuase) };
+    P[r.id] = { id: r.id, nama: String(f.fldVU2gofcKEhWHmB || '').trim(), panggilan: f.fldstVCm8Oa3tyxNA || '', wa: f.fldGsFt4GflTXoTa0 || '', email: f.fldhjOTrQfLGC6hWj || '', keuskupan: L(f.fldwJ7RnXW1nLaOcv)[0] || '', gender: first(f.fld3A1rRGfWxbuase), adaWa: !!String(f.fldGsFt4GflTXoTa0 || '').replace(/\D/g, ''), foto: ((f.fldIuYdJWnN77zoaT || [])[0] || {}).thumbnails ? f.fldIuYdJWnN77zoaT[0].thumbnails.large.url : '' };
   });
   const person = (ids) => (ids || []).map((i) => P[i]).filter(Boolean);
 
@@ -70,7 +73,21 @@ async function build() {
     pewarta: pewarta ? kpi(pewarta) : null,
   };
 
+  // Profil BPK: koordinator & pejabat aktif per keuskupan
+  const profil = {};
+  pejabat.forEach((r) => {
+    const f = r.fields; const st = L(f.fldyWZFFnXeN8CMlk)[0] || '';
+    if (!/aktif/i.test(st) || /tidak/i.test(st)) return;
+    const jab = L(f.fldAsSxbg8bZRkrru)[0] || '';
+    (f.fldrGASVYBRTS7v8o || []).forEach((bid) => {
+      const key = bid; profil[key] = profil[key] || { id: bid, nama: names[bid] || '', pejabat: [] };
+      person(f.fldCYWlWFYtnkjv6Z).forEach((o) => profil[key].pejabat.push({ jabatan: jab, koordinator: /koord/i.test(jab), orang: o }));
+    });
+  });
+  Object.values(profil).forEach((b) => b.pejabat.sort((x, y) => Number(y.koordinator) - Number(x.koordinator)));
+
   const out = {
+    bpkProfil: profil,
     generatedAt: new Date().toISOString(),
     today: iso(now),
     kpis,
@@ -107,19 +124,43 @@ async function build() {
   return out;
 }
 
+const OPSI = (rows) => ({
+  status: uniqSorted(rows.map((p) => p.status)), acc: uniqSorted(rows.map((p) => p.acc)), bulan: MONTHS.slice(),
+  tahun: uniqSorted(rows.map((p) => p.tahun)), metode: uniqSorted(rows.map((p) => p.metode)), sumberDana: uniqSorted(rows.map((p) => p.sumberDana)),
+});
+const uniqSorted = (a) => [...new Set(a.filter(Boolean))].sort();
+
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'private, no-store');
   const s = getSession(req);
   if (!s) return res.status(401).json({ error: 'Belum login' });
   try {
-    if (!cache.data || Date.now() - cache.at > TTL || req.query.refresh === '1') cache = { at: Date.now(), data: await build() };
-    const admin = s.level === 'Admin';
-    // Kontak pribadi hanya untuk Admin (sementara, sampai hak akses per level ditentukan).
-    const body = JSON.stringify({ user: { nama: s.nama, email: s.email, level: s.level }, ...cache.data }, (k, v) => (!admin && (k === 'wa' || k === 'email') ? '' : v));
+    const acc = await getAccess(s);
+    if (!acc) return res.status(401).json({ error: 'Akun tidak aktif' });
+    if (!cache.data || Date.now() - cache.at > TTL || (req.query.refresh === '1' && Date.now() - cache.at > 10000)) cache = { at: Date.now(), data: await build() };
+    const d = cache.data, P = acc.perm, ok = (k) => (P[k] || 0) >= 1;
+    const anyOf = (m) => Object.keys(P).some((k) => (k === m || k.startsWith(m + '/')) && P[k] >= 1);
+    let scopeNames = null;
+    if (acc.bpkIds) scopeNames = new Set(d.bpkList.filter((b) => acc.bpkIds.includes(b.id)).map((b) => b.nama));
+    const inScope = (arr) => !scopeNames || arr.some((n) => scopeNames.has(n));
+    const body = {
+      user: { nama: acc.nama, email: acc.email, level: acc.peran, peran: acc.peran, scope: scopeNames ? [...scopeNames] : null },
+      perm: P, opsi: OPSI(d.proker), generatedAt: d.generatedAt, today: d.today,
+      kpis: ok('dashboard') ? d.kpis : { bpk: { now: 0, prev: 0, total: 0 }, pdpkk: { now: 0, prev: 0 }, pewarta: null },
+      proker: anyOf('proker') || ok('dashboard') ? d.proker.filter((p) => inScope([...p.penerima, ...p.pelaksana])) : [],
+      pengurus: anyOf('pengurus') ? d.pengurus : [],
+      tim: anyOf('tim') ? d.tim : [],
+      pdpkk: anyOf('pd') ? d.pdpkk.filter((x) => !scopeNames || scopeNames.has(x.keuskupan)) : [],
+      bpkList: d.bpkList, event: ok('dashboard') && !scopeNames ? d.event : [], tugas: ok('dashboard') && !scopeNames ? d.tugas : [],
+      bpkProfil: anyOf('proker') || anyOf('pd') ? Object.fromEntries(Object.entries(d.bpkProfil).filter(([id]) => !acc.bpkIds || acc.bpkIds.includes(id))) : {},
+    };
+    // Nomor WA tidak pernah dikirim ke browser (tombol WA memakai /api/wa). Email disembunyikan untuk Pengamat.
+    const out = JSON.stringify(body, (k, v) => (k === 'wa' ? '' : acc.peran === 'Pengamat' && k === 'email' && typeof v === 'string' && k !== 'user' ? '' : v));
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.status(200).send(body);
+    res.status(200).send(out);
   } catch (e) {
     console.error('data error', e.message);
     res.status(502).json({ error: 'Gagal mengambil data dari Airtable' });
   }
 };
+module.exports.getCache = () => cache;

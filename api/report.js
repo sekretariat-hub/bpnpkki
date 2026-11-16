@@ -106,6 +106,8 @@ module.exports = async (req, res) => {
   const session = getSession(req);
   if (!session) return res.status(401).json({ error: 'Belum login' });
   try {
+    const acc = await require('../lib/access').getAccess(session);
+    if (!acc || !require('../lib/access').can(acc, 'laporan')) return res.status(403).json({ error: 'Tidak punya akses ke Laporan' });
     if (!cache.data || Date.now() - cache.at > TTL || req.query.refresh === '1') {
       cache = { at: Date.now(), data: await build() };
     }
