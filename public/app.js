@@ -50,7 +50,7 @@ const MENU = [
   { id: 'umat', label: 'Data Umat', icon: I.pd, sub: 'Profil umat yang terdaftar di sistem BPN', c: '#0EA5A4', tabs: [['ringkasan', 'Infografis'], ['daftar', 'Daftar Umat']] },
   { id: 'pendataan', label: 'Pendataan PIC', icon: I.pd, sub: 'Pejabat dan PIC di setiap BPK, lengkap dengan riwayatnya', c: '#E0661A' },
   { id: 'laporan', label: 'Laporan', icon: I.chart, sub: 'Ringkasan kegiatan', c: '#34C28A', tabs: [['pleno', 'Pleno & Golden Jubilee'], ['tc', 'TC SHDR'], ['kepemudaan', 'Kepemudaan']] },
-  { id: 'admin', label: 'Administrasi', icon: I.key, sub: 'Kelola pengguna dan hak akses', c: '#6B7A99', tabs: [['pengguna', 'Pengguna & Hak Akses']] },
+  { id: 'admin', label: 'Administrasi', icon: I.key, sub: 'Kelola pengguna dan hak akses', c: '#6B7A99', tabs: [['pengguna', 'Pengguna'], ['role', 'Role & Hak Akses']] },
 ];
 
 /* ===== komponen ===== */
@@ -716,39 +716,89 @@ function showPw(j, judul) {
   if (j.password) $('#cp').onclick = () => { navigator.clipboard?.writeText(j.password); $('#cp').textContent = 'Tersalin ✓'; };
   $('#cl').onclick = () => { navigator.clipboard?.writeText(j.link); $('#cl').textContent = 'Tersalin ✓'; };
 }
-function openAkses(u) {
-  const pre = ADM.presets[u.peran];
-  const labelOf = (k) => { const [m, t] = k.split('/'); const mm = MENU.find((x) => x.id === m); return t ? '   ↳ ' + (mm.tabs.find((x) => x[0] === t) || [, t])[1] : mm.label; };
-  const keys = Object.keys(ADM.tree).filter((m) => m !== 'admin').flatMap((m) => [m, ...ADM.tree[m].map((t) => `${m}/${t}`)]);
-  const cur = (k) => (u.khusus[k] !== undefined ? u.khusus[k] : NAMES[pre[k]]);
-  modal(`<h2>Hak akses: ${esc(u.nama)}</h2><p class="sub">Peran <b>${esc(u.peran)}</b>. Pilihan di bawah mengubah bawaan peran. Hak <i>Edit</i> saat ini berlaku untuk Program Kerja (mengubah data program).${u.peran === 'Koordinator BPK' ? ' Koordinator BPK hanya melihat data keuskupannya sendiri.' : ''}</p>
-    <div class="tw"><table><thead><tr><th>Menu / tab</th><th>Bawaan peran</th><th>Hak akses</th></tr></thead><tbody>${keys.map((k) => `<tr><td style="white-space:pre"><b>${esc(labelOf(k))}</b></td><td class="sub">${LVL[NAMES[pre[k]]]}</td><td><select data-k="${k}">${NAMES.map((n) => `<option value="${n}"${cur(k) === n ? ' selected' : ''}>${LVL[n]}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>
-    <div class="err" id="ae"></div><div class="mact"><button class="ghost" id="ar">Kembalikan ke bawaan</button><button class="btn" id="as">Simpan</button></div>`, true);
-  $('#ar').onclick = async () => { try { await admApi({ action: 'update', id: u.id, khusus: {} }); closeModal(); admReload(); } catch (e) { $('#ae').textContent = e.message; } };
-  $('#as').onclick = async () => {
-    const khusus = {}; document.querySelectorAll('#ov select[data-k]').forEach((s2) => { if (s2.value !== NAMES[pre[s2.dataset.k]]) khusus[s2.dataset.k] = s2.value; });
-    try { await admApi({ action: 'update', id: u.id, khusus }); closeModal(); admReload(); } catch (e) { $('#ae').textContent = e.message; }
-  };
+const labelOfKey = (k) => { const [m, t] = k.split('/'); const mm = MENU.find((x) => x.id === m); return t ? '   ↳ ' + ((mm.tabs.find((x) => x[0] === t) || [, t])[1]) : mm.label; };
+const roleKeys = () => Object.keys(ADM.tree).filter((m) => m !== 'admin').flatMap((m) => [m, ...ADM.tree[m].map((t) => `${m}/${t}`)]);
+const roleChip = (n, auto) => chip(n + (auto ? ' · otomatis' : ''), auto ? 'teal' : 'blue');
+const pemicu = (r) => [r.kat, r.seksi && r.seksi.replace(/^Tim Kerja\s*/i, ''), r.tingkat].filter(Boolean).join(' · ') || '–';
+function openRolesUser(u) {
+  const cb = (r) => `<label class="chk" style="display:flex;gap:8px;align-items:flex-start;margin:4px 0"><input type="checkbox" value="${esc(r.nama)}" ${u.roles.includes(r.nama) ? 'checked' : ''} style="width:auto;margin-top:3px"><span><b>${esc(r.nama)}</b>${r.desk ? `<br><span class="sub">${esc(r.desk)}</span>` : ''}</span></label>`;
+  const sis = ADM.roles.filter((r) => r.sistem), cus = ADM.roles.filter((r) => !r.sistem);
+  modal(`<h2>Role: ${esc(u.nama)}</h2><p class="sub">Boleh lebih dari satu. Jika bentrok, hak yang <b>tertinggi</b> yang berlaku. Role bertanda "otomatis" diberikan sistem dari jabatan orang ini di Tim BPN dan tidak perlu dicentang.</p>${u.auto.length ? `<div class="chips" style="margin-bottom:8px">${u.auto.map((n) => roleChip(n, true)).join('')}</div>` : ''}
+    <div style="max-height:46vh;overflow:auto;border:1px solid var(--line,#e3e8f2);border-radius:10px;padding:8px 12px"><h4 style="margin:4px 0">Role umum</h4>${sis.map(cb).join('')}${cus.length ? `<h4 style="margin:10px 0 4px">Role BPN (per seksi dan lainnya)</h4>${cus.map(cb).join('')}` : ''}</div>
+    <div class="err" id="ae"></div><div class="mact"><button class="btn" id="as">Simpan</button></div>`, true);
+  $('#as').onclick = async () => { const roles = [...document.querySelectorAll('#ov input[type=checkbox]:checked')].map((x) => x.value); try { await admApi({ action: 'update', id: u.id, roles }); closeModal(); admReload(); } catch (e) { $('#ae').textContent = e.message; } };
 }
+function openRole(r0) {
+  const baru = !r0, r = r0 || { nama: '', sistem: false, terkunci: false, hak: {}, cakupan: 'Terbatas', seksi: '', tingkat: '', kat: '', desk: '' };
+  const keys = roleKeys(), lock = r.terkunci;
+  const opt = (arr, cur, blank) => `${blank ? `<option value="">${blank}</option>` : ''}${arr.map((x) => `<option${x === cur ? ' selected' : ''}>${esc(x)}</option>`).join('')}`;
+  const copy = ADM.roles.filter((x) => x.nama !== r.nama);
+  modal(`<h2>${baru ? 'Role baru' : 'Role: ' + esc(r.nama)}</h2>${lock ? '<p class="note">Admin dan Super Admin selalu memiliki akses penuh dan hanya mereka yang dapat membuka menu Administrasi.</p>' : ''}
+    <div class="eform" style="grid-template-columns:1fr 1fr"><div><label>Nama role</label><input id="rn" value="${esc(r.nama)}" ${!baru ? 'readonly' : ''} placeholder="mis. Koordinator – Tim Kerja Dana"></div><div><label>Cakupan data umat</label><select id="rc" ${lock ? 'disabled' : ''}>${opt(['Nasional', 'Terbatas'], r.cakupan)}</select><div class="sub">Terbatas = hanya keuskupan/PD sesuai jabatannya.</div></div>
+    <div style="grid-column:1/-1"><label>Keterangan</label><input id="rd" value="${esc(r.desk)}" placeholder="Untuk siapa role ini"></div></div>
+    ${lock ? '' : `<h4 style="margin:12px 0 4px">Diberikan otomatis (opsional)</h4><p class="sub" style="margin:0 0 6px">Orang yang berstatus AKTIF di tabel Tim BPN dan cocok dengan kriteria ini langsung mendapat role ini. Kosongkan semua jika role hanya diberikan manual.</p>
+    <div class="eform" style="grid-template-columns:1fr 1fr 1fr"><div><label>Kategori tim</label><select id="rk">${opt(['BPN INTI', 'BPN HARIAN', 'TIM KERJA'], r.kat, '(semua)')}</select></div><div><label>Seksi</label><select id="rs">${opt(ADM.seksi, r.seksi, '(semua)')}</select></div><div><label>Tingkat</label><select id="rt">${opt(['Koordinator', 'Anggota'], r.tingkat, '(semua)')}</select></div></div>
+    <h4 style="margin:12px 0 4px">Hak akses menu</h4><div class="filters" style="margin:0 0 6px"><div><label>Salin dari role</label><select id="rcopy"><option value="">(pilih)</option>${copy.map((x) => `<option>${esc(x.nama)}</option>`).join('')}</select></div><div style="flex:none;align-self:end"><button type="button" class="ghost" id="rall">Semua: lihat saja</button> <button type="button" class="ghost" id="rno">Semua: tidak ada</button></div></div>`}
+    <div class="tw" style="max-height:38vh;overflow:auto"><table><thead><tr><th>Menu / tab</th><th>Hak akses</th></tr></thead><tbody>${keys.map((k) => `<tr><td style="white-space:pre"><b>${esc(labelOfKey(k))}</b></td><td><select data-k="${k}" ${lock ? 'disabled' : ''}>${NAMES.map((n) => `<option value="${n}"${(lock ? 'edit' : r.hak[k] || 'none') === n ? ' selected' : ''}>${LVL[n]}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>
+    <p class="sub" style="margin-top:6px">Hak <i>Lihat + Edit</i> berlaku untuk Program Kerja dan Pengurus BPN (mengubah data).</p><div class="err" id="ae"></div>
+    <div class="mact">${!baru && !lock ? `<button class="ghost" id="rdel">${r.sistem ? 'Kembalikan ke bawaan' : 'Hapus role'}</button>` : ''}${lock ? '' : '<button class="btn" id="rs2">Simpan</button>'}</div>`, true);
+  if (lock) return;
+  const setAll = (v) => document.querySelectorAll('#ov select[data-k]').forEach((s2) => { s2.value = v; });
+  $('#rall').onclick = () => setAll('view'); $('#rno').onclick = () => setAll('none');
+  $('#rcopy').onchange = (e) => { const src = ADM.roles.find((x) => x.nama === e.target.value); if (src) document.querySelectorAll('#ov select[data-k]').forEach((s2) => { s2.value = src.hak[s2.dataset.k] || 'none'; }); };
+  $('#rs2').onclick = async () => {
+    const hak = {}; document.querySelectorAll('#ov select[data-k]').forEach((s2) => { hak[s2.dataset.k] = s2.value; });
+    try { await admApi({ action: 'role', id: r.id || undefined, nama: $('#rn').value, desk: $('#rd').value, cakupan: $('#rc').value, kat: $('#rk').value, seksi: $('#rs').value, tingkat: $('#rt').value, hak }); closeModal(); admReload(); } catch (e) { $('#ae').textContent = e.message; }
+  };
+  $('#rdel')?.addEventListener('click', async () => { if (!confirm(r.sistem ? 'Kembalikan hak role ini ke bawaan sistem?' : `Hapus role "${r.nama}"?`)) return; try { await admApi({ action: 'roledel', id: r.id }); closeModal(); admReload(); } catch (e) { $('#ae').textContent = e.message; } });
+}
+const HAK_KOORD = { dashboard: 'view', proker: 'edit', 'proker/keuskupan': 'edit', 'proker/semua': 'edit', 'proker/ringkasan': 'view', 'proker/acc': 'view', pengurus: 'view', pd: 'view', 'pd/daftar': 'view', 'pd/ringkasan': 'view', tim: 'view', 'tim/bagan': 'view', 'tim/daftar': 'view', modul: 'view', 'modul/ringkasan': 'view', 'modul/permodul': 'view', 'modul/peserta': 'view', 'modul/pengajar': 'view', umat: 'view', 'umat/ringkasan': 'view', 'umat/daftar': 'view', laporan: 'view', 'laporan/pleno': 'view', 'laporan/tc': 'view', 'laporan/kepemudaan': 'view' };
+const HAK_ANGGOTA = { dashboard: 'view', proker: 'view', 'proker/keuskupan': 'view', 'proker/semua': 'view', 'proker/ringkasan': 'view', tim: 'view', 'tim/bagan': 'view', 'tim/daftar': 'view', modul: 'view', 'modul/ringkasan': 'view', 'modul/permodul': 'view', 'modul/peserta': 'view', 'modul/pengajar': 'view' };
+async function buatRoleSeksi(btn) {
+  const ada = new Set(ADM.roles.map((r) => r.nama.toLowerCase())); let n = 0;
+  btn.disabled = true;
+  try {
+    for (const s2 of ADM.seksi) for (const [tg, hak] of [['Koordinator', HAK_KOORD], ['Anggota', HAK_ANGGOTA]]) {
+      const nama = `${tg} – ${s2}`; if (ada.has(nama.toLowerCase())) continue;
+      await admApi({ action: 'role', nama, desk: `${tg} ${s2} (otomatis dari Tim BPN)`, cakupan: 'Nasional', kat: '', seksi: s2, tingkat: tg, hak }); n++;
+    }
+    alert(n ? `${n} role dibuat. Periksa dan sesuaikan hak aksesnya per role.` : 'Semua role per seksi sudah ada.'); admReload();
+  } catch (e) { alert(e.message); btn.disabled = false; }
+}
+PAGES['admin/role'] = () => {
+  if (!ADM) { fetch('/api/admin', { credentials: 'same-origin' }).then((r) => r.json()).then((j) => { if (j.error) throw new Error(j.error); ADM = j; render(); }).catch((e) => { $('#page').innerHTML = `<div class="empty">${esc(e.message || 'Gagal memuat')}</div>`; }); return '<div class="load"><div class="sp"></div><div>Memuat role…</div></div>'; }
+  const edit = (D.perm['admin/role'] || 0) >= 2;
+  setTimeout(() => {
+    document.querySelectorAll('button[data-role]').forEach((el) => el.addEventListener('click', () => openRole(ADM.roles.find((r) => r.nama === el.dataset.role))));
+    $('#rnew')?.addEventListener('click', () => openRole(null));
+    $('#rseksi')?.addEventListener('click', (e) => buatRoleSeksi(e.target));
+  });
+  const sis = ADM.roles.filter((r) => r.sistem), cus = ADM.roles.filter((r) => !r.sistem);
+  const rows = (l) => l.map((r) => `<tr><td><b>${esc(r.nama)}</b>${r.diubah ? ' ' + chip('disesuaikan', 'amber') : ''}${r.desk ? `<div class="sub">${esc(r.desk)}</div>` : ''}</td><td class="sub">${esc(pemicu(r))}</td><td>${esc(r.cakupan)}</td><td>${nf.format(r.pakai)}</td><td><button class="ghost" data-role="${esc(r.nama)}">${edit && !r.terkunci ? 'Atur' : 'Lihat'}</button></td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">Belum ada role.</div></td></tr>';
+  const head = '<thead><tr><th>Role</th><th>Otomatis untuk</th><th>Cakupan data</th><th>Orang</th><th></th></tr></thead>';
+  return `<div class="note" style="margin-bottom:12px">Hak akses diatur <b>per role</b>, bukan per orang. Satu orang boleh punya beberapa role (manual dari tab Pengguna atau otomatis dari jabatannya di Tim BPN); jika bentrok, hak <b>tertinggi</b> yang berlaku. Hanya Admin dan Super Admin yang dapat mengubah ini.</div>
+  ${edit ? `<div class="acts" style="margin-bottom:12px"><button class="btn" id="rnew">+ Role baru</button> <button class="ghost" id="rseksi">Buat role Koordinator &amp; Anggota untuk tiap seksi</button></div>` : ''}
+  <div class="card" style="margin-bottom:16px"><h3>Role BPN<small>per seksi / bidang: Koordinator dan Anggota</small></h3><div class="tw"><table>${head}<tbody>${rows(cus)}</tbody></table></div></div>
+  <div class="card"><h3>Role umum<small>bawaan sistem; hak aksesnya boleh disesuaikan</small></h3><div class="tw"><table>${head}<tbody>${rows(sis)}</tbody></table></div></div>`;
+};
 PAGES['admin/pengguna'] = () => {
   if (!ADM) { fetch('/api/admin', { credentials: 'same-origin' }).then((r) => r.json()).then((j) => { if (j.error) throw new Error(j.error); ADM = j; render(); }).catch((e) => { $('#page').innerHTML = `<div class="empty">${esc(e.message || 'Gagal memuat')}</div>`; }); return '<div class="load"><div class="sp"></div><div>Memuat pengguna…</div></div>'; }
   const edit = (D.perm['admin/pengguna'] || 0) >= 2;
   setTimeout(() => {
-    document.querySelectorAll('select[data-peran]').forEach((el) => el.addEventListener('change', async () => { try { await admApi({ action: 'update', id: el.dataset.peran, peran: el.value }); admReload(); } catch (e) { alert(e.message); admReload(); } }));
     document.querySelectorAll('input[data-aktif]').forEach((el) => el.addEventListener('change', async () => { try { await admApi({ action: 'update', id: el.dataset.aktif, aktif: el.checked }); admReload(); } catch (e) { alert(e.message); admReload(); } }));
-    document.querySelectorAll('button[data-akses]').forEach((el) => el.addEventListener('click', () => openAkses(ADM.users.find((u) => u.id === el.dataset.akses))));
+    document.querySelectorAll('button[data-akses]').forEach((el) => el.addEventListener('click', () => openRolesUser(ADM.users.find((u) => u.id === el.dataset.akses))));
     document.querySelectorAll('button[data-prof]').forEach((el) => el.addEventListener('click', () => { location.hash = '#/profil/' + el.dataset.prof; }));
     document.querySelectorAll('button[data-kwa]').forEach((el) => el.addEventListener('click', async () => { if (!confirm('Kirim ulang tautan masuk lewat WhatsApp ke pengguna ini? Tautan lama tidak berlaku lagi.')) return; el.disabled = true; el.textContent = 'Mengirim…'; try { showPw(await admApi({ action: 'kirimwa', id: el.dataset.kwa }), 'Kirim ulang tautan'); } catch (e) { alert(e.message); } el.disabled = false; el.textContent = 'Kirim WA'; }));
     document.querySelectorAll('button[data-reset]').forEach((el) => el.addEventListener('click', async () => { if (!confirm('Buat password sementara baru untuk pengguna ini?')) return; try { showPw(await admApi({ action: 'reset', id: el.dataset.reset }), 'Password baru'); } catch (e) { alert(e.message); } }));
     let sel = null;
     const q = $('#adq'), box = $('#adr');
     q?.addEventListener('input', () => { clearTimeout(q._t); sel = null; $('#adadd').disabled = true; if (q.value.trim().length < 2) { box.innerHTML = ''; return; } q._t = setTimeout(async () => { const j = await fetch('/api/admin?q=' + encodeURIComponent(q.value.trim()), { credentials: 'same-origin' }).then((r) => r.json()).catch(() => ({ orang: [] })); box.innerHTML = (j.orang || []).map((o) => `<button type="button" class="opt" data-e="${esc(o.id)}" data-n="${esc(o.nama)}"><b>${esc(o.nama)}</b> <span class="sub">WA ${esc(o.wa)}</span></button>`).join('') || '<div class="sub">Tidak ada yang cocok (harus ada di M-Person dengan nomor WhatsApp).</div>'; box.querySelectorAll('.opt').forEach((b2) => b2.addEventListener('click', () => { sel = b2.dataset.e; q.value = b2.dataset.n; box.innerHTML = ''; $('#adadd').disabled = false; })); }, 300); });
-    $('#adadd')?.addEventListener('click', async () => { if (!sel) return; $('#adadd').disabled = true; try { const j = await admApi({ action: 'create', personId: sel, peran: $('#adp').value }); showPw(j, 'Pengguna ditambahkan'); admReload(); } catch (e) { $('#ade').textContent = e.message; $('#adadd').disabled = false; } });
+    $('#adadd')?.addEventListener('click', async () => { if (!sel) return; $('#adadd').disabled = true; try { const j = await admApi({ action: 'create', personId: sel, roles: [$('#adp').value] }); showPw(j, 'Pengguna ditambahkan'); admReload(); } catch (e) { $('#ade').textContent = e.message; $('#adadd').disabled = false; } });
   });
   const tgl = (u) => `${esc(u.nama)}${u.pending ? ' ' + chip('menunggu persetujuan', 'amber') : ''}<div class="sub">WA ${esc(u.wa || '–')}${u.email && !/^\d+$/.test(u.email) ? ' · ' + esc(u.email) : ''}</div>`;
-  return `${edit ? `<div class="card" style="margin-bottom:16px"><h3>Tambah pengguna<small>pilih dari M-Person (harus punya nomor WhatsApp). Orang juga bisa mendaftar sendiri dari halaman login.</small></h3><div class="filters" style="margin:0"><div class="q" style="position:relative"><label>Cari nama</label><input id="adq" autocomplete="off" placeholder="Ketik minimal 2 huruf…"><div id="adr" class="sres"></div></div><div><label>Peran</label><select id="adp">${ADM.peran.map((x) => `<option>${esc(x)}</option>`).join('')}</select></div><div style="flex:none;align-self:end"><button class="btn" id="adadd" disabled>Tambah</button></div></div><div class="err" id="ade"></div></div>` : ''}
-  <div class="card"><h3>Pengguna<small>${ADM.users.length} akun</small></h3><div class="tw"><table><thead><tr><th>Pengguna</th><th>Peran</th><th>Aktif</th><th>Terakhir masuk</th><th></th></tr></thead><tbody>${ADM.users.map((u) => `<tr><td>${tgl(u)}</td><td>${edit ? `<select data-peran="${u.id}">${u.peran ? '' : '<option value="" selected disabled>— pilih peran untuk menyetujui —</option>'}${ADM.peran.map((x) => `<option${x === u.peran ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>` : esc(u.peran)}${Object.keys(u.khusus).length ? ` ${chip('akses khusus', 'amber')}` : ''}</td><td><input type="checkbox" data-aktif="${u.id}" ${u.aktif ? 'checked' : ''} ${edit ? '' : 'disabled'} style="width:auto"></td><td class="sub">${u.lastLogin ? esc(new Date(u.lastLogin).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })) : '–'}</td><td style="white-space:nowrap"><button class="ghost" data-akses="${u.id}">Hak akses</button> ${u.person ? `<button class="ghost" data-prof="${esc(u.person)}">Profil</button> ` : ''}${edit && u.peran && !u.pending && u.aktif && u.wa && u.wa !== '****' ? `<button class="ghost" data-kwa="${u.id}">Kirim WA</button> ` : ''}${edit ? `<button class="ghost" data-reset="${u.id}">Reset password</button>` : ''}</td></tr>`).join('')}</tbody></table></div>
-  <p class="note" style="margin-top:12px"><b>Peran:</b> Admin (semua + administrasi) · Editor BPN (semua menu, boleh edit) · Pengurus BPN Harian (semua menu, hanya lihat) · Koordinator BPK (hanya program, PD, dan data keuskupannya + data Pengurus BPN) · Pengamat (hanya lihat).</p></div>`;
+  return `${edit ? `<div class="card" style="margin-bottom:16px"><h3>Tambah pengguna<small>pilih dari M-Person (harus punya nomor WhatsApp). Role lain bisa ditambah setelahnya. Orang juga bisa mendaftar sendiri dari halaman login.</small></h3><div class="filters" style="margin:0"><div class="q" style="position:relative"><label>Cari nama</label><input id="adq" autocomplete="off" placeholder="Ketik minimal 2 huruf…"><div id="adr" class="sres"></div></div><div><label>Role awal</label><select id="adp">${ADM.roles.map((x) => `<option>${esc(x.nama)}</option>`).join('')}</select></div><div style="flex:none;align-self:end"><button class="btn" id="adadd" disabled>Tambah</button></div></div><div class="err" id="ade"></div></div>` : ''}
+  <div class="card"><h3>Pengguna<small>${ADM.users.length} akun</small></h3><div class="tw"><table><thead><tr><th>Pengguna</th><th>Role</th><th>Aktif</th><th>Terakhir masuk</th><th></th></tr></thead><tbody>${ADM.users.map((u) => `<tr><td>${tgl(u)}</td><td><div class="chips">${u.roles.map((n) => roleChip(n)).join('')}${u.auto.map((n) => roleChip(n, true)).join('')}${!u.roles.length && !u.auto.length ? chip('belum ada role', 'amber') : ''}</div></td><td><input type="checkbox" data-aktif="${u.id}" ${u.aktif ? 'checked' : ''} ${edit ? '' : 'disabled'} style="width:auto"></td><td class="sub">${u.lastLogin ? esc(new Date(u.lastLogin).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })) : '–'}</td><td style="white-space:nowrap">${edit ? `<button class="ghost" data-akses="${u.id}">Atur role</button> ` : ''}${u.person ? `<button class="ghost" data-prof="${esc(u.person)}">Profil</button> ` : ''}${edit && (u.roles.length || u.auto.length) && !u.pending && u.aktif && u.wa && u.wa !== '****' ? `<button class="ghost" data-kwa="${u.id}">Kirim WA</button> ` : ''}${edit ? `<button class="ghost" data-reset="${u.id}">Reset password</button>` : ''}</td></tr>`).join('')}</tbody></table></div>
+  <p class="note" style="margin-top:12px">Hak akses menu diatur di tab <b>Role &amp; Hak Akses</b>, bukan per orang. Pengguna baru yang mendaftar sendiri menunggu sampai diberi minimal satu role.</p></div>`;
 };
 
 /* ===== Ganti password ===== */

@@ -4,6 +4,8 @@ const { fetchAll, update, create } = require('../lib/airtable');
 const { getSession, hashPassword } = require('../lib/auth');
 const { T, F } = require('../lib/users');
 const A = require('../lib/access');
+const R = require('../lib/roles');
+const { create: mk, update: up } = require('../lib/airtable');
 const { waDigits, mask } = require('../lib/phone');
 const { kirimWa } = require('../lib/wa');
 const { newToken, hashToken, TTL } = require('../lib/invite');
@@ -33,43 +35,86 @@ module.exports = async (req, res) => {
         const rows = await fetchAll(PERSON, [PF.nama, PF.email, PF.wa], { filterByFormula: `AND(LEN({Whatsapp})>0, SEARCH('${qs(q.toLowerCase())}', LOWER({Nama Lengkap})))`, maxRecords: '15' });
         return res.json({ orang: rows.map((r) => ({ id: r.id, nama: r.fields[PF.nama] || '', email: String(r.fields[PF.email] || '').toLowerCase(), wa: mask(waDigits(r.fields[PF.wa])) })).filter((o) => o.wa !== '****') });
       }
-      const rows = await fetchAll(T, [...Object.values(F), A.FX.peran, A.FX.khusus]);
-      return res.json({
-        tree: A.TREE, peran: A.PERAN,
-        presets: Object.fromEntries(A.PERAN.map((p) => [p, A.resolve(p, {})])),
-        users: rows.map((r) => { const f = r.fields; return { id: r.id, email: f[F.email] || '', wa: mask(waDigits(f[F.wa])), nama: f[F.nama] || '', aktif: !!f[F.aktif], pending: !f[F.disetujui], peran: nm(f[A.FX.peran]) || (nm(f[F.level]) === 'Admin' ? 'Admin' : ''), khusus: A.cleanKhusus(A.parseKhusus(f[A.FX.khusus])), lastLogin: f[F.lastLogin] || '', person: /^rec/.test(f[F.person] || '') ? f[F.person] : '' }; })
-          .sort((a, b) => a.nama.localeCompare(b.nama, 'id')),
-      });
+      R.invalidate();
+      const [rows, roles, tim, seksi] = await Promise.all([fetchAll(T, [...Object.values(F), A.FX.peran, A.FX.manual]), R.loadRoles(), R.loadTim(), R.daftarSeksi().catch(() => [])]);
+      const custom = roles.filter((r) => !R.SISTEM.includes(r.nama));
+      const names = [...R.SISTEM, ...custom.map((r) => r.nama)];
+      const users = rows.map((r) => {
+        const f = r.fields, person = /^rec/.test(f[F.person] || '') ? f[F.person] : '';
+        const own = nm(f[A.FX.peran]) || (nm(f[F.level]) === 'Admin' ? 'Admin' : '');
+        const manual = [...new Set([own, ...A.listOf(f[A.FX.manual])].filter((x) => names.includes(x)))];
+        const auto = R.autoRoles(roles, tim, person).filter((x) => !manual.includes(x));
+        return { id: r.id, email: f[F.email] || '', wa: mask(waDigits(f[F.wa])), nama: f[F.nama] || '', aktif: !!f[F.aktif], pending: !f[F.disetujui], roles: manual, auto, lastLogin: f[F.lastLogin] || '', person };
+      }).sort((x, y) => x.nama.localeCompare(y.nama, 'id'));
+      const list = names.map((n) => { const r = roles.find((x) => x.nama === n) || {}; const m = A.mapOf(n, roles); return { id: r.id || '', nama: n, sistem: R.SISTEM.includes(n), terkunci: R.ADMIN_ROLES.includes(n), hak: Object.fromEntries(Object.entries(m).map(([k, v]) => [k, A.NAME[v]])), cakupan: r.cakupan || (A.NASIONAL.includes(n) ? 'Nasional' : 'Terbatas'), seksi: r.seksi || '', tingkat: r.tingkat || '', kat: r.kat || '', desk: r.desk || '', pakai: users.filter((u) => u.roles.includes(n) || u.auto.includes(n)).length, diubah: !!(r.hak && Object.keys(r.hak).length) }; });
+      return res.json({ tree: A.TREE, roles: list, seksi, users });
     }
     if (req.method !== 'POST') return res.status(405).json({ error: 'Metode tidak diizinkan' });
     if (!A.can(acc, 'admin', 2)) return res.status(403).json({ error: 'Tidak punya hak mengubah' });
     const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
     if (b.action === 'create') {
       const pid = String(b.personId || '');
-      if (!/^rec[A-Za-z0-9]{14}$/.test(pid) || !A.PERAN.includes(b.peran)) return res.status(400).json({ error: 'Pilih orang dan peran' });
+      const rl = (Array.isArray(b.roles) ? b.roles : [b.peran]).filter(Boolean);
+      const known = new Set([...R.SISTEM, ...(await R.loadRoles()).map((r) => r.nama)]);
+      if (!/^rec[A-Za-z0-9]{14}$/.test(pid) || !rl.length || !rl.every((x) => known.has(x))) return res.status(400).json({ error: 'Pilih orang dan minimal satu role' });
       const ps = await fetchAll(PERSON, [PF.nama, PF.email, PF.wa], { filterByFormula: `RECORD_ID()='${pid}'`, maxRecords: '1' });
       const p = ps[0], wa = p ? waDigits(p.fields[PF.wa]) : '';
       if (!wa) return res.status(400).json({ error: 'Orang ini belum punya nomor WhatsApp yang valid di M-Person' });
       const ex = await fetchAll(T, [F.wa], { filterByFormula: `{Whatsapp}='${wa}'`, maxRecords: '1' });
       if (ex[0]) return res.status(409).json({ error: 'Pengguna dengan nomor ini sudah ada' });
       const pw = temp(), iv = inv(req), email = String(p.fields[PF.email] || '').toLowerCase();
-      await create(T, { ...iv.f, [F.email]: email || wa, [F.nama]: p.fields[PF.nama] || wa, [F.wa]: wa, [F.level]: b.peran === 'Admin' ? 'Admin' : 'Pengurus', [A.FX.peran]: b.peran, [F.aktif]: true, [F.disetujui]: true, [F.hash]: hashPassword(pw), [F.person]: pid, [A.FX.khusus]: '{}' }, { typecast: ['PIC BPK', 'Koordinator PD'].includes(b.peran) });
-      console.log('admin create', acc.email, wa, b.peran);
-      const kirim = await kirimUndangan(wa, p.fields[PF.nama] || '', b.peran, iv.link);
+      await create(T, { ...iv.f, [F.email]: email || wa, [F.nama]: p.fields[PF.nama] || wa, [F.wa]: wa, [F.level]: rl.some((x) => R.ADMIN_ROLES.includes(x)) ? 'Admin' : 'Pengurus', [A.FX.manual]: JSON.stringify(rl), [F.aktif]: true, [F.disetujui]: true, [F.hash]: hashPassword(pw), [F.person]: pid, [A.FX.khusus]: '{}' });
+      console.log('admin create', acc.email, wa, rl.join(','));
+      const kirim = await kirimUndangan(wa, p.fields[PF.nama] || '', rl.join(', '), iv.link);
       return res.json({ ok: true, wa: mask(wa), password: pw, link: iv.link, ...kirim });
+    }
+    if (b.action === 'role') {
+      const nama = String(b.nama || '').trim().slice(0, 60);
+      if (nama.length < 2) return res.status(400).json({ error: 'Nama role minimal 2 huruf' });
+      const roles = await R.loadRoles();
+      const ex = b.id ? roles.find((r) => r.id === b.id) : roles.find((r) => r.nama.toLowerCase() === nama.toLowerCase());
+      if (!b.id && ex) return res.status(409).json({ error: 'Nama role sudah dipakai' });
+      if (b.id && !ex && !R.SISTEM.includes(nama)) return res.status(404).json({ error: 'Role tidak ditemukan' });
+      const sistem = R.SISTEM.includes(nama) || !!(ex && ex.sistem);
+      if (!sistem && roles.some((r) => r.id !== (ex && ex.id) && r.nama.toLowerCase() === nama.toLowerCase())) return res.status(409).json({ error: 'Nama role sudah dipakai' });
+      if (R.ADMIN_ROLES.includes(nama)) return res.status(400).json({ error: 'Role Admin dan Super Admin selalu punya akses penuh' });
+      const keys = new Set(Object.entries(A.TREE).flatMap(([m, t]) => [m, ...t.map((x) => `${m}/${x}`)]));
+      const hak = {}; Object.entries(b.hak || {}).forEach(([k, v]) => { if (keys.has(k) && k !== 'admin' && !k.startsWith('admin/') && A.NAME.includes(v)) hak[k] = v; });
+      const sel = (v, ok) => (ok.includes(v) ? v : null);
+      const f = { [R.RT.nama]: nama, [R.RT.hak]: JSON.stringify(hak), [R.RT.cak]: sel(b.cakupan, ['Nasional', 'Terbatas']), [R.RT.seksi]: String(b.seksi || '').slice(0, 80), [R.RT.tingkat]: sel(b.tingkat, ['Koordinator', 'Anggota']), [R.RT.kat]: sel(b.kat, ['BPN INTI', 'BPN HARIAN', 'TIM KERJA']), [R.RT.sistem]: sistem, [R.RT.desk]: String(b.desk || '').slice(0, 500) };
+      if (ex) await up(R.RT.t, ex.id, f); else await mk(R.RT.t, f);
+      R.invalidate(); A.forgetAll();
+      console.log('admin role', acc.email, nama);
+      return res.json({ ok: true });
+    }
+    if (b.action === 'roledel') {
+      const roles = await R.loadRoles(); const r = roles.find((x) => x.id === b.id);
+      if (!r) return res.status(404).json({ error: 'Role tidak ditemukan' });
+      if (R.SISTEM.includes(r.nama)) { await up(R.RT.t, r.id, { [R.RT.hak]: '{}' }); R.invalidate(); A.forgetAll(); return res.json({ ok: true, kembali: true }); }
+      const users = await fetchAll(T, [A.FX.manual, A.FX.peran]);
+      if (users.some((u) => A.listOf(u.fields[A.FX.manual]).includes(r.nama))) return res.status(409).json({ error: 'Role masih dipakai pengguna. Lepaskan dulu dari pengguna.' });
+      await require('../lib/airtable').remove(R.RT.t, r.id);
+      R.invalidate(); A.forgetAll();
+      return res.json({ ok: true });
     }
     const id = String(b.id || '');
     if (!/^rec[A-Za-z0-9]{14}$/.test(id)) return res.status(400).json({ error: 'ID tidak valid' });
-    const rows = await fetchAll(T, [F.email, F.wa, F.nama, F.disetujui, F.aktif, A.FX.peran], { filterByFormula: `RECORD_ID()='${id}'`, maxRecords: '1' });
+    const rows = await fetchAll(T, [F.email, F.wa, F.nama, F.disetujui, F.aktif, A.FX.peran, A.FX.manual], { filterByFormula: `RECORD_ID()='${id}'`, maxRecords: '1' });
     if (!rows[0]) return res.status(404).json({ error: 'Pengguna tidak ditemukan' });
     const email = String(rows[0].fields[F.email] || '').toLowerCase();
     const self = id === acc.id;
     if (b.action === 'update') {
       const f = {};
+      if (b.roles !== undefined) {
+        const known = new Set([...R.SISTEM, ...(await R.loadRoles()).map((r) => r.nama)]);
+        const rl = [...new Set((Array.isArray(b.roles) ? b.roles : []).filter((x) => known.has(x)))];
+        if (self && acc.peran === 'Admin' && !rl.some((x) => R.ADMIN_ROLES.includes(x))) return res.status(400).json({ error: 'Anda tidak bisa mencabut role Admin dari diri sendiri' });
+        if (!rl.length) { const t2 = await fetchAll(T, [F.person], { filterByFormula: `RECORD_ID()='${id}'`, maxRecords: '1' }); const pid = t2[0] && t2[0].fields[F.person]; const tm = await R.loadTim(); if (!pid || !R.autoRoles(await R.loadRoles(), tm, pid).length) return res.status(400).json({ error: 'Pilih minimal satu role' }); }
+        f[A.FX.manual] = JSON.stringify(rl); f[A.FX.peran] = null; f[F.level] = rl.some((x) => R.ADMIN_ROLES.includes(x)) ? 'Admin' : 'Pengurus'; f[F.disetujui] = true;
+      }
       if (b.peran !== undefined) { if (!A.PERAN.includes(b.peran)) return res.status(400).json({ error: 'Peran tidak valid' }); if (self && b.peran !== 'Admin') return res.status(400).json({ error: 'Anda tidak bisa menurunkan peran sendiri' }); f[A.FX.peran] = b.peran; f[F.level] = b.peran === 'Admin' ? 'Admin' : 'Pengurus'; f[F.disetujui] = true; }
       if (b.aktif !== undefined) { if (self && !b.aktif) return res.status(400).json({ error: 'Anda tidak bisa menonaktifkan diri sendiri' }); f[F.aktif] = !!b.aktif; }
-      if (b.khusus !== undefined) f[A.FX.khusus] = JSON.stringify(A.cleanKhusus(b.khusus));
-      await update(T, id, f, { typecast: ['PIC BPK', 'Koordinator PD'].includes(f[A.FX.peran]) }); A.forget(id); A.forget(email);
+            await update(T, id, f); A.forget(id); A.forget(email);
       console.log('admin update', acc.email, email, Object.keys(f).join(','));
       return res.json({ ok: true });
     }
@@ -82,10 +127,10 @@ module.exports = async (req, res) => {
     if (b.action === 'kirimwa') {
       const f = rows[0].fields, wa = waDigits(f[F.wa]);
       if (!wa) return res.status(400).json({ error: 'Pengguna ini belum punya nomor WhatsApp' });
-      if (!f[F.aktif] || !f[F.disetujui] || !nm(f[A.FX.peran])) return res.status(400).json({ error: 'Setujui akun dan pilih peran dulu' });
+      if (!f[F.aktif] || !f[F.disetujui]) return res.status(400).json({ error: 'Setujui akun dan pilih role dulu' });
       const iv = inv(req);
       await update(T, id, iv.f); A.forget(id); A.forget(email);
-      const kirim = await kirimUndangan(wa, f[F.nama] || '', nm(f[A.FX.peran]), iv.link);
+      const kirim = await kirimUndangan(wa, f[F.nama] || '', (A.listOf(f[A.FX.manual]).join(', ') || nm(f[A.FX.peran]) || 'pengguna'), iv.link);
       console.log('admin kirimwa', acc.email, email, kirim.terkirim);
       return res.json({ ok: true, wa: mask(wa), link: iv.link, ...kirim });
     }
