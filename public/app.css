@@ -169,7 +169,7 @@ details.grp[open]>summary{border-bottom:1px solid var(--line);background:#FAFBFE
 .md{background:#fff;border-radius:18px;max-width:520px;width:100%;padding:24px;position:relative;box-shadow:0 20px 60px rgba(10,20,50,.3)}.md.wide{max-width:760px}
 .md h2{margin:0 0 6px;font-size:20px;padding-right:30px}.md h4{margin:18px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:#6B7A99}
 .md .x{position:absolute;right:14px;top:12px;border:0;background:#EEF2FA;border-radius:50%;width:30px;height:30px;cursor:pointer}
-.kvs{margin-top:12px}.kv{display:grid;grid-template-columns:170px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid #EEF2FA}.kv>span{color:#6B7A99;font-size:13px}
+.kvs{margin-top:12px}.kv{display:grid;grid-template-columns:minmax(110px,150px) minmax(0,1fr);gap:10px;padding:8px 0;border-bottom:1px solid #EEF2FA}.kv>span{color:#6B7A99;font-size:13px}
 .rules2{display:flex;gap:8px;flex-wrap:wrap}.rule2{padding:6px 12px;border-radius:99px;font-size:13px;font-weight:600}.rule2.ok{background:#E3F6EC;color:#13805A}.rule2.no{background:#FDE9E7;color:#C2362B}
 .mact{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
 .btn{background:var(--navy);color:#fff;border:0;border-radius:10px;padding:10px 18px;font:inherit;font-weight:600;cursor:pointer}.btn:disabled{opacity:.5;cursor:default}
@@ -205,3 +205,5 @@ tr.clk{cursor:pointer}tr.clk:hover{background:#F3F7FF}
 .phead{display:flex;gap:18px;align-items:center;flex-wrap:wrap}.pfoto{width:96px;height:96px;border-radius:50%;object-fit:cover;background:#EEF3FF;flex:none}
 .ckg{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px 16px;margin-top:8px}.ckg label{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;margin:0;color:inherit}.ckg input{width:auto;margin-top:3px}
 .pform .warnbox ul{margin:6px 0 10px 18px;padding:0}.pform .mact,.mact{display:flex;gap:10px;justify-content:flex-end}
+.me a#meprof{display:block;margin-top:3px;font-size:12px;font-weight:700;color:var(--navy);text-decoration:none}.me a#meprof:hover{text-decoration:underline}.me a#meprof.on{color:#E0661A}
+.kv>div{min-width:0;overflow-wrap:anywhere}.kv .chip{white-space:normal;text-align:left}

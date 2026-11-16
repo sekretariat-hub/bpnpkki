@@ -41,7 +41,7 @@ const I = {
 const MENU = [
   { id: 'dashboard', label: 'Dashboard', icon: I.home, sub: 'Agenda terdekat dan angka kunci', c: '#3B82F6' },
   { id: 'proker', label: 'Program Kerja', icon: I.clip, sub: 'Program kerja BPN untuk Keuskupan', c: '#F5A524', tabs: [['keuskupan', 'Per Keuskupan'], ['semua', 'Semua Program'], ['ringkasan', 'Ringkasan & Grafik'], ['acc', 'Syarat ACC']] },
-  { id: 'profil', label: 'Profil Saya', icon: I.star, sub: 'Lihat dan lengkapi data diri Anda', c: '#E0661A', always: true },
+  { id: 'profil', label: 'Profil Saya', icon: I.star, sub: 'Lihat dan lengkapi data diri Anda', c: '#E0661A', always: true, hide: true },
   { id: 'pengurus', label: 'Pengurus BPN', icon: I.star, sub: 'Susunan pengurus BPN', c: '#8B7CF6' },
   { id: 'pd', label: 'Koordinator PD', icon: I.pd, sub: 'Persekutuan Doa dan koordinatornya', c: '#14B8A6', tabs: [['daftar', 'Daftar PD'], ['ringkasan', 'Ringkasan']] },
   { id: 'tim', label: 'Tim Kerja BPN', icon: I.team, sub: 'Siapa saja yang bertugas di BPN', c: '#FF7A6B', tabs: [['bagan', 'Bagan Tim Aktif'], ['daftar', 'Daftar Tim Kerja']] },
@@ -771,10 +771,11 @@ function render() {
   DR = [];
   const { menu, tab, tabs } = route();
   if (!menu) { $('#nav').innerHTML = ''; $('#page').innerHTML = '<div class="empty">Akun Anda belum diberi akses ke menu apa pun. Hubungi Admin BPN.</div>'; return; }
-  $('#nav').innerHTML = visible().map((m) => `<a href="#/${m.id}" class="${m.id === menu.id ? 'on' : ''}"><svg viewBox="0 0 24 24">${m.icon}</svg>${esc(m.label)}${m.id === menu.id ? '' : `<span class="dot" style="background:${m.c}"></span>`}</a>`).join('');
+  $('#nav').innerHTML = visible().filter((m) => !m.hide).map((m) => `<a href="#/${m.id}" class="${m.id === menu.id ? 'on' : ''}"><svg viewBox="0 0 24 24">${m.icon}</svg>${esc(m.label)}${m.id === menu.id ? '' : `<span class="dot" style="background:${m.c}"></span>`}</a>`).join('');
   $('#ptitle').textContent = menu.label; $('#psub').textContent = menu.sub;
   $('#tabs').innerHTML = menu.tabs ? tabs.map(([id, l]) => `<a href="#/${menu.id}/${id}" class="${id === tab ? 'on' : ''}">${esc(l)}</a>`).join('') : '';
   const fn = PAGES[tab ? `${menu.id}/${tab}` : menu.id];
+  $('#meprof')?.classList.toggle('on', menu.id === 'profil');
   if (menu.id !== 'profil') S.prof = null;
   $('#page').innerHTML = (menu.id === 'profil' ? '' : bannerPr()) + (fn ? fn() : '<div class="empty">Halaman tidak ditemukan.</div>');
   $('#done')?.addEventListener('change', (e) => { S.showDone = e.target.checked; render(); });
