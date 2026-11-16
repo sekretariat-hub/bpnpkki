@@ -22,7 +22,7 @@ const iso = (d) => d.toISOString().slice(0, 10);
 async function build() {
   // Gelombang 1: tabel referensi kecil + data utama
   const [bpk, seksi, bidang, program, jabBpk, pengurus, proker, tim, pdpkk, event, task, pejabat] = await Promise.all([
-    fetchAll(T.bpk, ['fldxvUJvguk6J81mP', 'fldcvLPHh5A9E3S0G', 'fldvPkDbxZn38WFrJ']),
+    fetchAll(T.bpk, ['fldxvUJvguk6J81mP', 'fldcvLPHh5A9E3S0G', 'fldvPkDbxZn38WFrJ', 'fldphfJk5nqDLTGB6', 'flde1x6UBt0lZ9oc6']),
     fetchAll(T.seksi, ['fldlNoAUIJ9jKfZll', 'fldHR7n95OKVB50jx']),
     fetchAll(T.bidang, ['fld92od5eBugVo19p']),
     fetchAll(T.program, ['fldnPNRUurh3VQbJG']),
@@ -118,7 +118,7 @@ async function build() {
       id: r.id, nama: String(r.fields.fldzIeY3YMiHMo4ky || '').trim(), keuskupan: first(r.fields.fldWcO7mYhPFpFXlA), jenis: first(r.fields.fldq43MYnCIKg34ts),
       koordinator: person(r.fields.fldxlRQG4ikb8coP2), jumlahUmat: (r.fields.fldYgMqtmX7AbHfU3 || []).length,
     })),
-    bpkList: bpk.map((r) => ({ id: r.id, nama: String(r.fields.fldxvUJvguk6J81mP || '').trim(), status: first(r.fields.fldcvLPHh5A9E3S0G), aktif: !!r.fields.fldvPkDbxZn38WFrJ })),
+    bpkList: bpk.map((r) => ({ id: r.id, nama: String(r.fields.fldxvUJvguk6J81mP || '').trim(), status: first(r.fields.fldcvLPHh5A9E3S0G), aktif: !!r.fields.fldvPkDbxZn38WFrJ, lat: r.fields.fldphfJk5nqDLTGB6 ?? null, lng: r.fields.flde1x6UBt0lZ9oc6 ?? null })),
     event: event.filter((r) => r.fields.fldqLzgGmTFR7CkMV).map((r) => ({ id: r.id, nama: r.fields.flduBRbHd5qS10GGC || '', tanggal: r.fields.fldqLzgGmTFR7CkMV, status: first(r.fields.fld4fFsOg9vwjxzYw) })),
     tugas: task.map((r) => ({ id: r.id, nama: String(r.fields.fldry0ymZWhzbsvN7 || '').trim(), status: first(r.fields.fldFTszJpZtVvuBRs), prioritas: first(r.fields.fldPliH590gA6RsPc), tenggat: r.fields.fldXsegGJCM9Rk065 || '', seksi: L(r.fields.fldQ62QG6uFvzHHBx), penanggungjawab: person(r.fields.fldNwimQQb6Ms1Rhv).map((p) => p.nama) })),
   };

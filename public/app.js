@@ -137,7 +137,7 @@ PAGES.dashboard = () => {
   const pLine = (p) => `<div class="tli prow" data-pid="${p.id}"><div style="flex:1;min-width:0"><div class="t">${esc(p.program || p.label)}${p.detil ? ` <span class="s">· ${esc(p.detil)}</span>` : ''}</div><div class="s">${p.penerima.length ? 'Dilayani: ' + esc(p.penerima.join(', ')) : 'Penerima belum diisi'}${p.pelaksana.length ? ' · Melayani: ' + esc(p.pelaksana.join(', ')) : ''}</div></div><div>${chip(p.metode || '—', 'blue')}</div></div>`;
   return `<div class="hero"><div><h2>Halo, ${esc((D.user.nama || '').split(' ')[0])} 👋</h2><p>${esc(fdate(t))} · Semoga pelayanan hari ini berbuah.</p></div></div>
   <div class="grid g4" style="margin-bottom:18px">
-    ${kpi('BPK di Indonesia', k.bpk.now, { c: '#1F56C4', t: 'var(--blue-t)', delta: k.bpk, note: `dari ${k.bpk.total} keuskupan terdata`, go: () => openDrill('BPK di Indonesia', D.bpkList.filter((b) => b.aktif).sort((a, b) => cmp(a.nama, b.nama)), [['Keuskupan', (b) => `<b>${esc(b.nama)}</b>`], ['Status', (b) => esc(b.status || '–')]]) })}
+    ${kpi('BPK di Indonesia', k.bpk.now, { c: '#1F56C4', t: 'var(--blue-t)', delta: k.bpk, note: `dari ${k.bpk.total} keuskupan terdata`, go: () => openPeta() })}
     ${kpi('PDPKK terdaftar', k.pdpkk.now, { c: '#0B8277', t: 'var(--teal-t)', delta: k.pdpkk, go: () => openDrill('PDPKK terdaftar', [...D.pdpkk].sort((a, b) => cmp(a.keuskupan, b.keuskupan) || cmp(a.nama, b.nama)), C.pd) })}
     ${kpi('Pewarta pengajar terdaftar', k.pewarta ? k.pewarta.now : 0, { c: '#9A6200', t: 'var(--amber-t)', delta: k.pewarta || { now: 0, prev: 0 }, go: () => openDrill('Pewarta pengajar terdaftar', D.pewartaList || [], C.orang) })}
     ${kpi('Program sedang berjalan', running.length, { c: '#5B4CD1', t: 'var(--violet-t)', note: 'berstatus ON PROGRESS', go: () => openDrill('Program sedang berjalan', running, C.proker) })}
@@ -287,6 +287,26 @@ PAGES['laporan/kepemudaan'] = lap((r) => {
 /* ===== Drill-down: klik angka/grafik membuka daftar datanya ===== */
 function matchRows(rows, get, label) {
   return rows.filter((r) => { let v = get(r); v = Array.isArray(v) ? v : [v]; v = v.filter(Boolean); return label === '' ? true : label === '(kosong)' ? !v.length : v.includes(label); });
+}
+function openPeta() {
+  const P = window.PETA, list = D.bpkList.filter((b) => b.aktif).sort((a, b) => cmp(a.nama, b.nama));
+  const xy = (b) => [P.x0 + (b.lng - 94.5) * P.k, P.y0 + (6.5 - b.lat) * P.k];
+  const dots = list.filter((b) => b.lat != null && b.lng != null).map((b) => { const [x, y] = xy(b); const peng = /Penghubung/.test(b.status || ''); return `<g class="pt" data-bpk="${esc(b.nama)}" tabindex="0"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="11" fill="transparent"/><circle class="dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${peng ? '#9AA7C0' : '#1F56C4'}" stroke="#fff" stroke-width="1.5"/><title>${esc(b.nama)}</title></g>`; }).join('');
+  const n = list.length, np = list.filter((b) => /Penghubung/.test(b.status || '')).length;
+  modal(`<h2>BPK di Indonesia</h2><div class="note">${nf.format(n)} keuskupan · <span class="lg" style="background:#1F56C4"></span> BPK ${nf.format(n - np)} · <span class="lg" style="background:#9AA7C0"></span> BPK Penghubung ${nf.format(np)}. Klik titik atau nama untuk melihat detail.</div>
+    <div class="mapbox"><svg viewBox="0 0 ${P.W} ${P.H}" role="img" aria-label="Peta sebaran BPK di Indonesia"><rect width="${P.W}" height="${P.H}" fill="#EEF3FA"/><path d="${P.d}" fill="#fff" stroke="#B8C4DA" stroke-width=".6"/>${dots}</svg><div class="maptip" id="mtip"></div></div>
+    <input id="dq" placeholder="Cari keuskupan…" style="width:100%;box-sizing:border-box;margin:10px 0 6px"><div class="tw" id="dt" style="max-height:34vh;overflow:auto"></div>`, true);
+  const draw = () => { const q = $('#dq').value.toLowerCase(), l = list.filter((b) => !q || b.nama.toLowerCase().includes(q)); $('#dt').innerHTML = `<table><thead><tr><th>Keuskupan</th><th>Status</th></tr></thead><tbody>${l.map((b) => `<tr><td><a href="#" class="bpk" data-bpk="${esc(b.nama)}"><b>${esc(b.nama)}</b></a></td><td>${esc(b.status || '–')}</td></tr>`).join('') || '<tr><td colspan="2"><div class="empty">Tidak ada data.</div></td></tr>'}</tbody></table>`; };
+  $('#dq').addEventListener('input', draw); draw();
+  const tip = $('#mtip'), svg = document.querySelector('.mapbox svg');
+  svg.querySelectorAll('.pt').forEach((g) => {
+    const nm = g.dataset.bpk;
+    g.addEventListener('mouseenter', () => { tip.textContent = nm; tip.style.opacity = 1; });
+    g.addEventListener('mousemove', (e) => { const r = svg.getBoundingClientRect(); tip.style.left = e.clientX - r.left + 10 + 'px'; tip.style.top = e.clientY - r.top - 28 + 'px'; });
+    g.addEventListener('mouseleave', () => { tip.style.opacity = 0; });
+    g.addEventListener('click', () => openBpk(nm));
+    g.addEventListener('keydown', (e) => { if (e.key === 'Enter') g.dispatchEvent(new Event('click')); });
+  });
 }
 function openDrill(title, rows, cols) {
   const text = (r) => cols.map(([, f]) => String(f(r)).replace(/<[^>]*>/g, ' ')).join(' ').toLowerCase();

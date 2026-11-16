@@ -190,3 +190,7 @@ code.pw{font-size:18px;background:#F1F5FF;padding:6px 10px;border-radius:8px;let
 .lback{display:block;margin:8px auto 0}.dob{display:grid;grid-template-columns:1fr 1.4fr 1.2fr;gap:8px}
 .okbox{width:54px;height:54px;border-radius:50%;background:#E3F6EC;color:#13805A;font-size:28px;display:grid;place-items:center;margin:8px auto}
 .login select{width:100%;box-sizing:border-box}
+.mapbox{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line,#E3E8F2)}.mapbox svg{display:block;width:100%;height:auto}
+.pt{cursor:pointer}.pt:hover .dot,.pt:focus .dot{r:7;fill:#E0661A}.pt:focus{outline:none}
+.maptip{position:absolute;pointer-events:none;background:#12295F;color:#fff;font-size:12px;padding:3px 8px;border-radius:6px;opacity:0;transition:opacity .1s;white-space:nowrap}
+.lg{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin:0 2px 0 6px}
