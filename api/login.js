@@ -49,6 +49,13 @@ module.exports = async (req, res) => {
     return res.status(200).json({ ok: true });
   } catch (e) {
     console.error('login error', e.message);
-    return res.status(500).json({ error: 'Terjadi kesalahan server' });
+    const m = String(e.message);
+    let hint = 'Terjadi kesalahan server';
+    if (/AIRTABLE_TOKEN belum/.test(m)) hint = 'Konfigurasi server: AIRTABLE_TOKEN belum diisi di Vercel';
+    else if (/SESSION_SECRET/.test(m)) hint = 'Konfigurasi server: SESSION_SECRET belum diisi (min 32 karakter) di Vercel';
+    else if (/Airtable 401/.test(m)) hint = 'Konfigurasi server: AIRTABLE_TOKEN tidak valid';
+    else if (/Airtable 403/.test(m)) hint = 'Konfigurasi server: token Airtable tidak punya akses ke base/tabel Pengguna Report atau scope kurang';
+    else if (/Airtable 404/.test(m)) hint = 'Konfigurasi server: base atau tabel Airtable tidak ditemukan (cek AIRTABLE_BASE_ID)';
+    return res.status(500).json({ error: hint });
   }
 };
