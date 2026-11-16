@@ -1,11 +1,17 @@
-# Report BPN PKKI
+# Sistem Informasi BPN PKKI
 
-Dashboard ringkasan data Airtable (base **BPN PKKI**) dengan login email + password.
-Token Airtable hanya ada di server (Vercel env var); browser hanya menerima angka agregat.
+Sistem informasi Badan Pelayanan Nasional Pembaruan Karismatik Katolik Indonesia, dibangun di atas data Airtable (base **BPN PKKI**), login email + password.
+Token Airtable hanya ada di server (Vercel env var); browser tidak pernah menerima token.
+
+Menu (sidebar kiri, sub-menu berupa tab): Dashboard · Program Kerja (Per Keuskupan / Semua / Ringkasan / Syarat ACC) · Pengurus BPN · Koordinator PD · Tim Kerja BPN (Bagan Tim Aktif / Daftar) · Laporan (Pleno, TC SHDR, Kepemudaan).
+
+Hak akses sementara: nomor WhatsApp/email hanya tampil untuk level **Admin**.
 
 ## Struktur
-- `public/index.html` – halaman login + report (Program Kerja & Budget, Pleno & Golden Jubilee, TC SHDR, Kepemudaan)
-- `api/login.js`, `api/logout.js`, `api/report.js` – serverless function Vercel
+- `public/` – antarmuka (index.html, app.css, app.js, logo.png)
+- `api/login.js`, `api/logout.js` – autentikasi
+- `api/data.js` – data utama (proker, pengurus, tim kerja, PD, agenda, KPI)
+- `api/report.js` – laporan agregat (Pleno, TC SHDR, Kepemudaan)
 - `lib/` – klien Airtable, hash password (scrypt), sesi cookie bertanda tangan
 - `scripts/set-password.js` – buat/ganti password pengguna
 

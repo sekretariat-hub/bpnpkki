@@ -4,57 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Report BPN PKKI</title>
-<style>
-  :root{--bg:#f6f5f1;--card:#fff;--ink:#1f2a37;--mute:#6b7280;--line:#e5e2d9;--pri:#1f4e79;--pri2:#2e75b6;--acc:#b45309;--ok:#2f7d4f;--bad:#b42318;--r:14px}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-  .hide{display:none!important}
-  /* login */
-  .login{min-height:100vh;display:grid;place-items:center;padding:20px}
-  .login form{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:28px;width:100%;max-width:380px;box-shadow:0 6px 24px rgba(0,0,0,.05)}
-  .login h1{margin:0 0 4px;font-size:22px}.login p{margin:0 0 18px;color:var(--mute);font-size:14px}
-  label{display:block;font-size:13px;color:var(--mute);margin:12px 0 4px}
-  input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:15px}
-  input:focus{outline:2px solid var(--pri2);border-color:transparent}
-  button{cursor:pointer;border:0;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600}
-  .btn{background:var(--pri);color:#fff;width:100%;margin-top:18px}.btn:disabled{opacity:.6}
-  .ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
-  .err{color:var(--bad);font-size:13px;margin-top:10px;min-height:18px}
-  /* report */
-  header{background:var(--pri);color:#fff;padding:18px 20px}
-  .wrap{max-width:1100px;margin:0 auto}
-  header .wrap{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
-  header h1{margin:0;font-size:20px}header small{opacity:.8}
-  .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.actions span{font-size:13px;opacity:.9}
-  nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);z-index:5}
-  nav .wrap{display:flex;gap:6px;padding:8px 20px;overflow-x:auto}
-  nav a{white-space:nowrap;text-decoration:none;color:var(--ink);padding:6px 12px;border-radius:999px;font-size:14px}
-  nav a:hover{background:#e9e6dc}
-  main{padding:20px}
-  section{margin-bottom:34px}
-  section>h2{font-size:18px;margin:0 0 12px;padding-bottom:6px;border-bottom:2px solid var(--pri)}
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
-  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
-  .kpi b{display:block;font-size:26px;line-height:1.1}.kpi span{color:var(--mute);font-size:13px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;break-inside:avoid}
-  .card h3{margin:0 0 10px;font-size:14px;color:var(--mute);font-weight:600}
-  .row{display:grid;grid-template-columns:minmax(80px,38%) 1fr auto;gap:8px;align-items:center;margin:5px 0;font-size:13px}
-  .row .l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .bar{background:#eef2f7;border-radius:6px;height:14px;overflow:hidden}.bar i{display:block;height:100%;background:var(--pri2);border-radius:6px}
-  .row .v{font-variant-numeric:tabular-nums;font-weight:600;min-width:28px;text-align:right}
-  .empty{color:var(--mute);font-size:13px}
-  footer{color:var(--mute);font-size:12px;text-align:center;padding:10px 20px 30px}
-  @media print{header .actions,nav{display:none}body{background:#fff}.card,.kpi{box-shadow:none}header{background:#fff;color:#000;border-bottom:2px solid #000}}
-</style>
+<meta name="theme-color" content="#1B3A8C">
+<title>Sistem Informasi BPN PKKI</title>
+<link rel="icon" href="/logo.png">
+<link rel="stylesheet" href="/app.css">
 </head>
 <body>
-
 <div id="login" class="login hide">
   <form id="lf" autocomplete="on">
-    <h1>Report BPN PKKI</h1>
-    <p>Masuk dengan email yang terdaftar.</p>
+    <img src="/logo.png" alt="Logo BPN PKKI">
+    <h1>Sistem Informasi BPN PKKI</h1>
+    <p>Badan Pelayanan Nasional Pembaruan Karismatik Katolik Indonesia</p>
     <label for="email">Email</label>
     <input id="email" type="email" autocomplete="username" required>
     <label for="pw">Password</label>
@@ -64,79 +24,26 @@
   </form>
 </div>
 
-<div id="app" class="hide">
-  <header><div class="wrap">
-    <div><h1>Report BPN PKKI</h1><small id="stamp"></small></div>
-    <div class="actions"><span id="who"></span>
-      <button class="ghost" id="rf">Muat ulang data</button>
-      <button class="ghost" onclick="window.print()">Cetak / PDF</button>
-      <button class="ghost" id="lo">Keluar</button></div>
-  </div></header>
-  <nav><div class="wrap">
-    <a href="#proker">Program Kerja &amp; Budget</a><a href="#pleno">Pleno &amp; Golden Jubilee</a>
-    <a href="#tc">TC SHDR</a><a href="#pemuda">Kepemudaan</a>
-  </div></nav>
-  <main><div class="wrap" id="content"></div></main>
-  <footer>Data langsung dari Airtable (BPN PKKI), diperbarui otomatis tiap beberapa menit. Hanya angka ringkasan, tanpa data pribadi.</footer>
+<div id="app" class="shell hide">
+  <aside class="side" id="side">
+    <div class="brand"><img src="/logo.png" alt=""><div><b>BPN PKKI</b><span>Sistem Informasi</span></div></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="me"><div class="av" id="meav"></div><div><b id="mename"></b><small id="melevel"></small></div><button id="lo">Keluar</button></div>
+  </aside>
+  <div class="main">
+    <div class="top">
+      <div class="top-row">
+        <button class="burger" id="burger" aria-label="Menu">☰</button>
+        <div><h1 id="ptitle"></h1><div class="sub" id="psub"></div></div>
+        <div class="spacer"></div>
+        <button class="ghost" id="rf">Muat ulang</button>
+        <button class="ghost" onclick="window.print()">Cetak</button>
+      </div>
+      <div class="tabs" id="tabs"></div>
+    </div>
+    <div class="page" id="page"></div>
+  </div>
 </div>
-
-<script>
-const $ = (id) => document.getElementById(id);
-const nf = new Intl.NumberFormat('id-ID');
-const rp = (n) => 'Rp ' + nf.format(Math.round(n || 0));
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-
-const kpi = (v, l) => `<div class="kpi"><b>${v}</b><span>${esc(l)}</span></div>`;
-function bars(title, list, opts = {}) {
-  list = (list || []).slice(0, opts.max || 12);
-  const max = Math.max(1, ...list.map((x) => x.value));
-  const body = list.length
-    ? list.map((x) => `<div class="row"><div class="l" title="${esc(x.label)}">${esc(x.label)}</div><div class="bar"><i style="width:${(x.value / max) * 100}%"></i></div><div class="v">${nf.format(x.value)}</div></div>`).join('')
-    : '<div class="empty">Belum ada data</div>';
-  return `<div class="card"><h3>${esc(title)}</h3>${body}</div>`;
-}
-const find = (list, re) => ((list || []).find((x) => re.test(x.label)) || { value: 0 }).value;
-
-function render(d) {
-  const p = d.programKerja, e = d.pleno, t = d.tc, k = d.kepemudaan;
-  $('who').textContent = d.user.nama;
-  $('stamp').textContent = 'Diperbarui ' + new Date(d.generatedAt).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' });
-  $('content').innerHTML = `
-  <section id="proker"><h2>Program Kerja &amp; Budget</h2>
-    <div class="kpis">${kpi(nf.format(p.total), 'Total program kerja')}${kpi(rp(p.anggaran), 'Total anggaran dari BPN')}${kpi(nf.format(p.bpkTerdampak), 'BPK penerima program')}${kpi(nf.format(p.bpkTerlibat), 'BPK pelaksana program')}${kpi(nf.format(p.deal), 'Program sudah deal')}</div>
-    <div class="grid">${bars('Program per bulan', p.perBulan)}${bars('Status program', p.perStatus)}${bars('Seksi penanggung jawab', p.perSeksi)}${bars('Metode pelaksanaan', p.perMetode)}${bars('Jenis kegiatan', p.perJenis)}${bars('Sumber dana', p.perSumberDana)}</div></section>
-  <section id="pleno"><h2>Pleno &amp; Golden Jubilee</h2>
-    <div class="kpis">${kpi(nf.format(e.total), 'Total data masuk')}${kpi(nf.format(find(e.kehadiran, /^HADIR$/i)), 'Hadir')}${kpi(nf.format(find(e.kehadiran, /TIDAK/i)), 'Tidak hadir')}${kpi(nf.format(find(e.kehadiran, /BELUM/i)), 'Belum mengisi')}${kpi(nf.format(e.pasangan), 'Pasangan butuh kamar')}${kpi(nf.format(e.pastor), 'Pastor')}</div>
-    <div class="grid">${bars('Status kehadiran', e.kehadiran)}${bars('Kelengkapan foto', e.kelengkapanFoto)}${bars('Kategori penugasan BPN', e.kategori)}${bars('Dukungan transportasi', e.transportasi)}${bars('Jadwal kedatangan', e.kedatangan)}${bars('Membawa pasangan', e.bawaPasangan)}</div></section>
-  <section id="tc"><h2>TC SHDR</h2>
-    <div class="kpis">${kpi(nf.format(t.pendaftar), 'Pendaftar')}${kpi(nf.format(t.kelompok), 'Kelompok')}${kpi(nf.format(t.mentor), 'Mentor')}</div>
-    <div class="grid">${bars('Status pendaftaran', t.statusTC)}${bars('Status SHDR', t.statusSHDR)}${bars('Verifikasi data', t.verifikasi)}${bars('Kelompok usia', t.kelompokUsia)}${bars('Jenis kelamin', t.jenisKelamin)}${bars('Kategori mentor', t.kategoriMentor)}${bars('Pendaftar per keuskupan', t.perKeuskupan, { max: 25 })}</div></section>
-  <section id="pemuda"><h2>Kepemudaan</h2>
-    <div class="kpis">${kpi(nf.format(k.bpkAktif), 'BPK aktif')}${kpi(nf.format(k.bpkPunyaPIC), 'BPK sudah punya PIC')}${kpi(nf.format(k.bpkBelumPIC), 'BPK belum punya PIC')}${kpi(nf.format(k.pdpkkTotal), 'PDPKK terdata')}</div>
-    <div class="grid">${bars('Jenis PDPKK', k.pdpkkJenis)}${bars('Status peserta TC per BPK', k.statusPesertaTC)}</div></section>`;
-}
-
-async function load(refresh) {
-  const r = await fetch('/api/report' + (refresh ? '?refresh=1' : ''), { credentials: 'same-origin' });
-  if (r.status === 401) return showLogin();
-  if (!r.ok) { $('content').innerHTML = '<div class="card">Gagal memuat data. Coba muat ulang.</div>'; return; }
-  $('login').classList.add('hide'); $('app').classList.remove('hide');
-  render(await r.json());
-}
-function showLogin() { $('app').classList.add('hide'); $('login').classList.remove('hide'); }
-
-$('lf').addEventListener('submit', async (ev) => {
-  ev.preventDefault(); $('le').textContent = ''; $('lb').disabled = true;
-  try {
-    const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ email: $('email').value, password: $('pw').value }) });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) { $('le').textContent = j.error || 'Gagal masuk'; } else { $('pw').value = ''; await load(); }
-  } catch { $('le').textContent = 'Koneksi bermasalah'; }
-  $('lb').disabled = false;
-});
-$('rf').onclick = async () => { $('rf').disabled = true; await load(true); $('rf').disabled = false; };
-$('lo').onclick = async () => { await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); showLogin(); };
-load();
-</script>
+<script src="/app.js"></script>
 </body>
 </html>

@@ -14,7 +14,7 @@ const TBL = {
   pdpkk: 'tblhmeuR1qFHxUIId',
 };
 
-const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agust', 'Sept', 'Okt', 'Nov', 'Dec'];
 const byMonth = (a, b) => MONTHS.indexOf(a.label) - MONTHS.indexOf(b.label);
 
 let cache = { at: 0, data: null };
