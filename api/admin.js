@@ -37,7 +37,7 @@ module.exports = async (req, res) => {
       return res.json({
         tree: A.TREE, peran: A.PERAN,
         presets: Object.fromEntries(A.PERAN.map((p) => [p, A.resolve(p, {})])),
-        users: rows.map((r) => { const f = r.fields; return { id: r.id, email: f[F.email] || '', wa: mask(waDigits(f[F.wa])), nama: f[F.nama] || '', aktif: !!f[F.aktif], pending: !f[F.disetujui], peran: nm(f[A.FX.peran]) || (nm(f[F.level]) === 'Admin' ? 'Admin' : ''), khusus: A.cleanKhusus(A.parseKhusus(f[A.FX.khusus])), lastLogin: f[F.lastLogin] || '' }; })
+        users: rows.map((r) => { const f = r.fields; return { id: r.id, email: f[F.email] || '', wa: mask(waDigits(f[F.wa])), nama: f[F.nama] || '', aktif: !!f[F.aktif], pending: !f[F.disetujui], peran: nm(f[A.FX.peran]) || (nm(f[F.level]) === 'Admin' ? 'Admin' : ''), khusus: A.cleanKhusus(A.parseKhusus(f[A.FX.khusus])), lastLogin: f[F.lastLogin] || '', person: /^rec/.test(f[F.person] || '') ? f[F.person] : '' }; })
           .sort((a, b) => a.nama.localeCompare(b.nama, 'id')),
       });
     }

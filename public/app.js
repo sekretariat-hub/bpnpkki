@@ -41,6 +41,7 @@ const I = {
 const MENU = [
   { id: 'dashboard', label: 'Dashboard', icon: I.home, sub: 'Agenda terdekat dan angka kunci', c: '#3B82F6' },
   { id: 'proker', label: 'Program Kerja', icon: I.clip, sub: 'Program kerja BPN untuk Keuskupan', c: '#F5A524', tabs: [['keuskupan', 'Per Keuskupan'], ['semua', 'Semua Program'], ['ringkasan', 'Ringkasan & Grafik'], ['acc', 'Syarat ACC']] },
+  { id: 'profil', label: 'Profil Saya', icon: I.star, sub: 'Lihat dan lengkapi data diri Anda', c: '#E0661A', always: true },
   { id: 'pengurus', label: 'Pengurus BPN', icon: I.star, sub: 'Susunan pengurus BPN', c: '#8B7CF6' },
   { id: 'pd', label: 'Koordinator PD', icon: I.pd, sub: 'Persekutuan Doa dan koordinatornya', c: '#14B8A6', tabs: [['daftar', 'Daftar PD'], ['ringkasan', 'Ringkasan']] },
   { id: 'tim', label: 'Tim Kerja BPN', icon: I.team, sub: 'Siapa saja yang bertugas di BPN', c: '#FF7A6B', tabs: [['bagan', 'Bagan Tim Aktif'], ['daftar', 'Daftar Tim Kerja']] },
@@ -329,6 +330,139 @@ function formPejabat(bpkId, jabId) {
   });
 }
 
+/* --- Profil saya --- */
+const fj = (u) => fetch(u, { credentials: 'same-origin' }).then((r) => r.json()).catch(() => ({}));
+const PENGAJAR = /pewarta|pengajar/i;
+async function ringkasPr() {
+  try { const r = await fetch('/api/profil?act=ringkas', { credentials: 'same-origin' }); if (!r.ok || !D) return; const j = await r.json(); const was = JSON.stringify(D.pr || null); D.pr = j; if (JSON.stringify(j) !== was) render(); } catch { /* abaikan */ }
+}
+const bannerPr = () => (D && D.pr && D.pr.kurang && D.pr.kurang.length ? `<div class="warnbox" style="margin-bottom:16px"><b>Profil Anda belum lengkap.</b> Mohon lengkapi: ${D.pr.kurang.map((x) => esc(x)).join(', ')}. <a href="#/profil" style="font-weight:700">Lengkapi sekarang →</a></div>` : '');
+const resizeImg = (file, max = 900) => new Promise((ok, no) => { const img = new Image(), u = URL.createObjectURL(file); img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u); ok(c.toDataURL('image/jpeg', 0.85)); }; img.onerror = () => no(new Error('Foto tidak bisa dibaca')); img.src = u; });
+const profUrl = (extra) => '/api/profil' + (S.prof && S.prof.pid ? '?id=' + S.prof.pid + (extra ? '&' + extra : '') : extra ? '?' + extra : '');
+const nmOf = (list, id) => (list.find((x) => x.id === id) || {}).nama || '';
+
+PAGES.profil = () => {
+  const hid = location.hash.replace(/^#\/?/, '').split('/')[1] || '', pid = /^rec[A-Za-z0-9]{14}$/.test(hid) ? hid : '';
+  if (!S.prof || S.prof.pid !== pid) {
+    S.prof = { pid, loading: true };
+    fetch('/api/profil' + (pid ? '?id=' + pid : ''), { credentials: 'same-origin' }).then(async (r) => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Gagal memuat profil'); S.prof = { pid, ...j }; render(); })
+      .catch((e) => { S.prof = { pid, err: e.message }; render(); });
+  }
+  if (S.prof.loading) return '<div class="load"><div class="sp"></div><div>Memuat profil…</div></div>';
+  if (S.prof.err) return `<div class="empty">${esc(S.prof.err)}</div>`;
+  return S.prof.edit ? profilForm() : profilView();
+};
+
+function profilView() {
+  const P = S.prof, p = P.profil, o = P.opsi;
+  const pel = p.pelayanan.map((id) => nmOf(o.pelayanan, id)), ajar = pel.some((n) => PENGAJAR.test(n));
+  const lahir = p.tgl && p.bln && p.thn ? `${p.tgl} ${Object.values(BLN)[p.bln - 1]} ${p.thn}` : '';
+  const list = (a) => (a.length ? `<div class="chips">${a.map((x) => chip(x, 'blue')).join('')}</div>` : '');
+  return `${P.milik ? '' : `<div class="warnbox" style="margin-bottom:16px">Anda melihat profil <b>${esc(p.nama)}</b> sebagai Admin/Editor.</div>`}
+  ${P.kurang.length ? `<div class="warnbox" style="margin-bottom:16px"><b>${P.milik ? 'Profil Anda' : 'Profil ini'} belum lengkap.</b> Yang masih perlu diisi:<ul>${P.kurang.map((x) => `<li>${esc(x)}</li>`).join('')}</ul><button class="btn" id="prled" style="width:auto;margin:0">Lengkapi sekarang</button></div>` : '<div class="okmsg" style="margin-bottom:16px">✓ Data profil sudah lengkap.</div>'}
+  <div class="card"><div class="phead">${p.foto ? `<img class="pfoto" src="${esc(p.foto)}" alt="Foto ${esc(p.nama)}">` : `<div class="pfoto" style="display:grid;place-items:center;background:${hue(p.nama)};color:#fff;font-size:32px;font-weight:700">${esc(initials(p.nama))}</div>`}
+    <div style="flex:1;min-width:200px"><h2 style="margin:0">${esc(p.nama)}</h2><div class="sub">${esc(p.pan ? 'Dipanggil ' + p.pan : '')}</div><div class="chips" style="margin-top:8px">${p.kategori ? chip(p.kategori, 'violet') : ''}${ajar ? chip('Pewarta / Pengajar', 'teal') : ''}</div></div>
+    <button class="ghost" id="pred">✏️ Ubah profil</button></div></div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h3>Data diri</h3><div class="kvs">${row('Jenis kelamin', esc(p.jk))}${row('Tanggal lahir', esc(lahir))}${row('WhatsApp', esc(p.wa))}${row('Email', esc(p.email))}${row('Kategori', esc(p.kategori))}${row('Sakramen Baptis', esc(p.baptis))}${row('Sakramen Krisma', esc(p.krisma))}${row('Ukuran baju', esc(p.size))}</div></div>
+    <div class="card"><h3>Domisili</h3><div class="kvs">${row('Keuskupan', esc(nmOf(o.keuskupan, p.kus)))}${row('Kota / Kabupaten', esc(p.kota ? p.kota.nama + (p.kota.prov ? ', ' + p.kota.prov : '') : ''))}${row('Paroki', esc(p.paroki ? p.paroki.nama : ''))}${row('Alamat surat', esc(p.alamat))}</div></div>
+    <div class="card"><h3>Persekutuan Doa &amp; pelayanan</h3><div class="kvs">${row('Asal PD', esc(p.pd ? p.pd.nama : ''))}${row('Pelayanan', list(pel))}${ajar ? `${row('Modul yang diajar', list(p.modulAjar.map((id) => nmOf(o.modul, id))))}${row('Bab yang diajar', list(p.bab))}` : ''}</div></div>
+    <div class="card"><h3>Modul yang pernah diikuti</h3>${p.modulIkut.length ? list(p.modulIkut.map((id) => nmOf(o.modul, id))) : '<p class="sub">Belum ada yang dipilih.</p>'}</div>
+  </div>${setTimeout(() => { const go = () => { S.prof.edit = true; render(); }; $('#prled')?.addEventListener('click', go); $('#pred')?.addEventListener('click', go); }) && ''}`;
+}
+
+function profilForm() {
+  const P = S.prof, p = P.profil, o = P.opsi, yr = new Date().getFullYear();
+  const sel = (id, list, cur, ph = 'Pilih…') => `<select id="pf_${id}"><option value="">${ph}</option>${list.map((x) => `<option${x === cur ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
+  const cks = (name, list, cur, lab = (x) => x.nama, val = (x) => x.id) => `<div class="ckg">${list.map((x) => `<label><input type="checkbox" name="${name}" value="${esc(val(x))}"${cur.includes(val(x)) ? ' checked' : ''}> <span>${esc(lab(x))}</span></label>`).join('')}</div>`;
+  setTimeout(() => bindProfil(), 0);
+  return `<form id="pff" class="pform" autocomplete="off">
+  ${P.kurang.length ? `<div class="warnbox" style="margin-bottom:16px"><b>Belum lengkap:</b> ${P.kurang.map((x) => esc(x)).join(', ')}.</div>` : ''}
+  <div class="card"><h3>Foto</h3><div class="phead">${p.foto ? `<img class="pfoto" id="pf_img" src="${esc(p.foto)}" alt="">` : `<div class="pfoto" id="pf_img" style="display:grid;place-items:center;background:${hue(p.nama)};color:#fff;font-size:32px;font-weight:700">${esc(initials(p.nama))}</div>`}
+    <div><input type="file" id="pf_file" accept="image/jpeg,image/png,image/webp" style="max-width:280px"><p class="note" style="margin:6px 0 0">Foto wajah yang jelas. Tersimpan otomatis begitu dipilih.</p><div class="err" id="pf_fe"></div></div></div></div>
+  <div class="card" style="margin-top:16px"><h3>Data diri</h3><div class="eform">
+    <div><label>Nama lengkap</label><input id="pf_nama" value="${esc(p.nama)}"></div><div><label>Nama panggilan</label><input id="pf_pan" value="${esc(p.pan)}"></div>
+    <div><label>Jenis kelamin</label>${sel('jk', o.jk, p.jk)}</div><div><label>Nomor WhatsApp (untuk masuk, tidak bisa diubah di sini)</label><input value="${esc(p.wa)}" disabled></div>
+    <div><label>Tanggal lahir</label><div class="dob"><select id="pf_tgl"><option value="">Tgl</option>${Array.from({ length: 31 }, (_, i) => `<option${+p.tgl === i + 1 ? ' selected' : ''}>${i + 1}</option>`).join('')}</select><select id="pf_bln"><option value="">Bulan</option>${BLN3.map((b, i) => `<option value="${i + 1}"${+p.bln === i + 1 ? ' selected' : ''}>${b}</option>`).join('')}</select><select id="pf_thn"><option value="">Tahun</option>${Array.from({ length: yr - 1919 }, (_, i) => `<option${+p.thn === yr - i ? ' selected' : ''}>${yr - i}</option>`).join('')}</select></div></div>
+    <div><label>Email</label><input id="pf_email" type="email" value="${esc(p.email)}"></div>
+    <div><label>Kategori</label>${sel('kategori', o.kategori, p.kategori)}</div><div><label>Ukuran baju</label>${sel('size', o.size, p.size)}</div>
+    <div><label>Sakramen Baptis</label>${sel('baptis', o.sakramen, p.baptis)}</div><div><label>Sakramen Krisma</label>${sel('krisma', o.sakramen, p.krisma)}</div></div></div>
+  <div class="card" style="margin-top:16px"><h3>Domisili</h3><div class="eform">
+    <div><label>Keuskupan domisili</label><select id="pf_kus"><option value="">Pilih…</option>${o.keuskupan.map((k) => `<option value="${k.id}"${k.id === p.kus ? ' selected' : ''}>${esc(k.nama)}</option>`).join('')}</select></div>
+    <div style="position:relative"><label>Kota / Kabupaten</label><input id="pf_kota" placeholder="Ketik nama kota/kabupaten…" value="${esc(p.kota ? p.kota.nama + (p.kota.prov ? ', ' + p.kota.prov : '') : '')}"><div id="pf_kotar" class="sres"></div></div>
+    <div><label>Paroki</label><select id="pf_par" disabled><option value="">Pilih keuskupan dulu</option></select><input id="pf_parb" placeholder="Ketik nama paroki Anda" style="display:none;margin-top:6px"></div>
+    <div><label>Alamat surat</label><input id="pf_alamat" value="${esc(p.alamat)}"></div></div></div>
+  <div class="card" style="margin-top:16px"><h3>Persekutuan Doa (PD)</h3><div class="eform"><div class="full"><label>Asal PD</label><select id="pf_pd" disabled><option value="">Pilih keuskupan dulu</option></select><p class="note" style="margin:6px 0 0">PD Anda tidak ada di daftar? <a href="#" id="pf_pdb" style="font-weight:700">Tambah PD baru</a> (sistem mengecek dulu supaya tidak dobel).</p></div></div></div>
+  <div class="card" style="margin-top:16px"><h3>Pelayanan</h3><p class="note">Pilih pelayanan yang Anda jalani. Memilih <b>Pewarta</b> atau <b>Pengajar</b> memunculkan pertanyaan modul dan bab.</p>
+    <div class="ckg">${o.pelayanan.map((g) => `<label><input type="checkbox" name="pel" value="${esc(g.id)}" data-n="${esc(g.nama)}"${p.pelayanan.includes(g.id) ? ' checked' : ''}> <span>${esc(g.nama)}</span></label>`).join('')}</div>
+    <div id="pf_ajar" style="${o.pelayanan.some((g) => p.pelayanan.includes(g.id) && PENGAJAR.test(g.nama)) ? '' : 'display:none'};margin-top:14px;padding-top:12px;border-top:1px solid #EEF2FA">
+      <label style="font-weight:700">Modul apa yang Anda ajar?</label>${cks('maj', o.modul, p.modulAjar)}
+      <label style="font-weight:700;display:block;margin-top:14px">Bab berapa?</label>${cks('bab', o.bab.map((x) => ({ id: x, nama: x })), p.bab)}</div></div>
+  <div class="card" style="margin-top:16px"><h3>Modul yang pernah diikuti</h3>${cks('mik', o.modul, p.modulIkut)}</div>
+  <div class="err" id="pf_e"></div><div class="mact" style="margin-top:12px"><button class="ghost" type="button" id="pf_batal">Batal</button><button class="btn" id="pf_s" type="submit" style="width:auto;margin:0">Simpan profil</button></div></form>`;
+}
+
+function bindProfil() {
+  const f = $('#pff'); if (!f || f._b) return; f._b = true;
+  const P = S.prof, p = P.profil, v = (id) => $('#pf_' + id).value;
+  let kota = p.kota ? p.kota.id : '';
+  const fillPilihan = async (kus, curPar, curPd) => {
+    const par = $('#pf_par'), pd = $('#pf_pd');
+    if (!kus) { par.disabled = pd.disabled = true; par.innerHTML = pd.innerHTML = '<option value="">Pilih keuskupan dulu</option>'; return; }
+    par.disabled = pd.disabled = true; par.innerHTML = pd.innerHTML = '<option>Memuat…</option>';
+    const [a, b] = await Promise.all([fj('/api/profil?act=paroki&kus=' + kus), fj('/api/profil?act=pd&kus=' + kus)]);
+    par.innerHTML = `<option value="">Pilih paroki…</option>${(a.paroki || []).map((x) => `<option value="${x.id}"${x.id === curPar ? ' selected' : ''}>${esc(x.nama)}</option>`).join('')}<option value="__baru">— Paroki saya tidak ada di daftar —</option>`;
+    pd.innerHTML = `<option value="">Pilih PD…</option>${(b.pd || []).map((x) => `<option value="${x.id}"${x.id === curPd ? ' selected' : ''}>${esc(x.nama + (x.koord ? ' · Koord: ' + x.koord : ''))}</option>`).join('')}`;
+    if (curPd && !pd.value && p.pd) pd.insertAdjacentHTML('beforeend', `<option value="${p.pd.id}" selected>${esc(p.pd.nama)}</option>`);
+    if (curPar && !par.value && p.paroki) par.insertAdjacentHTML('afterbegin', `<option value="${p.paroki.id}" selected>${esc(p.paroki.nama)}</option>`);
+    par.disabled = pd.disabled = false;
+  };
+  fillPilihan(p.kus, p.paroki && p.paroki.id, p.pd && p.pd.id);
+  $('#pf_kus').addEventListener('change', () => fillPilihan(v('kus'), '', ''));
+  $('#pf_par').addEventListener('change', () => { $('#pf_parb').style.display = v('par') === '__baru' ? '' : 'none'; });
+  const kq = $('#pf_kota'), kb = $('#pf_kotar');
+  kq.addEventListener('input', () => { clearTimeout(kq._t); kota = ''; if (kq.value.trim().length < 2) { kb.innerHTML = ''; return; } kq._t = setTimeout(async () => { const j = await fj('/api/profil?act=kota&q=' + encodeURIComponent(kq.value.trim())); kb.innerHTML = (j.kota || []).map((x) => `<button type="button" class="opt" data-i="${esc(x.id)}" data-n="${esc(x.nama + (x.prov ? ', ' + x.prov : ''))}"><b>${esc(x.nama)}</b> <span class="sub">${esc(x.prov)}</span></button>`).join('') || '<div class="sub" style="padding:8px 12px">Tidak ditemukan.</div>'; kb.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => { kota = b.dataset.i; kq.value = b.dataset.n; kb.innerHTML = ''; })); }, 300); });
+  f.querySelectorAll('input[name=pel]').forEach((c) => c.addEventListener('change', () => { $('#pf_ajar').style.display = [...f.querySelectorAll('input[name=pel]:checked')].some((x) => PENGAJAR.test(x.dataset.n)) ? '' : 'none'; }));
+  $('#pf_batal').onclick = () => { S.prof.edit = false; render(); };
+  $('#pf_file').addEventListener('change', async (ev) => {
+    const file = ev.target.files[0]; if (!file) return; $('#pf_fe').textContent = 'Mengunggah…';
+    try { const j = await post('/api/profil', { act: 'foto', id: P.pid || undefined, file: await resizeImg(file) }); Object.assign(S.prof, { profil: j.profil, kurang: j.kurang }); if (P.milik && D) D.pr = { kurang: j.kurang, lengkap: !j.kurang.length }; $('#pf_img').outerHTML = `<img class="pfoto" id="pf_img" src="${esc(j.profil.foto)}" alt="">`; $('#pf_fe').textContent = '✓ Foto tersimpan'; }
+    catch (e) { $('#pf_fe').textContent = e.message; }
+  });
+  $('#pf_pdb').addEventListener('click', (ev) => { ev.preventDefault(); formPdBaru(v('kus'), (j) => { const pd = $('#pf_pd'); if (![...pd.options].some((o) => o.value === j.pd.id)) pd.insertAdjacentHTML('beforeend', `<option value="${j.pd.id}">${esc(j.pd.nama)}</option>`); pd.value = j.pd.id; pd.disabled = false; }); });
+  f.addEventListener('submit', async (ev) => {
+    ev.preventDefault(); const e = $('#pf_e'), s = $('#pf_s'); e.textContent = ''; s.disabled = true; s.textContent = 'Menyimpan…';
+    try {
+      if (v('kota') && !kota) throw new Error('Pilih kota/kabupaten dari daftar yang muncul');
+      let paroki = v('par');
+      if (paroki === '__baru') { if (!v('parb').trim()) throw new Error('Ketik nama paroki Anda'); if (!v('kus')) throw new Error('Pilih keuskupan dulu'); paroki = (await post('/api/profil', { act: 'parokibaru', id: P.pid || undefined, data: { nama: v('parb'), kus: v('kus') } })).paroki.id; }
+      const chk = (n) => [...f.querySelectorAll(`input[name=${n}]:checked`)].map((x) => x.value);
+      const data = { nama: v('nama'), pan: v('pan'), jk: v('jk'), email: v('email'), tgl: v('tgl'), bln: v('bln'), thn: v('thn'), alamat: v('alamat'), kus: v('kus'), kota, paroki: paroki === '__baru' ? '' : paroki, pd: v('pd'), kategori: v('kategori'), baptis: v('baptis'), krisma: v('krisma'), size: v('size'), pelayanan: chk('pel'), modulAjar: chk('maj'), bab: chk('bab'), modulIkut: chk('mik') };
+      const j = await post('/api/profil', { act: 'simpan', id: P.pid || undefined, data });
+      S.prof = { ...S.prof, profil: j.profil, kurang: j.kurang, edit: false }; if (P.milik && D) D.pr = { kurang: j.kurang, lengkap: !j.kurang.length };
+      render(); window.scrollTo(0, 0);
+    } catch (er) { e.textContent = er.message; s.disabled = false; s.textContent = 'Simpan profil'; }
+  });
+}
+
+function formPdBaru(kus, cb) {
+  const o = S.prof.opsi;
+  modal(`<h2>Tambah PD baru</h2><p class="sub">Sistem mengecek dulu: kalau PD ini sudah terdaftar di keuskupan tersebut, Anda otomatis dihubungkan ke PD yang sudah ada (tidak dobel). Kalau benar-benar baru, Sekretariat/Admin diberi tahu lewat email untuk dicek.</p>
+    <form id="pdf" class="eform" style="grid-template-columns:1fr"><div><label>Nama PD</label><input name="nama" required></div>
+    <div><label>Keuskupan PD</label><select name="kus" required><option value="">Pilih…</option>${o.keuskupan.map((k) => `<option value="${k.id}"${k.id === kus ? ' selected' : ''}>${esc(k.nama)}</option>`).join('')}</select></div>
+    <div><label>Jenis PD</label><select name="jenis" required><option value="">Pilih…</option>${o.jenisPd.map((x) => `<option>${esc(x)}</option>`).join('')}</select></div>
+    <div><label>Nama koordinator PD</label><input name="kn" required></div><div><label>Nomor WhatsApp koordinator</label><input name="kw" type="tel" inputmode="tel" placeholder="0812 3456 7890" required></div>
+    <div class="err" id="pde"></div><div class="mact"><button class="btn" id="pds" type="submit">Simpan PD</button></div></form>`);
+  $('#pdf').addEventListener('submit', async (ev) => {
+    ev.preventDefault(); const f = ev.target; $('#pde').textContent = ''; $('#pds').disabled = true; $('#pds').textContent = 'Memeriksa…';
+    try {
+      const j = await post('/api/profil', { act: 'pdbaru', id: S.prof.pid || undefined, data: { nama: f.elements.nama.value, kus: f.elements.kus.value, jenis: f.elements.jenis.value, koordNama: f.elements.kn.value, koordWa: f.elements.kw.value } });
+      closeModal(); cb(j);
+      alert(j.digabung ? `PD ini sudah terdaftar sebagai "${j.pd.nama}". Anda dihubungkan ke PD tersebut.` : `PD "${j.pd.nama}" ditambahkan. Sekretariat/Admin sudah diberi tahu untuk mengecek.`);
+    } catch (er) { $('#pde').textContent = er.message; $('#pds').disabled = false; $('#pds').textContent = 'Simpan PD'; }
+  });
+}
+
 /* --- Koordinator PD --- */
 const pdRows = () => { const f = S.pdf, q = f.q.toLowerCase(); return D.pdpkk.filter((x) => (!f.kus || x.keuskupan === f.kus) && (!f.jenis || x.jenis === f.jenis) && (!q || (x.nama + ' ' + x.koordinator.map((k) => k.nama).join(' ') + ' ' + x.keuskupan).toLowerCase().includes(q))); };
 PAGES['pd/daftar'] = () => {
@@ -576,6 +710,7 @@ PAGES['admin/pengguna'] = () => {
     document.querySelectorAll('select[data-peran]').forEach((el) => el.addEventListener('change', async () => { try { await admApi({ action: 'update', id: el.dataset.peran, peran: el.value }); admReload(); } catch (e) { alert(e.message); admReload(); } }));
     document.querySelectorAll('input[data-aktif]').forEach((el) => el.addEventListener('change', async () => { try { await admApi({ action: 'update', id: el.dataset.aktif, aktif: el.checked }); admReload(); } catch (e) { alert(e.message); admReload(); } }));
     document.querySelectorAll('button[data-akses]').forEach((el) => el.addEventListener('click', () => openAkses(ADM.users.find((u) => u.id === el.dataset.akses))));
+    document.querySelectorAll('button[data-prof]').forEach((el) => el.addEventListener('click', () => { location.hash = '#/profil/' + el.dataset.prof; }));
     document.querySelectorAll('button[data-kwa]').forEach((el) => el.addEventListener('click', async () => { if (!confirm('Kirim ulang tautan masuk lewat WhatsApp ke pengguna ini? Tautan lama tidak berlaku lagi.')) return; el.disabled = true; el.textContent = 'Mengirim…'; try { showPw(await admApi({ action: 'kirimwa', id: el.dataset.kwa }), 'Kirim ulang tautan'); } catch (e) { alert(e.message); } el.disabled = false; el.textContent = 'Kirim WA'; }));
     document.querySelectorAll('button[data-reset]').forEach((el) => el.addEventListener('click', async () => { if (!confirm('Buat password sementara baru untuk pengguna ini?')) return; try { showPw(await admApi({ action: 'reset', id: el.dataset.reset }), 'Password baru'); } catch (e) { alert(e.message); } }));
     let sel = null;
@@ -585,7 +720,7 @@ PAGES['admin/pengguna'] = () => {
   });
   const tgl = (u) => `${esc(u.nama)}${u.pending ? ' ' + chip('menunggu persetujuan', 'amber') : ''}<div class="sub">WA ${esc(u.wa || '–')}${u.email && !/^\d+$/.test(u.email) ? ' · ' + esc(u.email) : ''}</div>`;
   return `${edit ? `<div class="card" style="margin-bottom:16px"><h3>Tambah pengguna<small>pilih dari M-Person (harus punya nomor WhatsApp). Orang juga bisa mendaftar sendiri dari halaman login.</small></h3><div class="filters" style="margin:0"><div class="q" style="position:relative"><label>Cari nama</label><input id="adq" autocomplete="off" placeholder="Ketik minimal 2 huruf…"><div id="adr" class="sres"></div></div><div><label>Peran</label><select id="adp">${ADM.peran.map((x) => `<option>${esc(x)}</option>`).join('')}</select></div><div style="flex:none;align-self:end"><button class="btn" id="adadd" disabled>Tambah</button></div></div><div class="err" id="ade"></div></div>` : ''}
-  <div class="card"><h3>Pengguna<small>${ADM.users.length} akun</small></h3><div class="tw"><table><thead><tr><th>Pengguna</th><th>Peran</th><th>Aktif</th><th>Terakhir masuk</th><th></th></tr></thead><tbody>${ADM.users.map((u) => `<tr><td>${tgl(u)}</td><td>${edit ? `<select data-peran="${u.id}">${u.peran ? '' : '<option value="" selected disabled>— pilih peran untuk menyetujui —</option>'}${ADM.peran.map((x) => `<option${x === u.peran ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>` : esc(u.peran)}${Object.keys(u.khusus).length ? ` ${chip('akses khusus', 'amber')}` : ''}</td><td><input type="checkbox" data-aktif="${u.id}" ${u.aktif ? 'checked' : ''} ${edit ? '' : 'disabled'} style="width:auto"></td><td class="sub">${u.lastLogin ? esc(new Date(u.lastLogin).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })) : '–'}</td><td style="white-space:nowrap"><button class="ghost" data-akses="${u.id}">Hak akses</button> ${edit && u.peran && !u.pending && u.aktif && u.wa && u.wa !== '****' ? `<button class="ghost" data-kwa="${u.id}">Kirim WA</button> ` : ''}${edit ? `<button class="ghost" data-reset="${u.id}">Reset password</button>` : ''}</td></tr>`).join('')}</tbody></table></div>
+  <div class="card"><h3>Pengguna<small>${ADM.users.length} akun</small></h3><div class="tw"><table><thead><tr><th>Pengguna</th><th>Peran</th><th>Aktif</th><th>Terakhir masuk</th><th></th></tr></thead><tbody>${ADM.users.map((u) => `<tr><td>${tgl(u)}</td><td>${edit ? `<select data-peran="${u.id}">${u.peran ? '' : '<option value="" selected disabled>— pilih peran untuk menyetujui —</option>'}${ADM.peran.map((x) => `<option${x === u.peran ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>` : esc(u.peran)}${Object.keys(u.khusus).length ? ` ${chip('akses khusus', 'amber')}` : ''}</td><td><input type="checkbox" data-aktif="${u.id}" ${u.aktif ? 'checked' : ''} ${edit ? '' : 'disabled'} style="width:auto"></td><td class="sub">${u.lastLogin ? esc(new Date(u.lastLogin).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })) : '–'}</td><td style="white-space:nowrap"><button class="ghost" data-akses="${u.id}">Hak akses</button> ${u.person ? `<button class="ghost" data-prof="${esc(u.person)}">Profil</button> ` : ''}${edit && u.peran && !u.pending && u.aktif && u.wa && u.wa !== '****' ? `<button class="ghost" data-kwa="${u.id}">Kirim WA</button> ` : ''}${edit ? `<button class="ghost" data-reset="${u.id}">Reset password</button>` : ''}</td></tr>`).join('')}</tbody></table></div>
   <p class="note" style="margin-top:12px"><b>Peran:</b> Admin (semua + administrasi) · Editor BPN (semua menu, boleh edit) · Pengurus BPN Harian (semua menu, hanya lihat) · Koordinator BPK (hanya program, PD, dan data keuskupannya + data Pengurus BPN) · Pengamat (hanya lihat).</p></div>`;
 };
 
@@ -610,7 +745,7 @@ function showChangePw(forced) {
 
 /* ===== router ===== */
 const tabsOf = (m) => (m.tabs ? m.tabs.filter(([id]) => (D.perm[`${m.id}/${id}`] || 0) >= 1) : []);
-const visible = () => MENU.filter((m) => (m.tabs ? tabsOf(m).length : (D.perm[m.id] || 0) >= 1));
+const visible = () => MENU.filter((m) => m.always || (m.tabs ? tabsOf(m).length : (D.perm[m.id] || 0) >= 1));
 function route() { const ms = visible(); const [m = 'dashboard', t] = location.hash.replace(/^#\/?/, '').split('/'); const menu = ms.find((x) => x.id === m) || ms[0]; if (!menu) return { menu: null, tab: null, tabs: [] }; const tabs = tabsOf(menu); return { menu, tabs, tab: menu.tabs ? (tabs.find((x) => x[0] === t) || tabs[0])[0] : null }; }
 function render() {
   if (!D) return;
@@ -621,7 +756,8 @@ function render() {
   $('#ptitle').textContent = menu.label; $('#psub').textContent = menu.sub;
   $('#tabs').innerHTML = menu.tabs ? tabs.map(([id, l]) => `<a href="#/${menu.id}/${id}" class="${id === tab ? 'on' : ''}">${esc(l)}</a>`).join('') : '';
   const fn = PAGES[tab ? `${menu.id}/${tab}` : menu.id];
-  $('#page').innerHTML = fn ? fn() : '<div class="empty">Halaman tidak ditemukan.</div>';
+  if (menu.id !== 'profil') S.prof = null;
+  $('#page').innerHTML = (menu.id === 'profil' ? '' : bannerPr()) + (fn ? fn() : '<div class="empty">Halaman tidak ditemukan.</div>');
   $('#done')?.addEventListener('change', (e) => { S.showDone = e.target.checked; render(); });
   $('#side').classList.remove('open');
   document.title = `${menu.label} · BPN PKKI`;
@@ -634,7 +770,7 @@ async function load(refresh) {
   D = await r.json(); if (refresh) { R = null; ADM = null; }
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
   $('#mename').textContent = D.user.nama; $('#melevel').textContent = D.user.level; $('#meav').style.background = hue(D.user.nama); $('#meav').textContent = initials(D.user.nama);
-  render();
+  render(); ringkasPr();
 }
 function showLogin() { $('#app').classList.add('hide'); $('#login').classList.remove('hide'); D = null; R = null; stepPhone(); }
 window.addEventListener('hashchange', render);

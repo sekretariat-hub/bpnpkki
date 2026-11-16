@@ -202,3 +202,6 @@ code.pw{font-size:18px;background:#F1F5FF;padding:6px 10px;border-radius:8px;let
 .warnbox{background:#FFF6E5;border:1px solid #F5D9A5;border-radius:10px;padding:10px 12px;font-size:13px}.chk{display:block;margin-top:6px}
 .pvform label{display:block;margin-top:8px}.pvform input,.pvform select{width:100%;box-sizing:border-box}
 tr.clk{cursor:pointer}tr.clk:hover{background:#F3F7FF}
+.phead{display:flex;gap:18px;align-items:center;flex-wrap:wrap}.pfoto{width:96px;height:96px;border-radius:50%;object-fit:cover;background:#EEF3FF;flex:none}
+.ckg{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px 16px;margin-top:8px}.ckg label{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;margin:0;color:inherit}.ckg input{width:auto;margin-top:3px}
+.pform .warnbox ul{margin:6px 0 10px 18px;padding:0}.pform .mact,.mact{display:flex;gap:10px;justify-content:flex-end}
