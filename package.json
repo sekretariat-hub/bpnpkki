@@ -1,0 +1,10 @@
+{
+  "name": "bpnpkki",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Report BPN PKKI - dashboard ringkasan dari Airtable (login + proxy aman)",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "set-password": "node scripts/set-password.js"
+  }
+}
