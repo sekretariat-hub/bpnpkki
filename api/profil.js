@@ -6,7 +6,7 @@ const A = require('../lib/access');
 const { waDigits } = require('../lib/phone');
 const { personByWa, PERSON } = require('../lib/person');
 const { kirimAdmin } = require('../lib/mail');
-const { P, OPSI, nm, pengajar, kurang } = require('../lib/profil');
+const { P, OPSI, nm, pengajar, kurang, TAMPIL_BAB } = require('../lib/profil');
 
 const BPK = 'tblgj0UYB9w7UWWnv', PD = 'tblhmeuR1qFHxUIId', PAR = 'tblqKpvfwGtLEHnip', KOTA = 'tblSaXvGJJ7G1P9my', PEL = 'tblTzNOMyrh4iF8MA', MOD = 'tblymcTBL1pjIMa4A', ANT = 'tblRarr3Rk6PQ1C8j';
 const PDF = { nama: 'fldzIeY3YMiHMo4ky', kus: 'fldWcO7mYhPFpFXlA', jenis: 'fldq43MYnCIKg34ts', koord: 'fldxlRQG4ikb8coP2', koordNama: 'fldTkyK4Y7dGMpAXn' };
@@ -154,10 +154,10 @@ module.exports = async (req, res) => {
       if (has('pelayanan')) {
         const o = await opsi(), chosen = o.pelayanan.filter((g) => ids(d.pelayanan).includes(g.id));
         fl[P.pel] = chosen.flatMap((g) => [g.id]);
-        if (!pengajar(chosen.map((g) => g.nama))) { fl[P.modAjar] = []; fl[P.bab] = []; }
+        if (!pengajar(chosen.map((g) => g.nama))) { fl[P.modAjar] = []; if (TAMPIL_BAB) fl[P.bab] = []; }
       }
       if (has('modulAjar') && fl[P.modAjar] === undefined) fl[P.modAjar] = ids(d.modulAjar);
-      if (has('bab') && fl[P.bab] === undefined) fl[P.bab] = (Array.isArray(d.bab) ? d.bab : []).filter((x) => OPSI.bab.includes(x));
+      if (TAMPIL_BAB && has('bab') && fl[P.bab] === undefined) fl[P.bab] = (Array.isArray(d.bab) ? d.bab : []).filter((x) => OPSI.bab.includes(x));
       if (!Object.keys(fl).length) return bad(res, 'Tidak ada yang diubah');
       await update(PERSON, pid, fl);
       console.log('profil simpan', acc.email, milik ? 'sendiri' : 'orang lain ' + pid, Object.keys(fl).length, 'field');

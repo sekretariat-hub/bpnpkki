@@ -366,7 +366,7 @@ function profilView() {
   <div class="grid g2" style="margin-top:16px">
     <div class="card"><h3>Data diri</h3><div class="kvs">${row('Jenis kelamin', esc(p.jk))}${row('Tanggal lahir', esc(lahir))}${row('WhatsApp', esc(p.wa))}${row('Email', esc(p.email))}${row('Kategori', esc(p.kategori))}${row('Sakramen Baptis', esc(p.baptis))}${row('Sakramen Krisma', esc(p.krisma))}${row('Ukuran baju', esc(p.size))}</div></div>
     <div class="card"><h3>Domisili</h3><div class="kvs">${row('Keuskupan', esc(nmOf(o.keuskupan, p.kus)))}${row('Kota / Kabupaten', esc(p.kota ? p.kota.nama + (p.kota.prov ? ', ' + p.kota.prov : '') : ''))}${row('Paroki', esc(p.paroki ? p.paroki.nama : ''))}${row('Alamat surat', esc(p.alamat))}</div></div>
-    <div class="card"><h3>Persekutuan Doa &amp; pelayanan</h3><div class="kvs">${row('Asal PD', esc(p.pd ? p.pd.nama : ''))}${row('Pelayanan', list(pel))}${ajar ? `${row('Modul yang diajar', list(p.modulAjar.map((id) => nmOf(o.modul, id))))}${row('Bab yang diajar', list(p.bab))}` : ''}</div></div>
+    <div class="card"><h3>Persekutuan Doa &amp; pelayanan</h3><div class="kvs">${row('Asal PD', esc(p.pd ? p.pd.nama : ''))}${row('Pelayanan', list(pel))}${ajar ? `${row('Modul yang diajar', list(p.modulAjar.map((id) => nmOf(o.modul, id))))}` : ''}</div></div>
     <div class="card"><h3>Modul yang pernah diikuti</h3>${p.modulIkut.length ? list(p.modulIkut.map((id) => nmOf(o.modul, id))) : '<p class="sub">Belum ada yang dipilih.</p>'}</div>
   </div>${setTimeout(() => { const go = () => { S.prof.edit = true; render(); }; $('#prled')?.addEventListener('click', go); $('#pred')?.addEventListener('click', go); }) && ''}`;
 }
@@ -396,8 +396,7 @@ function profilForm() {
   <div class="card" style="margin-top:16px"><h3>Pelayanan</h3><p class="note">Pilih pelayanan yang Anda jalani. Memilih <b>Pewarta</b> atau <b>Pengajar</b> memunculkan pertanyaan modul dan bab.</p>
     <div class="ckg">${o.pelayanan.map((g) => `<label><input type="checkbox" name="pel" value="${esc(g.id)}" data-n="${esc(g.nama)}"${p.pelayanan.includes(g.id) ? ' checked' : ''}> <span>${esc(g.nama)}</span></label>`).join('')}</div>
     <div id="pf_ajar" style="${o.pelayanan.some((g) => p.pelayanan.includes(g.id) && PENGAJAR.test(g.nama)) ? '' : 'display:none'};margin-top:14px;padding-top:12px;border-top:1px solid #EEF2FA">
-      <label style="font-weight:700">Modul apa yang Anda ajar?</label>${cks('maj', o.modul, p.modulAjar)}
-      <label style="font-weight:700;display:block;margin-top:14px">Bab berapa?</label>${cks('bab', o.bab.map((x) => ({ id: x, nama: x })), p.bab)}</div></div>
+      <label style="font-weight:700">Modul apa yang Anda ajar?</label>${cks('maj', o.modul, p.modulAjar)}</div></div>
   <div class="card" style="margin-top:16px"><h3>Modul yang pernah diikuti</h3>${cks('mik', o.modul, p.modulIkut)}</div>
   <div class="err" id="pf_e"></div><div class="mact" style="margin-top:12px"><button class="ghost" type="button" id="pf_batal">Batal</button><button class="btn" id="pf_s" type="submit" style="width:auto;margin:0">Simpan profil</button></div></form>`;
 }
@@ -457,7 +456,7 @@ function bindProfil() {
       let paroki = v('par');
       if (paroki === '__baru') { if (!v('parb').trim()) throw new Error('Ketik nama paroki Anda'); if (!v('kus')) throw new Error('Pilih keuskupan dulu'); paroki = (await post('/api/profil', { act: 'parokibaru', id: P.pid || undefined, data: { nama: v('parb'), kus: v('kus') } })).paroki.id; }
       const chk = (n) => [...f.querySelectorAll(`input[name=${n}]:checked`)].map((x) => x.value);
-      const data = { nama: v('nama'), pan: v('pan'), jk: v('jk'), email: v('email'), tgl: v('tgl'), bln: v('bln'), thn: v('thn'), alamat: v('alamat'), kus: v('kus'), kota, paroki: paroki === '__baru' ? '' : paroki, pd: v('pd'), kategori: v('kategori'), baptis: v('baptis'), krisma: v('krisma'), size: v('size'), pelayanan: chk('pel'), modulAjar: chk('maj'), bab: chk('bab'), modulIkut: chk('mik') };
+      const data = { nama: v('nama'), pan: v('pan'), jk: v('jk'), email: v('email'), tgl: v('tgl'), bln: v('bln'), thn: v('thn'), alamat: v('alamat'), kus: v('kus'), kota, paroki: paroki === '__baru' ? '' : paroki, pd: v('pd'), kategori: v('kategori'), baptis: v('baptis'), krisma: v('krisma'), size: v('size'), pelayanan: chk('pel'), modulAjar: chk('maj'), modulIkut: chk('mik') };
       const j = await post('/api/profil', { act: 'simpan', id: P.pid || undefined, data });
       S.prof = { ...S.prof, profil: j.profil, kurang: j.kurang, edit: false }; if (P.milik && D) D.pr = { kurang: j.kurang, lengkap: !j.kurang.length };
       render(); window.scrollTo(0, 0);
