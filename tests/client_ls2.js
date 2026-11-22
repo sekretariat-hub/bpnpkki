@@ -1,7 +1,7 @@
 const { JSDOM } = require('jsdom'); const fs = require('fs');
 const root = require('path').resolve(__dirname,'../public')+'/';
 const html = fs.readFileSync(root + 'index.html', 'utf8').replace(/<script src[^>]*><\/script>/, '');
-const PERM = {'ls/diskusi':2,dashboard:1,ls:2,'ls/tc':2,'ls/pengajar':2,'ls/peserta':2,'ls/daftar':2,'ls/pendaftar':2,'ls/laporan':1};
+const PERM = {'ls/dasbor':2,'ls/diskusi':2,dashboard:1,ls:2,'ls/tc':2,'ls/pengajar':2,'ls/peserta':2,'ls/daftar':2,'ls/pendaftar':2,'ls/laporan':1};
 const data = { today: '2026-11-16', tugas: [], agenda: [], event: [], perm: PERM, user: { nama: 'Budi', level: 'Admin', peran: 'Admin' }, opsi: {}, kpis: { bpk: {}, pdpkk: {}, pewarta: {} }, proker: [], kelompok: { inti: [], tim: [] }, pengurus: [], tim: [], pdpkk: [], bpkList: [], jabatanBpk: [], bpkProfil: {}, riwayatPengurus: [] };
 const posts = [];
 const EV = 'recTC000000000001';
@@ -12,6 +12,7 @@ const R = {
   laporan: { semua: false, ringkas: { Lulus: 1 }, rows: [{ id: 'recH0000000000001', nama: 'Maria', event: 'TC SHDR 2027', keus: 'KAJ', kelompok: 'Kel 1', pengajar: 'Pak Guru', status: 'Lulus', ket: '', catBpk: 'Siap melayani', dinilai: 1, boleh: 1, damping: 0 }] },
   laporandetail: { bab: [{ bab: 'Bab 1', izin: 'Boleh mengajar', cat: '', nonton: true }], komentar: [{ penulis: 'Pak Guru', isi: 'Bagus' }] },
   diskusi: { tc: [{ id: EV, nama: 'TC SHDR 2027' }], event: EV, posts: [{ id: 'p1', isi: 'Salam semua', penulis: 'Maria', peran: 'Peserta', kelompok: 'Kel 1', tgl: '2027-01-12' }] },
+  dasbor: { events: [{ id: EV, nama: 'TC SHDR 2027' }], event: EV, ambang: 50, bisaKirim: true, kpi: { total: 10, aktif: 6, lulus: 3, mundur: 1, rata: 40 }, bucket: { nol: 1, rendah: 2, sedang: 2, penuh: 1 }, keus: [{ nama: 'KAJ', total: 10, aktif: 6, lulus: 3, mundur: 1, rata: 40, tertinggal: 3 }], kelompok: [{ nama: 'Kelompok 1', pengajar: 'Pak Guru', total: 5, aktif: 3, lulus: 2, rata: 30, tertinggal: 2 }], tertinggal: [{ id: 'recH0000000000001', nama: 'Maria', keus: 'KAJ', kel: 'Kelompok 1', pct: 25, email: 'm@x.id', wa: true }] },
   opsi: { modul: ['SHDR', 'Kursus Alkitab'], bpk: [{ id: 'recBPK0000000001', nama: 'KAJ' }] },
   tclist: { edit: true, list: [{ id: EV, nama: 'TC SHDR 2027', mulai: '', selesai: '', daftar: 'Dibuka', status: '', oleh: 'Budi', link: 'x', syarat: { usiaMin: 18 }, materi: [] }] },
 };
@@ -46,6 +47,11 @@ const go = async (h) => { w.location.hash = '#/' + h; w.dispatchEvent(new w.Hash
   ok(posts.at(-1).a === 'diskusikirim' && posts.at(-1).isi === 'Terima kasih', 'tulisan diskusi terkirim');
   await go('ls/peserta'); $('#ps-recH0000000000001').value = 'Pak, tanya'; w.document.querySelector('[data-ls="pesan|recH0000000000001"]').click(); await wait(40);
   ok(posts.at(-1).a === 'pesan' && posts.at(-1).isi === 'Pak, tanya', 'pesan ke pengajar terkirim');
+  await go('ls/dasbor'); t = $('#page').innerHTML;
+  ok(/Rata-rata progres aktif: 40%/.test(t) && /Kelompok 1/.test(t) && /Maria/.test(t) && /KAJ/.test(t), 'Dasbor: KPI, keuskupan, kelompok, peserta tertinggal');
+  w.confirm = () => true;
+  w.document.querySelector('[data-ls="dbpilih"]').click(); w.document.querySelector('[data-ls="ingatkan"]').click(); await wait(60);
+  ok(posts.at(-1).a === 'ingatkan' && posts.at(-1).ids[0] === 'recH0000000000001', 'pengingat dikirim untuk peserta yang dicentang');
   await go('ls/laporan'); t = $('#page').innerHTML;
   ok(/Siap melayani/.test(t) && /1 boleh/.test(t) && /Lulus/.test(t), 'Laporan BPK: lulus, ringkasan bab, catatan akhir');
   w.document.querySelector('[data-ls="lapdetail|recH0000000000001"]').click(); await wait(60);

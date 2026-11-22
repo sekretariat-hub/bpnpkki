@@ -50,7 +50,7 @@ const MENU = [
   { id: 'umat', label: 'Data Umat', icon: I.pd, sub: 'Profil umat yang terdaftar di sistem BPN', c: '#0EA5A4', tabs: [['ringkasan', 'Infografis'], ['daftar', 'Daftar Umat']] },
   { id: 'pendataan', label: 'Pendataan PIC', icon: I.pd, sub: 'Pejabat dan PIC di setiap BPK, lengkap dengan riwayatnya', c: '#E0661A' },
   { id: 'laporan', label: 'Laporan', icon: I.chart, sub: 'Ringkasan kegiatan', c: '#34C28A', tabs: [['pleno', 'Pleno & Golden Jubilee'], ['tc', 'TC SHDR'], ['kepemudaan', 'Kepemudaan']] },
-  { id: 'ls', label: 'Learning System', icon: I.book, sub: 'TC, learning path, dan penilaian pengajar', c: '#6D28D9', tabs: [['peserta', 'Belajar'], ['diskusi', 'Diskusi'], ['daftar', 'Daftar TC'], ['pendaftar', 'Pendaftar'], ['laporan', 'Laporan BPK'], ['tc', 'Kelola TC'], ['pengajar', 'Pengajar']] },
+  { id: 'ls', label: 'Learning System', icon: I.book, sub: 'TC, learning path, dan penilaian pengajar', c: '#6D28D9', tabs: [['peserta', 'Belajar'], ['diskusi', 'Diskusi'], ['daftar', 'Daftar TC'], ['dasbor', 'Dasbor'], ['pendaftar', 'Pendaftar'], ['laporan', 'Laporan BPK'], ['tc', 'Kelola TC'], ['pengajar', 'Pengajar']] },
   { id: 'admin', label: 'Administrasi', icon: I.key, sub: 'Kelola pengguna dan hak akses', c: '#6B7A99', tabs: [['pengguna', 'Pengguna'], ['role', 'Role & Hak Akses']] },
 ];
 
@@ -753,7 +753,7 @@ function openRole(r0) {
   };
   $('#rdel')?.addEventListener('click', async () => { if (!confirm(r.sistem ? 'Kembalikan hak role ini ke bawaan sistem?' : `Hapus role "${r.nama}"?`)) return; try { await admApi({ action: 'roledel', id: r.id }); closeModal(); admReload(); } catch (e) { $('#ae').textContent = e.message; } });
 }
-const HAK_KOORD = { dashboard: 'view', proker: 'edit', 'proker/keuskupan': 'edit', 'proker/semua': 'edit', 'proker/ringkasan': 'view', 'proker/acc': 'view', pengurus: 'view', pd: 'view', 'pd/daftar': 'view', 'pd/ringkasan': 'view', tim: 'view', 'tim/bagan': 'view', 'tim/daftar': 'view', modul: 'view', 'modul/ringkasan': 'view', 'modul/permodul': 'view', 'modul/peserta': 'view', 'modul/pengajar': 'view', umat: 'view', 'umat/ringkasan': 'view', 'umat/daftar': 'view', laporan: 'view', 'laporan/pleno': 'view', 'laporan/tc': 'view', 'laporan/kepemudaan': 'view', ls: 'edit', 'ls/tc': 'edit', 'ls/pengajar': 'view', 'ls/peserta': 'edit', 'ls/daftar': 'edit', 'ls/diskusi': 'edit', 'ls/pendaftar': 'view', 'ls/laporan': 'view' };
+const HAK_KOORD = { dashboard: 'view', proker: 'edit', 'proker/keuskupan': 'edit', 'proker/semua': 'edit', 'proker/ringkasan': 'view', 'proker/acc': 'view', pengurus: 'view', pd: 'view', 'pd/daftar': 'view', 'pd/ringkasan': 'view', tim: 'view', 'tim/bagan': 'view', 'tim/daftar': 'view', modul: 'view', 'modul/ringkasan': 'view', 'modul/permodul': 'view', 'modul/peserta': 'view', 'modul/pengajar': 'view', umat: 'view', 'umat/ringkasan': 'view', 'umat/daftar': 'view', laporan: 'view', 'laporan/pleno': 'view', 'laporan/tc': 'view', 'laporan/kepemudaan': 'view', ls: 'edit', 'ls/tc': 'edit', 'ls/pengajar': 'view', 'ls/peserta': 'edit', 'ls/daftar': 'edit', 'ls/diskusi': 'edit', 'ls/pendaftar': 'view', 'ls/laporan': 'view', 'ls/dasbor': 'view' };
 const HAK_ANGGOTA = { dashboard: 'view', proker: 'view', 'proker/keuskupan': 'view', 'proker/semua': 'view', 'proker/ringkasan': 'view', tim: 'view', 'tim/bagan': 'view', 'tim/daftar': 'view', modul: 'view', 'modul/ringkasan': 'view', 'modul/permodul': 'view', 'modul/peserta': 'view', 'modul/pengajar': 'view' };
 async function buatRoleSeksi(btn) {
   const ada = new Set(ADM.roles.map((r) => r.nama.toLowerCase())); let n = 0;
@@ -1006,6 +1006,8 @@ document.addEventListener('click', (e) => {
   if (a === 'tugas') return lsTugas(id);
   if (a === 'pesan') return lsPesan(id);
   if (a === 'lapdetail') return lsLapDetail(id);
+  if (a === 'ingatkan') return lsIngatkan(b);
+  if (a === 'dbpilih') return document.querySelectorAll('[data-db]').forEach((x) => { x.checked = true; });
   if (a === 'diskusikirim') return lsDiskusi(id);
 });
 PAGES['ls/tc'] = () => lsPage('tc', 'tclist', (s) => {
@@ -1150,6 +1152,33 @@ async function lsLapDetail(id) {
     const j = await lsApi('laporandetail&head=' + id);
     modal(`<h2>${esc(r.nama)}</h2><p class="sub">${esc(r.event)} · ${esc(r.keus)} · ${esc(r.status)}</p><h4>Bab</h4><div class="tw"><table><thead><tr><th>Bab</th><th>Tonton</th><th>Boleh mengajar?</th><th>Catatan</th></tr></thead><tbody>${j.bab.map((b) => `<tr><td>${esc(b.bab)}</td><td>${b.nonton ? '✓' : '–'}</td><td>${esc(b.izin || '–')}</td><td>${esc(b.cat)}</td></tr>`).join('')}</tbody></table></div>${r.catBpk ? `<h4 style="margin-top:12px">Catatan akhir TC</h4><p>${esc(r.catBpk)}</p>` : ''}<h4 style="margin-top:12px">Komentar pengajar</h4>${j.komentar.map((k) => `<div class="riw"><b>${esc(k.penulis)}</b> <span class="sub">${esc(lsDate(k.tgl))}</span><div>${esc(k.isi)}</div></div>`).join('') || '<p class="sub">Belum ada komentar.</p>'}`, true);
   } catch (e) { alert(e.message); }
+}
+
+PAGES['ls/dasbor'] = () => lsPage('dasbor', 'dasbor', (s) => {
+  if (!s.events.length) return '<div class="empty">Belum ada peserta TC.</div>';
+  const k = s.kpi, mx = Math.max(1, k.aktif), bar = (n, tone, l) => `<div style="margin:6px 0"><div class="sub">${esc(l)}: <b>${n}</b></div><div style="background:#e5e7eb;border-radius:6px;height:10px"><div style="width:${Math.round((n / mx) * 100)}%;background:${tone};height:10px;border-radius:6px"></div></div></div>`;
+  const sel = (LS.dbSel || {});
+  return `<div class="eform"><div><label>TC</label><select id="db-ev">${s.events.map((e) => `<option value="${e.id}"${e.id === s.event ? ' selected' : ''}>${esc(e.nama)}</option>`).join('')}</select></div><div><label>Tertinggal bila progres di bawah (%)</label><input id="db-am" type="number" min="1" max="100" value="${s.ambang}"></div></div>
+    <div class="chips" style="margin:12px 0">${chip('Peserta: ' + k.total, 'blue')}${chip('Aktif: ' + k.aktif, 'amber')}${chip('Lulus: ' + k.lulus, 'green')}${chip('Mundur: ' + k.mundur, 'red')}${chip('Rata-rata progres aktif: ' + k.rata + '%', 'blue')}</div>
+    <div class="card" style="margin-bottom:16px"><h3>Sebaran progres peserta aktif</h3>${bar(s.bucket.nol, '#dc2626', 'Belum mulai (0%)')}${bar(s.bucket.rendah, '#f59e0b', '1–49%')}${bar(s.bucket.sedang, '#2563eb', '50–99%')}${bar(s.bucket.penuh, '#16a34a', '100%')}</div>
+    <div class="card" style="margin-bottom:16px"><h3>Per keuskupan</h3><div class="tw"><table><thead><tr><th>Keuskupan</th><th>Peserta</th><th>Aktif</th><th>Lulus</th><th>Mundur</th><th>Rata-rata aktif</th><th>Tertinggal</th></tr></thead><tbody>${s.keus.map((g) => `<tr><td>${esc(g.nama)}</td><td>${g.total}</td><td>${g.aktif}</td><td>${g.lulus}</td><td>${g.mundur}</td><td>${g.rata}%</td><td>${g.tertinggal}</td></tr>`).join('')}</tbody></table></div></div>
+    <div class="card" style="margin-bottom:16px"><h3>Per kelompok</h3><div class="tw"><table><thead><tr><th>Kelompok</th><th>Pengajar</th><th>Peserta</th><th>Aktif</th><th>Lulus</th><th>Rata-rata aktif</th><th>Tertinggal</th></tr></thead><tbody>${s.kelompok.map((g) => `<tr><td>${esc(g.nama)}</td><td>${esc(g.pengajar)}</td><td>${g.total}</td><td>${g.aktif}</td><td>${g.lulus}</td><td>${g.rata}%</td><td>${g.tertinggal}</td></tr>`).join('')}</tbody></table></div></div>
+    <div class="card"><h3>Peserta tertinggal (${s.tertinggal.length})</h3>${s.bisaKirim ? '<div class="eform"><div class="full"><label>Pesan tambahan (opsional)</label><input id="db-ps" placeholder="mis. Batas tugas minggu ini"></div></div><div class="acts" style="margin-bottom:8px"><button class="btn" data-ls="ingatkan">Kirim pengingat ke yang dicentang</button> <button class="ghost" data-ls="dbpilih">Centang semua</button></div><div class="err" id="db-e"></div>' : ''}
+    <div class="tw"><table><thead><tr>${s.bisaKirim ? '<th></th>' : ''}<th>Nama</th><th>Keuskupan</th><th>Kelompok</th><th>Progres</th><th>Kontak</th></tr></thead><tbody>${s.tertinggal.map((x) => `<tr>${s.bisaKirim ? `<td><input type="checkbox" data-db="${x.id}"></td>` : ''}<td>${esc(x.nama)}</td><td>${esc(x.keus)}</td><td>${esc(x.kel)}</td><td>${x.pct}%</td><td>${x.email ? '✉' : ''} ${x.wa ? 'WA' : ''}</td></tr>`).join('') || '<tr><td colspan="6">Tidak ada peserta tertinggal.</td></tr>'}</tbody></table></div></div>`;
+});
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'db-ev' || e.target.id === 'db-am') {
+    const ev = $('#db-ev').value, am = $('#db-am').value || 50; LS.dasbor = undefined;
+    lsApi(`dasbor&event=${ev}&ambang=${am}`).then((j) => { LS.dasbor = j; render(); }).catch(() => { delete LS.dasbor; render(); });
+  }
+});
+async function lsIngatkan(btn) {
+  const ids = [...document.querySelectorAll('[data-db]:checked')].map((x) => x.dataset.db), er = $('#db-e'); er.textContent = '';
+  if (!ids.length) { er.textContent = 'Centang peserta dulu'; return; }
+  if (!confirm(`Kirim pengingat ke ${ids.length} peserta?`)) return;
+  btn.disabled = true;
+  try { const j = await lsApi('ingatkan', { ids, pesan: $('#db-ps').value }); er.textContent = `Terkirim: ${j.email} email, ${j.wa} WhatsApp (dari ${j.dipilih} peserta)`; } catch (x) { er.textContent = x.message; }
+  btn.disabled = false;
 }
 
 const tabsOf = (m) => (m.tabs ? m.tabs.filter(([id]) => (D.perm[`${m.id}/${id}`] || 0) >= 1) : []);

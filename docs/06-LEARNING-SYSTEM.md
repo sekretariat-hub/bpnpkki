@@ -52,4 +52,6 @@ Menu `ls` dengan tab `peserta` (Belajar), `diskusi`, `daftar` (Daftar TC), `pend
 TC "TC SHDR BPN PKKI" sudah ada di Schole (±369 peserta, puluhan kelompok; status Lulus / Peserta Aktif / Mengundurkan diri). Menu Learning System membaca data itu langsung, tanpa impor.
 - `Email Mentor` di LMSHeader bisa berisi beberapa alamat (dua mentor per kelompok); pencocokan pengajar memakai daftar, bukan kesamaan persis (`mentorF` / `emails` di `lib/ls.js`).
 - **Laporan BPK** kini dibaca dari LMSHeader (bukan Pendaftaran LS), dibatasi keuskupan Koordinator/PIC lewat kecocokan nama keuskupan (M-BPK = kolom Keuskupan Schole). Rincian bab dan komentar per peserta diambil saat tombol Rincian ditekan (`laporandetail`).
-- Rencana lanjutan: dasbor progres + pengingat otomatis, sertifikat kelulusan bernomor, jadwal dan presensi pertemuan.
+- **Dasbor** (tab `dasbor`, Tahap B): KPI, sebaran progres, rekap per keuskupan dan per kelompok, daftar peserta tertinggal (ambang progres bisa diubah). Lingkup data: pengurus TC = semua; Koordinator/PIC BPK = keuskupannya; pengajar = kelompoknya. Progres = bab ditonton / jumlah bab.
+- **Pengingat** manual (`ingatkan`): email, dan WhatsApp bila nomor ada, ke peserta yang dicentang (maks 60 per kirim). Hanya pengurus TC dan pengajar (untuk kelompoknya); Koordinator BPK hanya melihat. Belum ada pengingat otomatis terjadwal.
+- Rencana lanjutan: sertifikat kelulusan bernomor (Tahap C), jadwal dan presensi pertemuan (Tahap D), pengingat terjadwal.
