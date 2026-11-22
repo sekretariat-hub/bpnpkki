@@ -36,3 +36,9 @@ Super Admin, Admin, Editor BPN, Pengurus BPN Harian, Koordinator BPK, PIC BPK, K
 
 ## Kode terkait
 `lib/access.js` (resolusi hak, cakupan), `lib/roles.js` (muat role, Tim BPN, role otomatis), `api/admin.js` (CRUD role dan pengguna), `public/app.js` (halaman `admin/role`, `admin/pengguna`).
+
+## Tambahan (22 Nov 2026)
+- **Pembatasan seksi:** edit Program Kerja hanya untuk seksi penanggung jawab milik pengguna (dari Tim BPN aktif: relasi seksi atau nama seksi pada teks jabatan). Dikecualikan: Admin, Super Admin, Editor BPN, Koordinator Bidang. Penegakan di `api/proker.js`; `a.seksiEdit` (null = tanpa batas).
+- **Paket role** (tombol di halaman Role): Koordinator Bidang (jabatan memuat "Bidang"), Koordinator Seksi (semua jabatan koordinator BPN Harian), Anggota BPN Inti, Anggota Tim Kerja.
+- **Role baru sistem:** `Pengajar TC` (otomatis dari tabel Mentor & Petugas Schole) dan `Peserta TC`; menu `ls` (Learning System).
+- Role otomatis memakai `/koord/i`, sehingga salah ketik "Koordiantor" tetap dikenali.

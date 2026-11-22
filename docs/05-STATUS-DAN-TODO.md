@@ -1,7 +1,7 @@
 # Status dan daftar tindak lanjut (per 22 Nov 2026)
 
 ## Sudah jadi dan di-push ke `main`
-Login WhatsApp + OTP + undangan · Profil Saya lengkap (foto, PD pencarian, pelayanan, modul; bab disembunyikan) · PD/paroki baru dengan deteksi duplikat + email · Pendataan PIC (dengan keterangan centang + PIC otomatis pindah domisili) · Modul Berjenjang (4 tab) · Data Umat (infografis + daftar) · Koordinator PD · **Role & Hak Akses berbasis role** (multi-role, otomatis dari Tim BPN) · 12 fungsi Vercel.
+Login WhatsApp + OTP + undangan · Profil Saya lengkap (foto, PD pencarian, pelayanan, modul; bab disembunyikan) · PD/paroki baru dengan deteksi duplikat + email · Pendataan PIC (dengan keterangan centang + PIC otomatis pindah domisili) · Modul Berjenjang (4 tab) · Data Umat (infografis + daftar) · Koordinator PD · **Role & Hak Akses berbasis role** (multi-role, otomatis dari Tim BPN) · **edit Program Kerja dibatasi ke seksi sendiri** (kecuali Admin, Editor BPN, Koordinator Bidang) · **Learning System Tahap 1** (lihat `06-LEARNING-SYSTEM.md`) · 12 fungsi Vercel.
 
 ## Langkah manual untuk pemilik
 1. Vercel → Deployments: pastikan commit terbaru **Ready**.
@@ -15,6 +15,9 @@ Login WhatsApp + OTP + undangan · Profil Saya lengkap (foto, PD pencarian, pela
 Pengiriman BaBlast, email Resend, tampilan di browser sesungguhnya, dan pemetaan jabatan→role otomatis dengan data Tim BPN produksi (diuji dengan data tiruan).
 
 ## Ide berikutnya
+- **Learning System Tahap 2 dan 3** (pendaftaran + persetujuan bertingkat + email, tab Peserta, Laporan BPK, pesan/grup). Lihat `06-LEARNING-SYSTEM.md`.
+- Klik "Pasang paket role yang disarankan" di Role & Hak Akses (Koordinator Bidang, Koordinator Seksi, Anggota BPN Inti, Anggota Tim Kerja); lalu klik Muat ulang.
+- Hapus baris "BPNH" di tabel Bidang bila tidak dipakai.
 - Role Pewarta dan Umat (akses terbatas ke profil/materi).
 - Menu Laporan untuk Koordinator BPK.
 - Jumlah program (62) vs tahun 2027 perlu dicek.

@@ -12,8 +12,12 @@
 | Modul Berjenjang | Ringkasan · Per Modul · Peserta Lulus · Pengajar | Retret berjenjang: peserta lulus ("pernah diikuti" = lulus), pengajar, sebaran per keuskupan, filter, klik untuk detail |
 | Data Umat | Infografis · Daftar Umat | Infografis klik-lihat (JK, usia, kategori, sakramen, ukuran baju, keuskupan, provinsi, pelayanan, PD, kelengkapan profil) dan daftar dengan filter |
 | Laporan | Pleno · TC SHDR · Kepemudaan | Laporan agregat |
+| Learning System | Kelola TC · Pengajar (Peserta, Laporan BPK menyusul) | TC + learning path + tautan pendaftaran; progres kelompok, nilai bab, kelulusan, komentar, catatan akhir untuk BPK. Data di base Schole. Lihat `06-LEARNING-SYSTEM.md` |
 | Administrasi | Pengguna · Role & Hak Akses | Kelola akun dan role (hanya Admin/Super Admin) |
 | Profil Saya | – | Lihat/ubah profil, foto, PD (cari), paroki, pelayanan, modul diikuti/diajar; kotak peringatan jika data belum lengkap. Admin/Editor bisa membuka profil orang lain (`#/profil/<personId>`) |
+
+## API Learning System
+`GET/POST /api/report?ls=<aksi>` (di `api/report.js` → `lib/ls.js`): `tclist`, `tcsave`, `materisave`, `babsave`, `pengajar`, `nilai`, `lulus`, `komentar`.
 
 ## File kode
 - `api/login.js`, `logout.js`, `password.js`, `akses.js`, `invite.js` — masuk, keluar, ganti password, alur OTP/pendaftaran, undangan.
