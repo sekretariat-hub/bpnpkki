@@ -1,36 +1,20 @@
 # Sistem Informasi BPN PKKI
 
-Sistem informasi Badan Pelayanan Nasional Pembaruan Karismatik Katolik Indonesia, dibangun di atas data Airtable (base **BPN PKKI**), login email + password.
-Token Airtable hanya ada di server (Vercel env var); browser tidak pernah menerima token.
+Aplikasi web Badan Pelayanan Nasional Pembaruan Karismatik Katolik Indonesia di atas Airtable (base **BPN PKKI**), hosting Vercel, login nomor WhatsApp + password, hak akses berbasis role.
 
-Menu (sidebar kiri, sub-menu berupa tab): Dashboard · Program Kerja (Per Keuskupan / Semua / Ringkasan / Syarat ACC) · Pengurus BPN · Koordinator PD · Tim Kerja BPN (Bagan Tim Aktif / Daftar) · Laporan (Pleno, TC SHDR, Kepemudaan).
+**Mulai dari sini:** `docs/00-PANDUAN-PROYEK.md` → `docs/01-SETUP.md`.
 
-Hak akses sementara: nomor WhatsApp/email hanya tampil untuk level **Admin**.
+| Dokumen | Isi |
+|---|---|
+| `docs/00-PANDUAN-PROYEK.md` | Ringkasan, batas, cara kerja |
+| `docs/01-SETUP.md` | Setup dari nol, environment variable, deploy, admin pertama, uji |
+| `docs/02-SKEMA-AIRTABLE.md` | ID tabel dan field |
+| `docs/03-AKSES-ROLE.md` | Role dan hak akses |
+| `docs/04-FITUR-DAN-API.md` | Menu, endpoint, file kode |
+| `docs/05-STATUS-DAN-TODO.md` | Status dan langkah berikutnya |
 
 ## Struktur
-- `public/` – antarmuka (index.html, app.css, app.js, logo.png)
-- `api/login.js`, `api/logout.js` – autentikasi
-- `api/data.js` – data utama (proker, pengurus, tim kerja, PD, agenda, KPI)
-- `api/report.js` – laporan agregat (Pleno, TC SHDR, Kepemudaan)
-- `lib/` – klien Airtable, hash password (scrypt), sesi cookie bertanda tangan
-- `scripts/set-password.js` – buat/ganti password pengguna
+`public/` antarmuka · `api/` fungsi serverless (maks. 12) · `lib/` modul bersama · `scripts/` skrip admin · `tests/` uji (`sh tests/run.sh`) · `docs/` dokumentasi.
 
-## Environment variable (Vercel → Settings → Environment Variables)
-| Nama | Isi |
-|---|---|
-| `AIRTABLE_TOKEN` | Personal access token, scope `data.records:read` + `data.records:write` (untuk catat login terakhir), hanya base BPN PKKI |
-| `AIRTABLE_BASE_ID` | `appG76IeTvWetH0FJ` |
-| `SESSION_SECRET` | string acak ≥ 32 karakter (`openssl rand -base64 48`) |
-
-## Menambah pengguna
-Pengguna disimpan di tabel **Pengguna Report** (base BPN PKKI). User ID = email yang terdaftar di **M-Person**.
-```
-AIRTABLE_TOKEN=pat... node scripts/set-password.js nama@email.org Admin
-```
-Tanpa argumen ke-3, password acak dibuatkan dan ditampilkan sekali. Level: Admin / Pengurus / Pengamat
-(hak akses per level akan ditentukan kemudian). Hilangkan centang **Aktif** di Airtable untuk memblokir akses.
-
-## Pengembangan lokal
-```
-npm i -g vercel && vercel dev
-```
+## Environment variable
+`AIRTABLE_TOKEN`, `AIRTABLE_BASE_ID`, `SESSION_SECRET` (wajib); `BABLAST_API_KEY`, `RESEND_API_KEY`, `MAIL_FROM`, `ADMIN_EMAIL` (opsional). Rincian di `docs/01-SETUP.md`.

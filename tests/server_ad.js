@@ -1,0 +1,21 @@
+process.env.SESSION_SECRET='x'.repeat(40); process.env.AIRTABLE_TOKEN='t';
+const root=require('path').resolve(__dirname,'..')+'/'; const {F,T}=require(root+'lib/users.js');
+const calls=[]; const RTT='tblCgJf2Xwi3Jcp5f';
+const db={[RTT]:[],[T]:[{id:'recADMIN000000001',fields:{[F.aktif]:true,[F.disetujui]:true,[F.email]:'a@x.id',[F.nama]:'Adm','fldsTal4cl44WawC3':{name:'Admin'},[F.level]:{name:'Admin'}}},{id:'recUSER000000001A',fields:{[F.aktif]:true,[F.disetujui]:true,[F.email]:'u@x.id',[F.nama]:'U','fld7LeP24BReQjdFA':'["Pengamat"]'}}],'tblDpFOHsHMntZwWk':[],'tblyGzVk36H6eGrFt':[{id:'recSK00000000001',fields:{fldlNoAUIJ9jKfZll:'Tim Kerja Dana'}}],'tblRzqA9mzvDBWgSZ':[]};
+const match=(rows,f)=>{let m; if(f&&(m=f.match(/RECORD_ID\(\)='(\w+)'/))) return rows.filter(r=>r.id===m[1]); return rows;};
+require.cache[require.resolve(root+'lib/airtable.js')]={id:'a',filename:'a',loaded:true,exports:{fetchAll:async(t,fl,ex={})=>match(db[t]||[],ex.filterByFormula),listByIds:async()=>[],update:async(t,id,f)=>{calls.push(['up',t,id,f]);const r=(db[t]||[]).find(x=>x.id===id); if(r) Object.assign(r.fields,f);},create:async(t,f)=>{calls.push(['mk',t,f]);const r={id:'recNEW'+String(calls.length).padStart(11,'0'),fields:f};(db[t]=db[t]||[]).push(r);return r;},remove:async(t,id)=>{calls.push(['rm',t,id]);db[t]=db[t].filter(x=>x.id!==id);},BASE:'x'}};
+const auth=require(root+'lib/auth.js'); auth.getSession=()=>({rid:'recADMIN000000001'});
+const H=require(root+'api/admin.js'); const ok=(c,m)=>console.log(c?'OK  ':'FAIL',m);
+const run=(method,body,query={})=>new Promise((r)=>{const res={headers:{},status(c){this.c=c;return this;},setHeader(){},json(j){r({c:this.c||200,j});}};H({method,body,query,headers:{host:'x'}},res);});
+(async()=>{
+ let r=await run('GET'); ok(r.c===200&&r.j.roles.some(x=>x.nama==='Admin'&&x.terkunci)&&r.j.seksi[0]==='Tim Kerja Dana','GET roles+seksi: '+r.c);
+ r=await run('POST',{action:'role',nama:'Koordinator – Tim Kerja Dana',cakupan:'Nasional',seksi:'Tim Kerja Dana',tingkat:'Koordinator',hak:{proker:'edit','admin':'edit',bogus:'edit',dashboard:'view'}}); ok(r.c===200&&calls.at(-1)[0]==='mk'&&!/admin|bogus/.test(calls.at(-1)[2]['fldXrXNjoRx4XcogQ']),'buat role, hak admin/bogus dibuang');
+ r=await run('POST',{action:'role',nama:'koordinator – tim kerja dana',hak:{}}); ok(r.c===409,'nama kembar ditolak');
+ r=await run('POST',{action:'role',nama:'Admin',hak:{}}); ok(r.c===400,'role Admin tidak bisa diubah');
+ r=await run('POST',{action:'update',id:'recUSER000000001A',roles:['Pengamat','Koordinator – Tim Kerja Dana']}); ok(r.c===200&&calls.at(-1)[3]['fld7LeP24BReQjdFA'].includes('Koordinator'),'set banyak role pada pengguna');
+ r=await run('POST',{action:'update',id:'recUSER000000001A',roles:['Role Palsu']}); ok(r.c===400,'role tak dikenal / kosong ditolak: '+r.c);
+ r=await run('POST',{action:'update',id:'recADMIN000000001',roles:['Pengamat']}); ok(r.c===400,'admin tak bisa mencabut Admin dari diri sendiri');
+ const id=db[RTT][0].id; r=await run('POST',{action:'roledel',id}); ok(r.c===409,'role masih dipakai tak bisa dihapus');
+ await run('POST',{action:'update',id:'recUSER000000001A',roles:['Pengamat']}); r=await run('POST',{action:'roledel',id}); ok(r.c===200&&calls.at(-1)[0]==='rm','role dihapus setelah dilepas');
+ r=await run('POST',{action:'role',nama:'Pengamat',hak:{umat:'edit'}}); ok(r.c===200&&calls.at(-1)[2]['fld8HSo7LgwAvki5a']===true,'role sistem bisa disesuaikan (disimpan sebagai override)');
+})();

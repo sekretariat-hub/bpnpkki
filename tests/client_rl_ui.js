@@ -1,0 +1,27 @@
+const { JSDOM } = require('jsdom'); const fs = require('fs');
+const root = require('path').resolve(__dirname,'../public')+'/';
+const html = fs.readFileSync(root + 'index.html', 'utf8').replace(/<script src[^>]*><\/script>/, '');
+const PERM = {dashboard:1,admin:2,'admin/pengguna':2,'admin/role':2};
+const data = { today: '2026-11-16', tugas: [], agenda: [], event: [], perm: PERM, user: { nama: 'Budi', level: 'Admin', peran: 'Admin' }, opsi: {}, kpis: { bpk: {}, pdpkk: {}, pewarta: {} }, proker: [], kelompok: { inti: [], tim: [] }, pengurus: [], tim: [], pdpkk: [], bpkList: [], jabatanBpk: [], bpkProfil: {}, riwayatPengurus: [] };
+const mk = (i, o) => ({ id: 'rec' + String(i).padStart(14, '0'), n: 'Umat ' + i, jk: i % 2 ? 'P' : 'W', u: 20 + i * 5, kat: i % 3 ? 'Awam' : 'Imam', bp: 1, kr: i % 2, sz: ['M', 'L', ''][i % 3], kus: i % 2 ? 'recK1' : 'recK2', prov: 'Jawa Barat', pd: 'recD1', pl: i % 2 ? ['recP1'] : [], mi: i < 4 ? ['recM1', 'recM2'] : i < 6 ? ['recM1'] : [], ma: i < 2 ? ['recM1'] : [], wa: 1, l: i % 2, k: 3, ...o });
+const posts=[]; const ADMJ = { tree:{dashboard:[],admin:['pengguna','role'],proker:['keuskupan']}, seksi:['Tim Kerja Dana','Tim Kerja Media'], roles:[{id:'',nama:'Admin',sistem:true,terkunci:true,hak:{},cakupan:'Nasional',seksi:'',tingkat:'',kat:'',desk:'',pakai:1,diubah:false},{id:'',nama:'Pengamat',sistem:true,terkunci:false,hak:{dashboard:'view'},cakupan:'Terbatas',seksi:'',tingkat:'',kat:'',desk:'',pakai:0,diubah:false},{id:'recR1',nama:'Koordinator – Tim Kerja Dana',sistem:false,terkunci:false,hak:{dashboard:'view',proker:'edit'},cakupan:'Nasional',seksi:'Tim Kerja Dana',tingkat:'Koordinator',kat:'',desk:'',pakai:2,diubah:true}], users:[{id:'recU1',email:'a@b.c',nama:'Ani',aktif:true,pending:false,roles:['Pengamat'],auto:['Koordinator – Tim Kerja Dana'],lastLogin:'',person:''}] };
+const dom = new JSDOM(html, { runScripts: 'outside-only', url: 'https://x.test/' }); const w = dom.window; const errs = []; w.addEventListener('error', (e) => errs.push(e.message));
+w.fetch = async (u, o) => { const J = (x) => ({ status: 200, ok: true, json: async () => x }); if (u.includes('/api/admin')) { if (o && o.method==='POST') { posts.push(JSON.parse(o.body)); return J({ok:true}); } return J(ADMJ); } if (u.includes('act=ringkas')) return J({ kurang: [], lengkap: true }); return J(data); };
+w.eval(fs.readFileSync(root + 'peta.js', 'utf8')); w.eval(fs.readFileSync(root + 'app.js', 'utf8'));
+const wait = (ms = 80) => new Promise((r) => setTimeout(r, ms)); const $ = (s) => w.document.querySelector(s); const ok = (c, m) => console.log((c ? 'OK   ' : 'FAIL ') + m);
+const go = async (h) => { w.location.hash = '#/' + h; w.dispatchEvent(new w.HashChangeEvent('hashchange')); await wait(150); };
+(async () => {
+  await wait(100);
+  await go('admin/role'); const t=$('#page').innerHTML;
+  ok(/Role BPN/.test(t)&&/Koordinator – Tim Kerja Dana/.test(t)&&/Role umum/.test(t)&&/Koordinator · Tim Kerja Dana|Dana · Koordinator/.test(t),'halaman Role tampil (pemicu otomatis terbaca)');
+  w.document.querySelector('[data-role="Admin"]').click(); await wait(30); ok(/selalu memiliki akses penuh/.test($('#ov').textContent)&&!$('#rs2'),'Admin terkunci, tanpa tombol simpan'); w.document.querySelector('#ov .x').click();
+  w.document.querySelector('[data-role="Pengamat"]').click(); await wait(30); ok($('#rdel').textContent==='Kembalikan ke bawaan','role sistem: tombol kembalikan ke bawaan');
+  $('#rall').click(); w.document.querySelector('#ov select[data-k="proker/keuskupan"]').value='edit'; $('#rs2').click(); await wait(40);
+  const p=posts.at(-1); ok(p.action==='role'&&p.nama==='Pengamat'&&p.hak.dashboard==='view'&&p.hak['proker/keuskupan']==='edit'&&!('admin' in p.hak),'simpan role mengirim matriks hak');
+  await go('admin/role'); $('#rnew').click(); await wait(30); $('#rn').value='Pewarta Baru'; $('#rs').value='Tim Kerja Media'; $('#rt').value='Anggota'; $('#rcopy').value='Koordinator – Tim Kerja Dana'; $('#rcopy').dispatchEvent(new w.Event('change')); $('#rs2').click(); await wait(40);
+  const q=posts.at(-1); ok(q.nama==='Pewarta Baru'&&q.seksi==='Tim Kerja Media'&&q.tingkat==='Anggota'&&q.hak.proker==='edit','role baru + salin dari role lain');
+  await go('admin/pengguna'); ok(/otomatis/.test($('#page').innerHTML)&&/Atur role/.test($('#page').innerHTML)&&!/Hak akses<\/button>/.test($('#page').innerHTML),'pengguna: chip role + otomatis, tombol Atur role');
+  w.document.querySelector('[data-akses]').click(); await wait(30); const cbs=w.document.querySelectorAll('#ov input[type=checkbox]'); ok(cbs.length===3&&[...cbs].find(c=>c.value==='Pengamat').checked,'modal role pengguna: centang sesuai');
+  [...cbs].find(c=>c.value==='Koordinator – Tim Kerja Dana').checked=true; $('#as').click(); await wait(40); const u=posts.at(-1); ok(u.action==='update'&&u.id==='recU1'&&u.roles.includes('Pengamat')&&u.roles.includes('Koordinator – Tim Kerja Dana'),'simpan banyak role');
+  console.log('errors:', errs.length ? errs : 'none');
+})();

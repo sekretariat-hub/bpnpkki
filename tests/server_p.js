@@ -1,0 +1,25 @@
+process.env.SESSION_SECRET='x'.repeat(40); process.env.AIRTABLE_TOKEN='t';
+const root=require('path').resolve(__dirname,'..')+'/';
+const T={ PEJ:'tblGR9a8J4UOyJGep', BPK:'tblgj0UYB9w7UWWnv', JAB:'tbldxeUpwRdy3ghib', PER:'tbl21zOSogH7Anlu2', PGR:'tblRzqA9mzvDBWgSZ', RW:'tblNNm7hwT7q9hxAV' };
+const db={ [T.PEJ]:[{id:'recPEJ0000000001a',fields:{fldrGASVYBRTS7v8o:['recBPK0000000001a'],fldCYWlWFYtnkjv6Z:['recOLD0000000001a'],fldAsSxbg8bZRkrru:['recJAB0000000001a'],fldyWZFFnXeN8CMlk:{name:'AKTIF'}}}], [T.BPK]:[{id:'recBPK0000000001a',fields:{fldxvUJvguk6J81mP:'Surabaya'}}], [T.JAB]:[{id:'recJAB0000000001a',fields:{fld1D1ejz3qnx7A8h:'Pic Doa'}}], [T.PER]:[{id:'recOLD0000000001a',fields:{fldVU2gofcKEhWHmB:'Lama',fldGsFt4GflTXoTa0:'+628500000001'}},{id:'recNEW0000000001a',fields:{fldVU2gofcKEhWHmB:'Baru'}}], [T.PGR]:[{id:'recPGR0000000001a',fields:{fldAZEb1CWjIEoEGB:'Bendahara',fldJgxaz4f5MmEbnS:['recOLD0000000001a']}}], [T.RW]:[] };
+let n=1;
+const match=(rows,f)=>{let m; if(!f) return rows; if((m=f.match(/RECORD_ID\(\)='(\w+)'/))) return rows.filter(r=>r.id===m[1]); if(f.startsWith('FIND(')){const nat=f.match(/FIND\('(\d+)'/)[1];return rows.filter(r=>String(r.fields.fldGsFt4GflTXoTa0||'').replace(/\D/g,'').includes(nat));} return rows;};
+const fake={fetchAll:async(t,fl,ex={})=>match(db[t],ex.filterByFormula),listByIds:async(t,ids)=>db[t].filter(r=>ids.includes(r.id)),update:async(t,id,f)=>{Object.assign(db[t].find(r=>r.id===id).fields,f);},create:async(t,f)=>{const r={id:'rec'+String(n++).padStart(14,'0'),fields:{...f}};db[t].push(r);return r;},BASE:'x'};
+require.cache[require.resolve(root+'lib/airtable.js')]={id:'a',filename:'a',loaded:true,exports:fake};
+const sent=[];require.cache[require.resolve(root+'lib/wa.js')]={id:'w',filename:'w',loaded:true,exports:{kirimWa:async(no,m)=>{sent.push([no,m]);}}};
+const A=require(root+'lib/access.js');const au=require(root+'lib/auth.js');au.getSession=()=>({rid:'x'});
+let ACC={nama:'Koor Sby',peran:'Koordinator BPK',email:'k@x',perm:{pendataan:2,pengurus:1},bpkIds:['recBPK0000000001a']};
+A.getAccess=async()=>ACC;
+const dat=require(root+'api/data.js'); dat.invalidate=()=>{};
+const pej=require(root+'api/pejabat.js'), pgr=require(root+'api/pejabat.js');
+const call=async(h,b)=>{let o={};await h({method:'POST',headers:{host:'bpnpkki.vercel.app'},body:b},{setHeader(){},status(c){o.s=c;return this},json(j){o.j=j;return this}});return o;};
+(async()=>{
+ const base={action:'tambah',bpkId:'recBPK0000000001a',jabatanId:'recJAB0000000001a',nama:'Siti Aminah',wa:'0812 5555 6666',jk:'Wanita'};
+ let r=await call(pej,base);console.log('tambah',r.j.ok,r.j.orangBaru,r.j.terkirim,sent[0][0]);console.log(sent[0][1].split('\n').slice(2,3).join(''),'|',/hp=628125556666/.test(sent[0][1]));
+ console.log('person baru JK/dom',db[T.PER][2].fields.fld3A1rRGfWxbuase,db[T.PER][2].fields.fldwJ7RnXW1nLaOcv);
+ r=await call(pej,base);console.log('duplikat',r.s);
+ r=await call(pej,{...base,bpkId:'recOTHER000000001a'});console.log('bpk lain',r.s);
+ ACC={...ACC,perm:{pendataan:1}};r=await call(pej,base);console.log('view saja',r.s);ACC={...ACC,perm:{pendataan:2,pengurus:2}};
+ r=await call(pej,{action:'akhiri',bpkId:'recBPK0000000001a',id:'recPEJ0000000001a'});console.log('akhiri',r.j,db[T.PEJ][0].fields.fldg9BWVX7AmO3Iw7);
+ ACC={...ACC,bpkIds:null};r=await call(pgr,{action:'pengurus',id:'recPGR0000000001a',lamaId:'recOLD0000000001a',baruId:'recNEW0000000001a'});console.log('ganti',r.j,db[T.PGR][0].fields.fldJgxaz4f5MmEbnS,db[T.RW][0].fields.fldJ9VuWtPiEceSe6,db[T.RW][0].fields.fldV7IAegtyjm2lV4);
+})();
