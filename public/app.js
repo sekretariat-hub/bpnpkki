@@ -1005,6 +1005,7 @@ document.addEventListener('click', (e) => {
   if (a === 'tonton') return lsTonton(id, b.dataset.on === '1');
   if (a === 'tugas') return lsTugas(id);
   if (a === 'pesan') return lsPesan(id);
+  if (a === 'lapdetail') return lsLapDetail(id);
   if (a === 'diskusikirim') return lsDiskusi(id);
 });
 PAGES['ls/tc'] = () => lsPage('tc', 'tclist', (s) => {
@@ -1133,9 +1134,23 @@ async function lsTugas(id) {
   try { await lsApi('tugas', { detail: id, file: await lsBerkas(document.getElementById('tg-' + id).files[0]) }); lsReload('belajar'); } catch (e) { err.textContent = e.message; }
 }
 PAGES['ls/laporan'] = () => lsPage('laporan', 'laporan', (s) => {
-  if (!s.rows.length) return '<div class="empty">Belum ada pendaftar dari keuskupan Anda.</div>';
-  return `<div class="note" style="margin-bottom:12px">Laporan peserta dari keuskupan Anda: siapa yang mendaftar, siapa yang lulus, bab yang boleh diajar, dan komentar pengajar.</div><div class="tw"><table><thead><tr><th>Nama</th><th>TC</th><th>Pendaftaran</th><th>Kelulusan</th><th>Bab (boleh mengajar)</th><th>Komentar &amp; catatan akhir</th></tr></thead><tbody>${s.rows.map((r) => `<tr><td>${esc(r.nama)}<div class="sub">${esc(r.keus)}</div></td><td>${esc(r.event)}</td><td>${lsStat(r.daftar)}</td><td>${r.status ? lsStat(r.status) : '–'}${r.ket ? `<div class="sub">${esc(r.ket)}</div>` : ''}</td><td>${r.bab.map((b) => `<div>${esc(b.bab)}: ${esc(b.izin)}${b.cat ? ` <span class="sub">(${esc(b.cat)})</span>` : ''}</div>`).join('') || '–'}</td><td>${r.catBpk ? `<div><b>Catatan akhir:</b> ${esc(r.catBpk)}</div>` : ''}${r.komentar.map((k) => `<div class="sub">${esc(k.penulis)}: ${esc(k.isi)}</div>`).join('')}</td></tr>`).join('')}</tbody></table></div>`;
+  if (!s.rows.length) return '<div class="empty">Belum ada peserta dari keuskupan Anda.</div>';
+  const q = (LS.lapq || '').toLowerCase(), st = LS.laps || '';
+  const rows = s.rows.filter((r) => (!st || r.status === st) && (!q || (r.nama + ' ' + r.keus).toLowerCase().includes(q)));
+  return `<div class="note" style="margin-bottom:12px">Peserta ${s.semua ? 'semua keuskupan' : 'dari keuskupan Anda'}: status kelulusan, bab yang boleh diajar, dan catatan akhir pengajar.</div>
+    <div class="chips" style="margin-bottom:10px">${Object.entries(s.ringkas).map(([k, v]) => chip(`${k}: ${v}`, /Lulus/.test(k) ? 'green' : /Mundur|Mengundurkan|Tidak/.test(k) ? 'red' : 'blue')).join('')}</div>
+    <div class="eform"><div><label>Cari</label><input id="lq" value="${esc(LS.lapq || '')}" placeholder="Nama atau keuskupan"></div><div><label>Status</label><select id="ls-st"><option value="">Semua</option>${Object.keys(s.ringkas).map((k) => `<option${k === st ? ' selected' : ''}>${esc(k)}</option>`).join('')}</select></div></div>
+    <div class="tw"><table><thead><tr><th>Nama</th><th>Keuskupan</th><th>Kelompok / Pengajar</th><th>Status</th><th>Bab dinilai</th><th>Catatan akhir</th><th></th></tr></thead><tbody>${rows.map((r) => `<tr><td>${esc(r.nama)}</td><td>${esc(r.keus)}</td><td>${esc(r.kelompok)}<div class="sub">${esc(r.pengajar)}</div></td><td>${lsStat(r.status)}${r.ket ? `<div class="sub">${esc(r.ket)}</div>` : ''}</td><td>${r.dinilai ? `${r.boleh} boleh, ${r.damping} didampingi (dari ${r.dinilai})` : '–'}</td><td>${esc(r.catBpk)}</td><td><button class="ghost" data-ls="lapdetail|${r.id}">Rincian</button></td></tr>`).join('') || '<tr><td colspan="7">Tidak ada yang cocok.</td></tr>'}</tbody></table></div>`;
 });
+document.addEventListener('input', (e) => { if (e.target.id === 'lq') { LS.lapq = e.target.value; const p = e.target.selectionStart; render(); const n = $('#lq'); if (n) { n.focus(); n.setSelectionRange(p, p); } } });
+document.addEventListener('change', (e) => { if (e.target.id === 'ls-st') { LS.laps = e.target.value; render(); } });
+async function lsLapDetail(id) {
+  const r = LS.laporan.rows.find((x) => x.id === id);
+  try {
+    const j = await lsApi('laporandetail&head=' + id);
+    modal(`<h2>${esc(r.nama)}</h2><p class="sub">${esc(r.event)} · ${esc(r.keus)} · ${esc(r.status)}</p><h4>Bab</h4><div class="tw"><table><thead><tr><th>Bab</th><th>Tonton</th><th>Boleh mengajar?</th><th>Catatan</th></tr></thead><tbody>${j.bab.map((b) => `<tr><td>${esc(b.bab)}</td><td>${b.nonton ? '✓' : '–'}</td><td>${esc(b.izin || '–')}</td><td>${esc(b.cat)}</td></tr>`).join('')}</tbody></table></div>${r.catBpk ? `<h4 style="margin-top:12px">Catatan akhir TC</h4><p>${esc(r.catBpk)}</p>` : ''}<h4 style="margin-top:12px">Komentar pengajar</h4>${j.komentar.map((k) => `<div class="riw"><b>${esc(k.penulis)}</b> <span class="sub">${esc(lsDate(k.tgl))}</span><div>${esc(k.isi)}</div></div>`).join('') || '<p class="sub">Belum ada komentar.</p>'}`, true);
+  } catch (e) { alert(e.message); }
+}
 
 const tabsOf = (m) => (m.tabs ? m.tabs.filter(([id]) => (D.perm[`${m.id}/${id}`] || 0) >= 1) : []);
 const visible = () => MENU.filter((m) => m.always || (m.tabs ? tabsOf(m).length : (D.perm[m.id] || 0) >= 1));

@@ -9,7 +9,8 @@ const R = {
   daftarlist: { tc: [{ id: EV, nama: 'TC SHDR 2027', mulai: '2027-01-10', selesai: '', daftar: 'Dibuka', syarat: { surat: true }, cek: { ok: true, items: [{ label: 'Data profil lengkap', ok: true }, { label: 'Sudah mengikuti SHDR', ok: false, info: 'Isi modul' }] }, mine: null }, { id: 'recTC000000000002', nama: 'TC Lain', daftar: 'Dibuka', syarat: {}, cek: { ok: false, items: [{ label: 'Usia 18–60 tahun', ok: false }] }, mine: null }] },
   pendaftar: { bnh: true, kelompok: [{ id: 'recKEL00000000001', nama: 'Kel 1' }], rows: [{ id: 'recPD000000000001', nama: 'Maria', eventNama: 'TC SHDR 2027', keus: 'KAJ', status: 'Disetujui BPK', email: 'm@x.id', wa: '62', suratUrl: 'https://f/x.pdf', suratNama: 'x.pdf', catBpk: 'ok', bisaBpk: false, bisaBnh: true }] },
   belajar: { kelas: [{ id: 'recH0000000000001', event: 'TC SHDR 2027', kelompok: 'Kel 1', status: 'Peserta Aktif', pengajar: 'Pak Guru', ket: '', bab: [{ id: 'recD0000000000001', judul: 'Bab 1', yt: 'https://youtu.be/x', tautan: [], selesai: false, tugas: [], izin: '', cat: '' }], komentar: [{ penulis: 'Pak Guru', isi: 'Bagus sekali', tgl: '2027-01-12' }] }] },
-  laporan: { rows: [{ id: 'r1', nama: 'Maria', event: 'TC SHDR 2027', keus: 'KAJ', daftar: 'Disetujui BPNH', status: 'Lulus', ket: '', catBpk: 'Siap melayani', bab: [{ bab: 'Bab 1', izin: 'Boleh mengajar', cat: '' }], komentar: [{ penulis: 'Pak Guru', isi: 'Bagus' }] }] },
+  laporan: { semua: false, ringkas: { Lulus: 1 }, rows: [{ id: 'recH0000000000001', nama: 'Maria', event: 'TC SHDR 2027', keus: 'KAJ', kelompok: 'Kel 1', pengajar: 'Pak Guru', status: 'Lulus', ket: '', catBpk: 'Siap melayani', dinilai: 1, boleh: 1, damping: 0 }] },
+  laporandetail: { bab: [{ bab: 'Bab 1', izin: 'Boleh mengajar', cat: '', nonton: true }], komentar: [{ penulis: 'Pak Guru', isi: 'Bagus' }] },
   diskusi: { tc: [{ id: EV, nama: 'TC SHDR 2027' }], event: EV, posts: [{ id: 'p1', isi: 'Salam semua', penulis: 'Maria', peran: 'Peserta', kelompok: 'Kel 1', tgl: '2027-01-12' }] },
   opsi: { modul: ['SHDR', 'Kursus Alkitab'], bpk: [{ id: 'recBPK0000000001', nama: 'KAJ' }] },
   tclist: { edit: true, list: [{ id: EV, nama: 'TC SHDR 2027', mulai: '', selesai: '', daftar: 'Dibuka', status: '', oleh: 'Budi', link: 'x', syarat: { usiaMin: 18 }, materi: [] }] },
@@ -46,7 +47,10 @@ const go = async (h) => { w.location.hash = '#/' + h; w.dispatchEvent(new w.Hash
   await go('ls/peserta'); $('#ps-recH0000000000001').value = 'Pak, tanya'; w.document.querySelector('[data-ls="pesan|recH0000000000001"]').click(); await wait(40);
   ok(posts.at(-1).a === 'pesan' && posts.at(-1).isi === 'Pak, tanya', 'pesan ke pengajar terkirim');
   await go('ls/laporan'); t = $('#page').innerHTML;
-  ok(/Siap melayani/.test(t) && /Bab 1: Boleh mengajar/.test(t) && /Lulus/.test(t), 'Laporan BPK: lulus, bab, catatan akhir');
+  ok(/Siap melayani/.test(t) && /1 boleh/.test(t) && /Lulus/.test(t), 'Laporan BPK: lulus, ringkasan bab, catatan akhir');
+  w.document.querySelector('[data-ls="lapdetail|recH0000000000001"]').click(); await wait(60);
+  ok(/Boleh mengajar/.test($('#ov').textContent) && /Bagus/.test($('#ov').textContent), 'rincian peserta: bab dan komentar tampil');
+  w.document.querySelector('#ov')?.remove();
   await go('ls/tc');
   w.document.querySelector('[data-ls="syarat|' + EV + '"]').click(); await wait(60);
   ok(!!$('#sy-min') && $('#sy-min').value === '18', 'editor syarat TC tampil dengan nilai tersimpan');

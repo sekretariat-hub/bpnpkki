@@ -74,6 +74,13 @@ const pdf = { name: 's.pdf', type: 'application/pdf', data: 'QUJD' };
   r = await run(umat, 'syaratsave', { id: EV, syarat: {} }); ok(r.code === 403, 'umat tidak boleh mengubah syarat');
   r = await run(bnh, 'syaratsave', { id: EV, syarat: { usiaMin: 20, usiaMax: '', jk: 'Ngawur', modul: ['SHDR'], surat: 1 } }); ok(r.code === 200 && JSON.parse(calls.at(-1)[3].fldEXvmXr3NASHVHS).jk === '' && JSON.parse(calls.at(-1)[3].fldEXvmXr3NASHVHS).usiaMax === null, 'syarat dibersihkan');
   r = await run(umat, 'laporan', {}, 'GET'); ok(r.code === 403, 'umat tidak boleh membuka laporan');
+  // laporan BPK dari LMSHeader: dibatasi keuskupan
+  db.tblZhieD2iLA6xSxa.push({ id: 'recHEAD0000000008', fields: { fldl4SuNiiBEQLyo3: 'Budi', fldIMpXTWOpqZpVrR: 'KAS', flduH9BDju7FUNYjp: { name: 'Lulus' }, fldPK70LzNQzsKnw1: [EV] } });
+  db.tblZhieD2iLA6xSxa[0].fields.fldIMpXTWOpqZpVrR = 'KAJ';
+  const kb = { email: 'kb@x.id', nama: 'KB', perm: { ls: 1, 'ls/laporan': 1 }, bpkIds: [BPK1] };
+  r = await run(kb, 'laporan', {}, 'GET'); ok(r.code === 200 && r.j.rows.length === 1 && r.j.rows[0].keus === 'KAJ', 'laporan BPK hanya keuskupan sendiri ' + JSON.stringify(r.j && r.j.rows && r.j.rows.length));
+  r = await run(kb, 'laporandetail', {}, 'GET', { head: 'recHEAD0000000008' }); ok(r.code === 403, 'rincian peserta keuskupan lain ditolak');
+  r = await run(kb, 'laporandetail', {}, 'GET', { head: HD }); ok(r.code === 200, 'rincian peserta keuskupan sendiri');
   // ---- Tahap 3: pesan dan diskusi ----
   const HD = 'recHEAD0000000009';
   db.tblZhieD2iLA6xSxa = [{ id: HD, fields: { fldWYrEa3TbJ7IxTd: 'maria@x.id', fldl95vg3BSSkSue2: 'guru@x.id', fldPK70LzNQzsKnw1: [EV], fldGcKUaAeeoPZgxu: 'TC SHDR', fld8TfBelMkpt3byj: ['Kel 1'] } }];
@@ -82,7 +89,7 @@ const pdf = { name: 's.pdf', type: 'application/pdf', data: 'QUJD' };
   r = await run(umat, 'pesan', { head: HD, isi: '  ' }); ok(r.code === 400, 'pesan kosong ditolak');
   r = await run(lain, 'pesan', { head: HD, isi: 'halo' }); ok(r.code === 403, 'orang lain tidak boleh menulis di kelas ini');
   r = await run(umat, 'pesan', { head: HD, isi: 'Pak, tugas bab 1?' }); ok(r.code === 200 && calls.at(-1)[2].fldIVfMOWuozs5FMy === 'Pesan' && calls.at(-1)[2].fldnqgxK9gevs098h === 'Peserta', 'peserta mengirim pesan');
-  ok(mails.some((m) => m[0] === 'guru@x.id'), 'pengajar diberi tahu lewat email');
+  ok(mails.some((m) => [].concat(m[0]).includes('guru@x.id')), 'pengajar diberi tahu lewat email');
   r = await run(guru, 'pesan', { head: HD, isi: 'Silakan unggah' }); ok(r.code === 200 && calls.at(-1)[2].fldnqgxK9gevs098h === 'Pengajar' && mails.some((m) => m[0] === 'maria@x.id' && /Pesan baru/.test(m[1])), 'pengajar membalas, peserta diberi tahu');
   r = await run(lain, 'diskusikirim', { event: EV, isi: 'hai' }); ok(r.code === 403, 'bukan anggota TC tidak boleh ikut diskusi');
   r = await run(umat, 'diskusikirim', { event: EV, isi: 'Salam semua' }); ok(r.code === 200 && calls.at(-1)[2].fldIVfMOWuozs5FMy === 'Grup' && calls.at(-1)[2].fldAOIttv6xHX12ot === EV, 'peserta menulis di diskusi TC');

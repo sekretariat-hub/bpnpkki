@@ -47,3 +47,9 @@ Menu `ls` dengan tab `peserta` (Belajar), `diskusi`, `daftar` (Daftar TC), `pend
 - **Pesan** peserta↔pengajar per kelas (LMSHeader): Komentar LS bertipe `Pesan`, ditulis dari tab Belajar (peserta) dan modal peserta (pengajar). Pihak lain diberi tahu lewat email; peserta juga lewat WhatsApp (BaBlast) bila nomornya ada di Pendaftaran LS.
 - **Diskusi**: tab `diskusi`, satu ruang per TC untuk semua kelompok dan pengajarnya (tipe `Grup`, kolom `Event Id`). Hanya anggota TC (atau pemegang hak `ls/tc`) yang bisa membaca/menulis.
 - Pesan tidak realtime (muat ulang halaman); tidak ada hapus/edit pesan dan lampiran.
+
+## Data TC SHDR BPN PKKI (live)
+TC "TC SHDR BPN PKKI" sudah ada di Schole (±369 peserta, puluhan kelompok; status Lulus / Peserta Aktif / Mengundurkan diri). Menu Learning System membaca data itu langsung, tanpa impor.
+- `Email Mentor` di LMSHeader bisa berisi beberapa alamat (dua mentor per kelompok); pencocokan pengajar memakai daftar, bukan kesamaan persis (`mentorF` / `emails` di `lib/ls.js`).
+- **Laporan BPK** kini dibaca dari LMSHeader (bukan Pendaftaran LS), dibatasi keuskupan Koordinator/PIC lewat kecocokan nama keuskupan (M-BPK = kolom Keuskupan Schole). Rincian bab dan komentar per peserta diambil saat tombol Rincian ditekan (`laporandetail`).
+- Rencana lanjutan: dasbor progres + pengingat otomatis, sertifikat kelulusan bernomor, jadwal dan presensi pertemuan.
