@@ -4,7 +4,7 @@ Menu **Learning System** memakai data base **Schole** (`appnbezea6uZzlSeS`, env 
 
 ## Tahap
 1. **Tahap 1 (jadi):** Kelola TC + learning path + tautan pendaftaran; tampilan Pengajar (progres kelompok, nilai bab "boleh mengajar", komentar, kelulusan, catatan akhir untuk BPK).
-2. **Tahap 2 (belum):** pendaftaran umat (tautan `#/ls/daftar/<EventTC>`), alur persetujuan, tab Peserta (modul, learning path, upload tugas, progres), tab Laporan BPK, email.
+2. **Tahap 2 (jadi):** pendaftaran umat (tautan `#/ls/daftar/<EventTC>`), alur persetujuan, tab Peserta (modul, learning path, upload tugas, progres), tab Laporan BPK, email.
 3. **Tahap 3 (belum):** pesan peserta ke pengajar dan grup diskusi per kelompok (tabel Komentar LS sudah disiapkan; notifikasi lewat WhatsApp BaBlast).
 
 ## Alur persetujuan pendaftar (Tahap 2, sudah berjalan)
