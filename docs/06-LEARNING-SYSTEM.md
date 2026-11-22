@@ -5,7 +5,7 @@ Menu **Learning System** memakai data base **Schole** (`appnbezea6uZzlSeS`, env 
 ## Tahap
 1. **Tahap 1 (jadi):** Kelola TC + learning path + tautan pendaftaran; tampilan Pengajar (progres kelompok, nilai bab "boleh mengajar", komentar, kelulusan, catatan akhir untuk BPK).
 2. **Tahap 2 (jadi):** pendaftaran umat (tautan `#/ls/daftar/<EventTC>`), alur persetujuan, tab Peserta (modul, learning path, upload tugas, progres), tab Laporan BPK, email.
-3. **Tahap 3 (belum):** pesan peserta ke pengajar dan grup diskusi per kelompok (tabel Komentar LS sudah disiapkan; notifikasi lewat WhatsApp BaBlast).
+3. **Tahap 3 (jadi):** pesan peserta ke pengajar dan grup diskusi per kelompok (tabel Komentar LS sudah disiapkan; notifikasi lewat WhatsApp BaBlast).
 
 ## Alur persetujuan pendaftar (Tahap 2, sudah berjalan)
 Peserta mendaftar → **Koordinator BPK / PIC Pewartaan BPK** keuskupannya menyetujui atau menolak → bila setuju, menunggu persetujuan **tim BPN Harian yang membuat TC** → bila setuju, peserta dan Koordinator BPK mendapat email (peserta: email pribadi; Koordinator BPK: daftar email total). Hal yang sama saat peserta lulus.
@@ -23,7 +23,7 @@ Peserta mendaftar → **Koordinator BPK / PIC Pewartaan BPK** keuskupannya menye
 Pengajar dikenali dari email di tabel **Mentor & Petugas** (dicocokkan dengan email di M-Person BPN) dan otomatis diberi role **Pengajar TC**. Peserta dihubungkan lewat `LMSHeader.Email Mentor`/`Email Peserta`.
 
 ## Hak akses
-Menu `ls` dengan tab `peserta` (Belajar), `daftar` (Daftar TC), `pendaftar`, `laporan`, `tc` (Kelola TC), `pengajar`. Bawaan: Admin/Editor penuh; Pengurus BPN Harian edit `tc` dan `pendaftar`, lihat lainnya; Koordinator/PIC BPK edit `pendaftar` dan lihat `laporan` (dibatasi keuskupannya); Pengajar TC edit `pengajar`; **semua akun** dapat `peserta` dan `daftar` (data dibatasi menurut email sendiri). Paket role "Koordinator Bidang/Seksi" mendapat edit `ls/tc`.
+Menu `ls` dengan tab `peserta` (Belajar), `diskusi`, `daftar` (Daftar TC), `pendaftar`, `laporan`, `tc` (Kelola TC), `pengajar`. Bawaan: Admin/Editor penuh; Pengurus BPN Harian edit `tc` dan `pendaftar`, lihat lainnya; Koordinator/PIC BPK edit `pendaftar` dan lihat `laporan` (dibatasi keuskupannya); Pengajar TC edit `pengajar`; **semua akun** dapat `peserta` dan `daftar` (data dibatasi menurut email sendiri). Paket role "Koordinator Bidang/Seksi" mendapat edit `ls/tc`.
 
 ## Aturan penilaian
 - Boleh mengajar / Boleh mengajar, didampingi (catatan **wajib** bila didampingi).
@@ -42,3 +42,8 @@ Menu `ls` dengan tab `peserta` (Belajar), `daftar` (Daftar TC), `pendaftar`, `la
 - **Batas berkas**: ±3 MB per berkas (Vercel membatasi isi permintaan ±4,5 MB; base64 menambah ±33%), bukan 5 MB.
 - Email lewat Resend (`lib/mail.js` `kirim`); bila `RESEND_API_KEY` kosong, email dilewati.
 - Belum diverifikasi di Airtable/Vercel sungguhan, hanya tes dengan data palsu.
+
+## Tahap 3: pesan dan diskusi
+- **Pesan** peserta↔pengajar per kelas (LMSHeader): Komentar LS bertipe `Pesan`, ditulis dari tab Belajar (peserta) dan modal peserta (pengajar). Pihak lain diberi tahu lewat email; peserta juga lewat WhatsApp (BaBlast) bila nomornya ada di Pendaftaran LS.
+- **Diskusi**: tab `diskusi`, satu ruang per TC untuk semua kelompok dan pengajarnya (tipe `Grup`, kolom `Event Id`). Hanya anggota TC (atau pemegang hak `ls/tc`) yang bisa membaca/menulis.
+- Pesan tidak realtime (muat ulang halaman); tidak ada hapus/edit pesan dan lampiran.

@@ -14,7 +14,11 @@ const db = {
   tbl65eRLE2SFQA3T1: [],
 };
 const base = {
-  fetchAll: async (t) => db[t] || [],
+  fetchAll: async (t, f, ex = {}) => {
+    const fm = (ex && ex.filterByFormula) || '', rows = db[t] || [], m = /\{Email Peserta\}='([^']*)'/.exec(fm);
+    if (t === 'tblZhieD2iLA6xSxa' && m) return rows.filter((r) => r.fields.fldWYrEa3TbJ7IxTd === m[1] || r.fields.fldl95vg3BSSkSue2 === m[1]);
+    return rows;
+  },
   listByIds: async (t, ids) => (db[t] || []).filter((r) => ids.includes(r.id)),
   update: async (t, id, f) => { calls.push(['update', t, id, f]); const r = (db[t] || []).find((x) => x.id === id); if (r) Object.assign(r.fields, f); return {}; },
   create: async (t, f) => { calls.push(['create', t, f]); const r = { id: 'recNEW' + String(calls.length).padStart(11, '0'), fields: f }; (db[t] = db[t] || []).push(r); return r; },
@@ -69,6 +73,19 @@ const pdf = { name: 's.pdf', type: 'application/pdf', data: 'QUJD' };
   r = await run(umat, 'syaratsave', { id: EV, syarat: {} }); ok(r.code === 403, 'umat tidak boleh mengubah syarat');
   r = await run(bnh, 'syaratsave', { id: EV, syarat: { usiaMin: 20, usiaMax: '', jk: 'Ngawur', modul: ['SHDR'], surat: 1 } }); ok(r.code === 200 && JSON.parse(calls.at(-1)[3].fldEXvmXr3NASHVHS).jk === '' && JSON.parse(calls.at(-1)[3].fldEXvmXr3NASHVHS).usiaMax === null, 'syarat dibersihkan');
   r = await run(umat, 'laporan', {}, 'GET'); ok(r.code === 403, 'umat tidak boleh membuka laporan');
+  // ---- Tahap 3: pesan dan diskusi ----
+  const HD = 'recHEAD0000000009';
+  db.tblZhieD2iLA6xSxa = [{ id: HD, fields: { fldWYrEa3TbJ7IxTd: 'maria@x.id', fldl95vg3BSSkSue2: 'guru@x.id', fldPK70LzNQzsKnw1: [EV], fldGcKUaAeeoPZgxu: 'TC SHDR', fld8TfBelMkpt3byj: ['Kel 1'] } }];
+  const guru = { email: 'guru@x.id', nama: 'Guru', perm: { ls: 2, 'ls/peserta': 2, 'ls/pengajar': 2 } };
+  const lain = { email: 'lain@x.id', nama: 'Lain', perm: { ls: 2, 'ls/peserta': 2 } };
+  r = await run(umat, 'pesan', { head: HD, isi: '  ' }); ok(r.code === 400, 'pesan kosong ditolak');
+  r = await run(lain, 'pesan', { head: HD, isi: 'halo' }); ok(r.code === 403, 'orang lain tidak boleh menulis di kelas ini');
+  r = await run(umat, 'pesan', { head: HD, isi: 'Pak, tugas bab 1?' }); ok(r.code === 200 && calls.at(-1)[2].fldIVfMOWuozs5FMy === 'Pesan' && calls.at(-1)[2].fldnqgxK9gevs098h === 'Peserta', 'peserta mengirim pesan');
+  ok(mails.some((m) => m[0] === 'guru@x.id'), 'pengajar diberi tahu lewat email');
+  r = await run(guru, 'pesan', { head: HD, isi: 'Silakan unggah' }); ok(r.code === 200 && calls.at(-1)[2].fldnqgxK9gevs098h === 'Pengajar' && mails.some((m) => m[0] === 'maria@x.id' && /Pesan baru/.test(m[1])), 'pengajar membalas, peserta diberi tahu');
+  r = await run(lain, 'diskusikirim', { event: EV, isi: 'hai' }); ok(r.code === 403, 'bukan anggota TC tidak boleh ikut diskusi');
+  r = await run(umat, 'diskusikirim', { event: EV, isi: 'Salam semua' }); ok(r.code === 200 && calls.at(-1)[2].fldIVfMOWuozs5FMy === 'Grup' && calls.at(-1)[2].fldAOIttv6xHX12ot === EV, 'peserta menulis di diskusi TC');
+  r = await run(umat, 'diskusi', {}, 'GET'); ok(r.code === 200 && r.j.tc.length === 1, 'daftar TC diskusi peserta');
   console.log(bad ? 'FAIL' : 'ok');
   process.exit(bad ? 1 : 0);
 })();

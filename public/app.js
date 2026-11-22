@@ -50,7 +50,7 @@ const MENU = [
   { id: 'umat', label: 'Data Umat', icon: I.pd, sub: 'Profil umat yang terdaftar di sistem BPN', c: '#0EA5A4', tabs: [['ringkasan', 'Infografis'], ['daftar', 'Daftar Umat']] },
   { id: 'pendataan', label: 'Pendataan PIC', icon: I.pd, sub: 'Pejabat dan PIC di setiap BPK, lengkap dengan riwayatnya', c: '#E0661A' },
   { id: 'laporan', label: 'Laporan', icon: I.chart, sub: 'Ringkasan kegiatan', c: '#34C28A', tabs: [['pleno', 'Pleno & Golden Jubilee'], ['tc', 'TC SHDR'], ['kepemudaan', 'Kepemudaan']] },
-  { id: 'ls', label: 'Learning System', icon: I.book, sub: 'TC, learning path, dan penilaian pengajar', c: '#6D28D9', tabs: [['peserta', 'Belajar'], ['daftar', 'Daftar TC'], ['pendaftar', 'Pendaftar'], ['laporan', 'Laporan BPK'], ['tc', 'Kelola TC'], ['pengajar', 'Pengajar']] },
+  { id: 'ls', label: 'Learning System', icon: I.book, sub: 'TC, learning path, dan penilaian pengajar', c: '#6D28D9', tabs: [['peserta', 'Belajar'], ['diskusi', 'Diskusi'], ['daftar', 'Daftar TC'], ['pendaftar', 'Pendaftar'], ['laporan', 'Laporan BPK'], ['tc', 'Kelola TC'], ['pengajar', 'Pengajar']] },
   { id: 'admin', label: 'Administrasi', icon: I.key, sub: 'Kelola pengguna dan hak akses', c: '#6B7A99', tabs: [['pengguna', 'Pengguna'], ['role', 'Role & Hak Akses']] },
 ];
 
@@ -753,7 +753,7 @@ function openRole(r0) {
   };
   $('#rdel')?.addEventListener('click', async () => { if (!confirm(r.sistem ? 'Kembalikan hak role ini ke bawaan sistem?' : `Hapus role "${r.nama}"?`)) return; try { await admApi({ action: 'roledel', id: r.id }); closeModal(); admReload(); } catch (e) { $('#ae').textContent = e.message; } });
 }
-const HAK_KOORD = { dashboard: 'view', proker: 'edit', 'proker/keuskupan': 'edit', 'proker/semua': 'edit', 'proker/ringkasan': 'view', 'proker/acc': 'view', pengurus: 'view', pd: 'view', 'pd/daftar': 'view', 'pd/ringkasan': 'view', tim: 'view', 'tim/bagan': 'view', 'tim/daftar': 'view', modul: 'view', 'modul/ringkasan': 'view', 'modul/permodul': 'view', 'modul/peserta': 'view', 'modul/pengajar': 'view', umat: 'view', 'umat/ringkasan': 'view', 'umat/daftar': 'view', laporan: 'view', 'laporan/pleno': 'view', 'laporan/tc': 'view', 'laporan/kepemudaan': 'view', ls: 'edit', 'ls/tc': 'edit', 'ls/pengajar': 'view', 'ls/peserta': 'edit', 'ls/daftar': 'edit', 'ls/pendaftar': 'view', 'ls/laporan': 'view' };
+const HAK_KOORD = { dashboard: 'view', proker: 'edit', 'proker/keuskupan': 'edit', 'proker/semua': 'edit', 'proker/ringkasan': 'view', 'proker/acc': 'view', pengurus: 'view', pd: 'view', 'pd/daftar': 'view', 'pd/ringkasan': 'view', tim: 'view', 'tim/bagan': 'view', 'tim/daftar': 'view', modul: 'view', 'modul/ringkasan': 'view', 'modul/permodul': 'view', 'modul/peserta': 'view', 'modul/pengajar': 'view', umat: 'view', 'umat/ringkasan': 'view', 'umat/daftar': 'view', laporan: 'view', 'laporan/pleno': 'view', 'laporan/tc': 'view', 'laporan/kepemudaan': 'view', ls: 'edit', 'ls/tc': 'edit', 'ls/pengajar': 'view', 'ls/peserta': 'edit', 'ls/daftar': 'edit', 'ls/diskusi': 'edit', 'ls/pendaftar': 'view', 'ls/laporan': 'view' };
 const HAK_ANGGOTA = { dashboard: 'view', proker: 'view', 'proker/keuskupan': 'view', 'proker/semua': 'view', 'proker/ringkasan': 'view', tim: 'view', 'tim/bagan': 'view', 'tim/daftar': 'view', modul: 'view', 'modul/ringkasan': 'view', 'modul/permodul': 'view', 'modul/peserta': 'view', 'modul/pengajar': 'view' };
 async function buatRoleSeksi(btn) {
   const ada = new Set(ADM.roles.map((r) => r.nama.toLowerCase())); let n = 0;
@@ -1004,6 +1004,8 @@ document.addEventListener('click', (e) => {
   if (a === 'putus') return lsPutus(id, b.dataset.aksi);
   if (a === 'tonton') return lsTonton(id, b.dataset.on === '1');
   if (a === 'tugas') return lsTugas(id);
+  if (a === 'pesan') return lsPesan(id);
+  if (a === 'diskusikirim') return lsDiskusi(id);
 });
 PAGES['ls/tc'] = () => lsPage('tc', 'tclist', (s) => {
   const hdr = `<div class="note" style="margin-bottom:12px">Buat TC, susun <b>learning path</b> (modul → bab, berisi video, PPT, dan dokumen), lalu bagikan tautan pendaftaran kepada umat.</div>${s.edit ? '<div class="acts" style="margin-bottom:12px"><button class="btn" data-ls="tc">+ TC baru</button></div>' : ''}`;
@@ -1024,12 +1026,14 @@ PAGES['ls/pengajar'] = () => lsPage('pengajar', 'pengajar', (s) => {
 });
 function lsPeserta(id) {
   const s = LS.pengajar, h = s.heads.find((x) => x.id === id); if (!h) return;
-  const ed = (D.perm['ls/pengajar'] || 0) >= 2, kom = s.komentar[id] || [];
+  const ed = (D.perm['ls/pengajar'] || 0) >= 2, kom = (s.komentar[id] || []).filter((k) => k.tipe !== 'Pesan'), psn = (s.komentar[id] || []).filter((k) => k.tipe === 'Pesan');
   const opt = (l, cur, ph) => `<option value="">${esc(ph)}</option>` + l.map((x) => `<option${x === cur ? ' selected' : ''}>${esc(x)}</option>`).join('');
   modal(`<h2>${esc(h.nama)}</h2><p class="sub">${esc(h.event)} · Kelompok ${esc(h.kelompok)} · ${esc(h.keuskupan)}</p>
     <h4>Progres per bab</h4><div class="tw"><table><thead><tr><th>Bab</th><th>Tonton</th><th>Tugas</th><th>Boleh mengajar?</th><th>Catatan</th><th></th></tr></thead><tbody>${h.bab.map((b) => `<tr data-d="${b.id}"><td>${esc(b.bab)}</td><td>${b.selesai ? '✓' : '–'}</td><td>${b.tugas ? '✓' : b.noUpload ? 'tidak ada' : '–'}</td><td><select data-izin ${ed ? '' : 'disabled'}>${opt(s.izin, b.izin, '(belum dinilai)')}</select></td><td><input data-cat value="${esc(b.cat)}" ${ed ? '' : 'disabled'} placeholder="wajib jika didampingi"></td><td>${ed ? '<button class="ghost" data-save>Simpan</button>' : ''}</td></tr>`).join('') || '<tr><td colspan="6" class="sub">Belum ada bab.</td></tr>'}</tbody></table></div>
     <h4 style="margin-top:14px">Komentar</h4><div id="lsk">${kom.map((k) => `<div class="riw"><b>${esc(k.penulis)}</b> <span class="sub">${esc(k.peran)} · ${esc(lsDate(k.tgl))}</span><div>${esc(k.isi)}</div></div>`).join('') || '<p class="sub">Belum ada komentar.</p>'}</div>
     ${ed ? '<div class="eform"><div class="full"><textarea id="lskt" rows="2" placeholder="Tulis komentar untuk peserta ini…"></textarea></div></div><div class="acts"><button class="ghost" id="lskb">Kirim komentar</button></div>' : ''}
+    <h4 style="margin-top:14px">Pesan dengan peserta</h4><div id="lspm">${psn.map((k) => `<div class="riw"><b>${esc(k.penulis)}</b> <span class="sub">${esc(k.peran)} · ${esc(lsDate(k.tgl))}</span><div>${esc(k.isi)}</div></div>`).join('') || '<p class="sub">Belum ada pesan.</p>'}</div>
+    <div class="eform"><div class="full"><textarea id="lspt" rows="2" placeholder="Tulis pesan untuk peserta ini…"></textarea></div></div><div class="acts"><button class="ghost" id="lspb">Kirim pesan</button></div>
     <h4 style="margin-top:14px">Kelulusan dan catatan akhir TC</h4><div class="eform"><div><label>Status peserta</label><select id="lst" ${ed ? '' : 'disabled'}>${s.status.map((x) => `<option${x === h.status ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></div><div></div>
     <div class="full"><label>Keterangan kelulusan</label><textarea id="lsk2" rows="2" ${ed ? '' : 'disabled'}>${esc(h.ket)}</textarea></div>
     <div class="full"><label>Catatan akhir TC untuk BPK keuskupan (dibaca Koordinator BPK dan PIC Pewartaan)</label><textarea id="lsb" rows="3" ${ed ? '' : 'disabled'}>${esc(h.catBpk)}</textarea></div></div>
@@ -1040,6 +1044,7 @@ function lsPeserta(id) {
     const x = h.bab.find((y) => y.id === tr.dataset.d); x.izin = tr.querySelector('[data-izin]').value; x.cat = tr.querySelector('[data-cat]').value; b.textContent = 'Tersimpan ✓';
     h.progres.dinilai = h.bab.filter((y) => y.izin).length;
   })));
+  $('#lspb')?.addEventListener('click', (e) => run(e.target, async () => { const isi = $('#lspt').value; await lsApi('pesan', { head: id, isi }); (s.komentar[id] = s.komentar[id] || []).push({ isi, penulis: D.user.nama, peran: 'Pengajar', tipe: 'Pesan', tgl: new Date().toISOString() }); closeModal(); lsPeserta(id); }));
   $('#lskb')?.addEventListener('click', (e) => run(e.target, async () => { const isi = $('#lskt').value; await lsApi('komentar', { head: id, isi }); (s.komentar[id] = s.komentar[id] || []).push({ isi, penulis: D.user.nama, peran: 'Pengajar', tgl: new Date().toISOString() }); lsPeserta(id); }));
   $('#lsl')?.addEventListener('click', (e) => run(e.target, async () => { const v = { head: id, status: $('#lst').value, ket: $('#lsk2').value, catBpk: $('#lsb').value }; await lsApi('lulus', v); Object.assign(h, { status: v.status, ket: v.ket, catBpk: v.catBpk }); closeModal(); render(); }));
 }
@@ -1108,8 +1113,20 @@ PAGES['ls/peserta'] = () => lsPage('belajar', 'belajar', (s) => {
   return s.kelas.map((k) => `<div class="card" style="margin-bottom:16px"><h3>${esc(k.event)}<small>Kelompok ${esc(k.kelompok || '–')} · Pengajar ${esc(k.pengajar || '–')}</small></h3>
     <div class="chips" style="margin-bottom:8px">${lsStat(k.status)}${chip(`${k.bab.filter((b) => b.selesai).length}/${k.bab.length} bab ditonton`, 'blue')}</div>${k.ket ? `<p class="sub">${esc(k.ket)}</p>` : ''}
     <div class="tw"><table><thead><tr><th>Bab</th><th>Materi</th><th>Tonton</th><th>Tugas (PDF/gambar, maks 3 MB)</th><th>Hasil</th></tr></thead><tbody>${k.bab.map((b) => `<tr><td>${esc(b.judul)}</td><td>${b.yt ? `<a href="${esc(b.yt)}" target="_blank" rel="noopener">Video</a> ` : ''}${b.tautan.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">Materi ${i + 1}</a>`).join(' ')}</td><td><button class="ghost" data-ls="tonton|${b.id}" data-on="${b.selesai ? 0 : 1}">${b.selesai ? '✓ Sudah' : 'Tandai selesai'}</button></td><td>${b.tugas.map((n) => `<div class="sub">📎 ${esc(n)}</div>`).join('')}<input type="file" id="tg-${b.id}" accept="application/pdf,image/jpeg,image/png"> <button class="ghost" data-ls="tugas|${b.id}">Unggah</button><div class="err" id="tge-${b.id}"></div></td><td>${b.izin ? chip(b.izin, 'green') : '–'}${b.cat ? `<div class="sub">${esc(b.cat)}</div>` : ''}</td></tr>`).join('')}</tbody></table></div>
-    <h4 style="margin-top:12px">Komentar pengajar</h4>${k.komentar.map((c) => `<div class="riw"><b>${esc(c.penulis)}</b> <span class="sub">${esc(lsDate(c.tgl))}</span><div>${esc(c.isi)}</div></div>`).join('') || '<p class="sub">Belum ada komentar.</p>'}</div>`).join('');
+    <h4 style="margin-top:12px">Komentar pengajar</h4>${k.komentar.filter((c) => c.tipe !== 'Pesan').map((c) => `<div class="riw"><b>${esc(c.penulis)}</b> <span class="sub">${esc(lsDate(c.tgl))}</span><div>${esc(c.isi)}</div></div>`).join('') || '<p class="sub">Belum ada komentar.</p>'}
+    <h4 style="margin-top:12px">Pesan dengan pengajar</h4>${k.komentar.filter((c) => c.tipe === 'Pesan').map((c) => `<div class="riw"><b>${esc(c.penulis)}</b> <span class="sub">${esc(c.peran)} · ${esc(lsDate(c.tgl))}</span><div>${esc(c.isi)}</div></div>`).join('') || '<p class="sub">Belum ada pesan.</p>'}
+    <div class="eform"><div class="full"><textarea id="ps-${k.id}" rows="2" placeholder="Tulis pesan untuk pengajar…"></textarea></div></div><div class="err" id="pse-${k.id}"></div><div class="acts"><button class="ghost" data-ls="pesan|${k.id}">Kirim pesan</button></div></div>`).join('');
 });
+async function lsPesan(id) { const e = $('#pse-' + id); e.textContent = ''; try { await lsApi('pesan', { head: id, isi: document.getElementById('ps-' + id).value }); lsReload('belajar'); } catch (x) { e.textContent = x.message; } }
+PAGES['ls/diskusi'] = () => lsPage('diskusi', 'diskusi', (s) => {
+  if (!s.tc.length) return '<div class="empty">Anda belum tergabung di TC mana pun.</div>';
+  return `<div class="note" style="margin-bottom:12px">Ruang diskusi seluruh peserta dan pengajar satu TC, lintas kelompok. Tetap santun dan saling menguatkan.</div>
+    <div class="eform"><div><label>TC</label><select id="dk-tc">${s.tc.map((t) => `<option value="${t.id}"${t.id === s.event ? ' selected' : ''}>${esc(t.nama)}</option>`).join('')}</select></div></div>
+    <div class="card" style="margin:12px 0">${s.posts.map((c) => `<div class="riw"><b>${esc(c.penulis)}</b> <span class="sub">${esc(c.peran)}${c.kelompok ? ' · Kelompok ' + esc(c.kelompok) : ''} · ${esc(lsDate(c.tgl))}</span><div>${esc(c.isi)}</div></div>`).join('') || '<p class="sub">Belum ada tulisan. Jadilah yang pertama.</p>'}</div>
+    <div class="eform"><div class="full"><textarea id="dk-t" rows="3" placeholder="Tulis di diskusi…"></textarea></div></div><div class="err" id="dk-e"></div><div class="acts"><button class="btn" data-ls="diskusikirim|${s.event}">Kirim</button></div>`;
+});
+document.addEventListener('change', (e) => { if (e.target.id === 'dk-tc') { delete LS.diskusi; LS.diskusi = undefined; lsApi('diskusi&event=' + e.target.value).then((j) => { LS.diskusi = j; render(); }).catch(() => {}); } });
+async function lsDiskusi(ev) { const e = $('#dk-e'); e.textContent = ''; try { await lsApi('diskusikirim', { event: ev, isi: $('#dk-t').value }); const j = await lsApi('diskusi&event=' + ev); LS.diskusi = j; render(); } catch (x) { e.textContent = x.message; } }
 async function lsTonton(id, on) { try { await lsApi('tonton', { detail: id, selesai: on }); lsReload('belajar'); } catch (e) { alert(e.message); } }
 async function lsTugas(id) {
   const err = $('#tge-' + id); err.textContent = '';
