@@ -765,6 +765,21 @@ async function buatRoleSeksi(btn) {
     alert(n ? `${n} role dibuat. Periksa dan sesuaikan hak aksesnya per role.` : 'Semua role per seksi sudah ada.'); admReload();
   } catch (e) { alert(e.message); btn.disabled = false; }
 }
+const PAKET = [
+  { nama: 'Koordinator Bidang', desk: 'Wakil Koordinator BPN Bidang 1/2/3 (otomatis dari jabatan yang memuat kata "Bidang" di Tim BPN)', kat: 'BPN HARIAN', seksi: 'Bidang', tingkat: 'Koordinator', hak: HAK_KOORD },
+  { nama: 'Koordinator Seksi', desk: 'Semua yang berjabatan koordinator di Tim BPN (Koordinator Seksi, dst.)', kat: 'BPN HARIAN', seksi: '', tingkat: 'Koordinator', hak: HAK_KOORD },
+  { nama: 'Anggota BPN Inti', desk: 'Anggota BPN Inti (otomatis dari Tim BPN)', kat: 'BPN INTI', seksi: '', tingkat: 'Anggota', hak: HAK_ANGGOTA },
+  { nama: 'Anggota Tim Kerja', desk: 'Anggota Tim Kerja seksi (otomatis dari Tim BPN)', kat: 'TIM KERJA', seksi: '', tingkat: 'Anggota', hak: HAK_ANGGOTA },
+];
+async function pasangPaket(btn) {
+  const ada = new Set(ADM.roles.map((r) => r.nama.toLowerCase())); let n = 0;
+  if (!confirm('Pasang paket role yang disarankan (Koordinator Bidang, Koordinator Seksi, Anggota BPN Inti, Anggota Tim Kerja)? Role yang sudah ada tidak diubah.')) return;
+  btn.disabled = true;
+  try {
+    for (const r of PAKET) { if (ada.has(r.nama.toLowerCase())) continue; await admApi({ action: 'role', nama: r.nama, desk: r.desk, cakupan: 'Nasional', kat: r.kat, seksi: r.seksi, tingkat: r.tingkat, hak: r.hak }); n++; }
+    alert(n ? `${n} role dibuat. Hak aksesnya dapat disesuaikan lewat tombol Atur.` : 'Paket role sudah terpasang semua.'); admReload();
+  } catch (e) { alert(e.message); btn.disabled = false; }
+}
 PAGES['admin/role'] = () => {
   if (!ADM) { fetch('/api/admin', { credentials: 'same-origin' }).then((r) => r.json()).then((j) => { if (j.error) throw new Error(j.error); ADM = j; render(); }).catch((e) => { $('#page').innerHTML = `<div class="empty">${esc(e.message || 'Gagal memuat')}</div>`; }); return '<div class="load"><div class="sp"></div><div>Memuat role…</div></div>'; }
   const edit = (D.perm['admin/role'] || 0) >= 2;
@@ -772,12 +787,13 @@ PAGES['admin/role'] = () => {
     document.querySelectorAll('button[data-role]').forEach((el) => el.addEventListener('click', () => openRole(ADM.roles.find((r) => r.nama === el.dataset.role))));
     $('#rnew')?.addEventListener('click', () => openRole(null));
     $('#rseksi')?.addEventListener('click', (e) => buatRoleSeksi(e.target));
+    $('#rpaket')?.addEventListener('click', (e) => pasangPaket(e.target));
   });
   const sis = ADM.roles.filter((r) => r.sistem), cus = ADM.roles.filter((r) => !r.sistem);
   const rows = (l) => l.map((r) => `<tr><td><b>${esc(r.nama)}</b>${r.diubah ? ' ' + chip('disesuaikan', 'amber') : ''}${r.desk ? `<div class="sub">${esc(r.desk)}</div>` : ''}</td><td class="sub">${esc(pemicu(r))}</td><td>${esc(r.cakupan)}</td><td>${nf.format(r.pakai)}</td><td><button class="ghost" data-role="${esc(r.nama)}">${edit && !r.terkunci ? 'Atur' : 'Lihat'}</button></td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">Belum ada role.</div></td></tr>';
   const head = '<thead><tr><th>Role</th><th>Otomatis untuk</th><th>Cakupan data</th><th>Orang</th><th></th></tr></thead>';
   return `<div class="note" style="margin-bottom:12px">Hak akses diatur <b>per role</b>, bukan per orang. Satu orang boleh punya beberapa role (manual dari tab Pengguna atau otomatis dari jabatannya di Tim BPN); jika bentrok, hak <b>tertinggi</b> yang berlaku. Hanya Admin dan Super Admin yang dapat mengubah ini.</div>
-  ${edit ? `<div class="acts" style="margin-bottom:12px"><button class="btn" id="rnew">+ Role baru</button> <button class="ghost" id="rseksi">Buat role Koordinator &amp; Anggota untuk tiap seksi</button></div>` : ''}
+  ${edit ? `<div class="acts" style="margin-bottom:12px"><button class="btn" id="rnew">+ Role baru</button> <button class="btn" id="rpaket">Pasang paket role yang disarankan</button> <button class="ghost" id="rseksi">Buat role Koordinator &amp; Anggota untuk tiap seksi</button></div>` : ''}
   <div class="card" style="margin-bottom:16px"><h3>Role BPN<small>per seksi / bidang: Koordinator dan Anggota</small></h3><div class="tw"><table>${head}<tbody>${rows(cus)}</tbody></table></div></div>
   <div class="card"><h3>Role umum<small>bawaan sistem; hak aksesnya boleh disesuaikan</small></h3><div class="tw"><table>${head}<tbody>${rows(sis)}</tbody></table></div></div>`;
 };
