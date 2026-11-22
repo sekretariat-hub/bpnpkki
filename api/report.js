@@ -117,6 +117,7 @@ module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'private, no-store');
   const session = getSession(req);
   if (!session) return res.status(401).json({ error: 'Belum login' });
+  if (req.query.ls) return require('../lib/ls').handle(req, res, session);
   try {
     const acc = await require('../lib/access').getAccess(session);
     if (!acc || !require('../lib/access').can(acc, 'laporan')) return res.status(403).json({ error: 'Tidak punya akses ke Laporan' });
