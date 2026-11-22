@@ -5,7 +5,7 @@ const calls = [];
 const H1 = 'recHEAD0000000001', H2 = 'recHEAD0000000002', D1 = 'recDET00000000001', D2 = 'recDET00000000002';
 const db = {
   tblmm50UE68U2eWgx: [{ id: 'recM0000000000001', fields: { fldVqIVmzzPUzb1Ms: ['guru@x.id'] } }],
-  tblZhieD2iLA6xSxa: [{ id: H1, fields: { fldl95vg3BSSkSue2: 'guru@x.id', fldl4SuNiiBEQLyo3: 'Peserta A', flduH9BDju7FUNYjp: { name: 'Peserta Aktif' } } }, { id: H2, fields: { fldl95vg3BSSkSue2: 'lain@x.id', fldl4SuNiiBEQLyo3: 'Peserta B' } }],
+  tblZhieD2iLA6xSxa: [{ id: H1, fields: { fldl95vg3BSSkSue2: 'guru@x.id', fldl4SuNiiBEQLyo3: 'Peserta A', fldxME5Jftq8f07RC: [D1], flduH9BDju7FUNYjp: { name: 'Peserta Aktif' } } }, { id: H2, fields: { fldl95vg3BSSkSue2: 'lain@x.id', fldl4SuNiiBEQLyo3: 'Peserta B', fldxME5Jftq8f07RC: [D2] } }],
   tblHdbfsd6vT0pxp5: [{ id: D1, fields: { fldRkmZ12W4cP91mD: [H1], fld4X9x4KzYGOu2MQ: 'Bab 1', fldHE0iiUherGR6Y7: { name: 'Selesai Menonton' } } }, { id: D2, fields: { fldRkmZ12W4cP91mD: [H2], fld4X9x4KzYGOu2MQ: 'Bab 1' } }],
 };
 const base = {

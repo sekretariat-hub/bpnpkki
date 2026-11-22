@@ -50,7 +50,7 @@ const MENU = [
   { id: 'umat', label: 'Data Umat', icon: I.pd, sub: 'Profil umat yang terdaftar di sistem BPN', c: '#0EA5A4', tabs: [['ringkasan', 'Infografis'], ['daftar', 'Daftar Umat']] },
   { id: 'pendataan', label: 'Pendataan PIC', icon: I.pd, sub: 'Pejabat dan PIC di setiap BPK, lengkap dengan riwayatnya', c: '#E0661A' },
   { id: 'laporan', label: 'Laporan', icon: I.chart, sub: 'Ringkasan kegiatan', c: '#34C28A', tabs: [['pleno', 'Pleno & Golden Jubilee'], ['tc', 'TC SHDR'], ['kepemudaan', 'Kepemudaan']] },
-  { id: 'ls', label: 'Learning System', icon: I.book, sub: 'TC, learning path, dan penilaian pengajar', c: '#6D28D9', tabs: [['tc', 'Kelola TC'], ['pengajar', 'Pengajar']] },
+  { id: 'ls', label: 'Learning System', icon: I.book, sub: 'TC, learning path, dan penilaian pengajar', c: '#6D28D9', tabs: [['peserta', 'Belajar'], ['daftar', 'Daftar TC'], ['pendaftar', 'Pendaftar'], ['laporan', 'Laporan BPK'], ['tc', 'Kelola TC'], ['pengajar', 'Pengajar']] },
   { id: 'admin', label: 'Administrasi', icon: I.key, sub: 'Kelola pengguna dan hak akses', c: '#6B7A99', tabs: [['pengguna', 'Pengguna'], ['role', 'Role & Hak Akses']] },
 ];
 
@@ -753,7 +753,7 @@ function openRole(r0) {
   };
   $('#rdel')?.addEventListener('click', async () => { if (!confirm(r.sistem ? 'Kembalikan hak role ini ke bawaan sistem?' : `Hapus role "${r.nama}"?`)) return; try { await admApi({ action: 'roledel', id: r.id }); closeModal(); admReload(); } catch (e) { $('#ae').textContent = e.message; } });
 }
-const HAK_KOORD = { dashboard: 'view', proker: 'edit', 'proker/keuskupan': 'edit', 'proker/semua': 'edit', 'proker/ringkasan': 'view', 'proker/acc': 'view', pengurus: 'view', pd: 'view', 'pd/daftar': 'view', 'pd/ringkasan': 'view', tim: 'view', 'tim/bagan': 'view', 'tim/daftar': 'view', modul: 'view', 'modul/ringkasan': 'view', 'modul/permodul': 'view', 'modul/peserta': 'view', 'modul/pengajar': 'view', umat: 'view', 'umat/ringkasan': 'view', 'umat/daftar': 'view', laporan: 'view', 'laporan/pleno': 'view', 'laporan/tc': 'view', 'laporan/kepemudaan': 'view', ls: 'edit', 'ls/tc': 'edit', 'ls/pengajar': 'view' };
+const HAK_KOORD = { dashboard: 'view', proker: 'edit', 'proker/keuskupan': 'edit', 'proker/semua': 'edit', 'proker/ringkasan': 'view', 'proker/acc': 'view', pengurus: 'view', pd: 'view', 'pd/daftar': 'view', 'pd/ringkasan': 'view', tim: 'view', 'tim/bagan': 'view', 'tim/daftar': 'view', modul: 'view', 'modul/ringkasan': 'view', 'modul/permodul': 'view', 'modul/peserta': 'view', 'modul/pengajar': 'view', umat: 'view', 'umat/ringkasan': 'view', 'umat/daftar': 'view', laporan: 'view', 'laporan/pleno': 'view', 'laporan/tc': 'view', 'laporan/kepemudaan': 'view', ls: 'edit', 'ls/tc': 'edit', 'ls/pengajar': 'view', 'ls/peserta': 'edit', 'ls/daftar': 'edit', 'ls/pendaftar': 'view', 'ls/laporan': 'view' };
 const HAK_ANGGOTA = { dashboard: 'view', proker: 'view', 'proker/keuskupan': 'view', 'proker/semua': 'view', 'proker/ringkasan': 'view', tim: 'view', 'tim/bagan': 'view', 'tim/daftar': 'view', modul: 'view', 'modul/ringkasan': 'view', 'modul/permodul': 'view', 'modul/peserta': 'view', 'modul/pengajar': 'view' };
 async function buatRoleSeksi(btn) {
   const ada = new Set(ADM.roles.map((r) => r.nama.toLowerCase())); let n = 0;
@@ -999,6 +999,11 @@ document.addEventListener('click', (e) => {
     return lsForm(b.dataset.bab ? 'Ubah bab' : 'Bab baru', [{ k: 'judul', label: 'Judul bab', val: bb.judul, full: true }, { k: 'urut', label: 'Urutan', type: 'num', val: bb.urut ?? (mo.bab.length + 1) }, { k: 'yt', label: 'Tautan video (YouTube)', val: bb.yt, ph: 'https://youtu.be/…' }, { k: 'tautan', label: 'Tautan materi: PPT / dokumen (satu per baris)', type: 'area', val: bb.tautan, ph: 'https://drive.google.com/…' }], async (v) => { await lsApi('babsave', { id: b.dataset.bab || undefined, materi: id2, ...v }); lsReload('tc'); });
   }
   if (a === 'peserta') return lsPeserta(id);
+  if (a === 'syarat') return lsSyarat(id);
+  if (a === 'daftar') return lsDaftar(id, b);
+  if (a === 'putus') return lsPutus(id, b.dataset.aksi);
+  if (a === 'tonton') return lsTonton(id, b.dataset.on === '1');
+  if (a === 'tugas') return lsTugas(id);
 });
 PAGES['ls/tc'] = () => lsPage('tc', 'tclist', (s) => {
   const hdr = `<div class="note" style="margin-bottom:12px">Buat TC, susun <b>learning path</b> (modul → bab, berisi video, PPT, dan dokumen), lalu bagikan tautan pendaftaran kepada umat.</div>${s.edit ? '<div class="acts" style="margin-bottom:12px"><button class="btn" data-ls="tc">+ TC baru</button></div>' : ''}`;
@@ -1008,7 +1013,7 @@ PAGES['ls/tc'] = () => lsPage('tc', 'tclist', (s) => {
     <div class="kv"><span>Tautan pendaftaran</span><div><code style="word-break:break-all">${esc(t.link)}</code> <button class="ghost" data-ls="copy" data-v="${esc(t.link)}">Salin</button></div></div>
     ${t.materi.map((m) => `<h4 style="margin:12px 0 4px">${esc(m.nama)} ${s.edit ? `<button class="ghost" data-ls="modul|${t.id}|${m.id}">Ubah</button> <button class="ghost" data-ls="bab|${t.id}|${m.id}">+ Bab</button>` : ''}</h4>
       ${m.bab.length ? `<div class="tw"><table><thead><tr><th>#</th><th>Bab</th><th>Video</th><th>Materi</th><th></th></tr></thead><tbody>${m.bab.map((b) => `<tr><td>${b.urut || ''}</td><td>${esc(b.judul)}</td><td>${b.yt ? `<a href="${esc(b.yt)}" target="_blank" rel="noopener">Tonton</a>` : '<span class="sub">–</span>'}</td><td>${String(b.tautan || '').split('\n').filter(Boolean).map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">Berkas ${i + 1}</a>`).join(' · ') || '<span class="sub">–</span>'}</td><td>${s.edit ? `<button class="ghost" data-ls="bab|${t.id}|${m.id}" data-bab="${b.id}">Ubah</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="sub">Belum ada bab.</p>'}`).join('') || '<p class="sub">Belum ada modul.</p>'}
-    ${s.edit ? `<div class="acts" style="margin-top:10px"><button class="ghost" data-ls="tc|${t.id}">Ubah TC</button> <button class="ghost" data-ls="modul|${t.id}">+ Modul</button></div>` : ''}</div>`).join('');
+    ${s.edit ? `<div class="acts" style="margin-top:10px"><button class="ghost" data-ls="tc|${t.id}">Ubah TC</button> <button class="ghost" data-ls="syarat|${t.id}">Syarat pendaftaran</button> <button class="ghost" data-ls="modul|${t.id}">+ Modul</button></div>` : ''}</div>`).join('');
 });
 const lsProg = (a, b) => `${a}/${b}`;
 PAGES['ls/pengajar'] = () => lsPage('pengajar', 'pengajar', (s) => {
@@ -1038,6 +1043,82 @@ function lsPeserta(id) {
   $('#lskb')?.addEventListener('click', (e) => run(e.target, async () => { const isi = $('#lskt').value; await lsApi('komentar', { head: id, isi }); (s.komentar[id] = s.komentar[id] || []).push({ isi, penulis: D.user.nama, peran: 'Pengajar', tgl: new Date().toISOString() }); lsPeserta(id); }));
   $('#lsl')?.addEventListener('click', (e) => run(e.target, async () => { const v = { head: id, status: $('#lst').value, ket: $('#lsk2').value, catBpk: $('#lsb').value }; await lsApi('lulus', v); Object.assign(h, { status: v.status, ket: v.ket, catBpk: v.catBpk }); closeModal(); render(); }));
 }
+
+/* ---- Tahap 2: syarat, pendaftaran, persetujuan, belajar, laporan BPK ---- */
+const lsBerkas = (file, maks = 3_000_000) => new Promise((ok, no) => {
+  if (!file) return no(new Error('Pilih berkas dulu'));
+  if (!['application/pdf', 'image/jpeg', 'image/png'].includes(file.type)) return no(new Error('Berkas harus PDF, JPG, atau PNG'));
+  if (file.size > maks) return no(new Error('Ukuran berkas maksimal 3 MB'));
+  const r = new FileReader(); r.onerror = () => no(new Error('Gagal membaca berkas'));
+  r.onload = () => ok({ name: file.name, type: file.type, data: String(r.result).split(',')[1] || '' }); r.readAsDataURL(file);
+});
+const lsStat = (t) => chip(t || '–', /Disetujui BPNH|Lulus/.test(t) ? 'green' : /Ditolak|Tidak/.test(t) ? 'red' : /Disetujui BPK/.test(t) ? 'blue' : 'amber');
+async function lsSyarat(id) {
+  const t = (LS.tc.list || []).find((x) => x.id === id), sy = t.syarat || {};
+  let o = LS.opsi; if (!o) { try { o = LS.opsi = await lsApi('opsi'); } catch (e) { return alert(e.message); } }
+  const cb = (n, v, on) => `<label class="ck"><input type="checkbox" data-${n}="${esc(v[0])}"${on ? ' checked' : ''}> ${esc(v[1])}</label>`;
+  modal(`<h2>Syarat pendaftaran</h2><p class="sub">${esc(t.nama)}. Yang selalu diperiksa otomatis: Baptis &amp; Krisma terisi, sudah mengikuti SHDR, data profil lengkap. Tambahan di bawah bersifat opsional.</p>
+    <div class="eform"><div class="full"><label>Wajib sudah mengikuti modul</label><div class="ckg">${o.modul.map((m) => cb('mod', [m, m], (sy.modul || []).includes(m))).join('')}</div></div>
+    <div><label>Usia minimal</label><input id="sy-min" type="number" value="${esc(sy.usiaMin ?? '')}"></div><div><label>Usia maksimal</label><input id="sy-max" type="number" value="${esc(sy.usiaMax ?? '')}"></div>
+    <div><label>Jenis kelamin</label><select id="sy-jk"><option value="">Semua</option><option${sy.jk === 'Pria' ? ' selected' : ''}>Pria</option><option${sy.jk === 'Wanita' ? ' selected' : ''}>Wanita</option></select></div>
+    <div class="full"><label>Hanya dari BPK (kosong = semua)</label><div class="ckg">${o.bpk.map((b) => cb('bpk', [b.id, b.nama], (sy.bpk || []).includes(b.id))).join('')}</div></div>
+    <div class="full"><label class="ck"><input type="checkbox" id="sy-pw"${sy.pewarta ? ' checked' : ''}> Harus melayani sebagai pewarta / pengajar</label></div>
+    <div class="full"><label class="ck"><input type="checkbox" id="sy-sr"${sy.surat ? ' checked' : ''}> Wajib unggah surat rekomendasi Pastor Moderator / paroki</label></div></div>
+    <div class="err" id="lse"></div><div class="mact"><button class="btn" id="lsok">Simpan syarat</button></div>`, true);
+  $('#lsok').onclick = async () => {
+    const body = { id, syarat: { modul: [...document.querySelectorAll('#ov [data-mod]:checked')].map((e) => e.dataset.mod), bpk: [...document.querySelectorAll('#ov [data-bpk]:checked')].map((e) => e.dataset.bpk), usiaMin: $('#sy-min').value, usiaMax: $('#sy-max').value, jk: $('#sy-jk').value, pewarta: $('#sy-pw').checked, surat: $('#sy-sr').checked } };
+    $('#lsok').disabled = true;
+    try { await lsApi('syaratsave', body); closeModal(); lsReload('tc', 'daftar'); } catch (e) { $('#lse').textContent = e.message; $('#lsok').disabled = false; }
+  };
+}
+PAGES['ls/daftar'] = () => lsPage('daftar', 'daftarlist', (s) => {
+  if (s.tanpaProfil) return '<div class="empty">Akun Anda belum terhubung ke data umat. Lengkapi dulu di Profil Saya.</div>';
+  const fokus = location.hash.replace(/^#\/?/, '').split('/')[2] || '';
+  const tc = [...s.tc].sort((a, b) => (b.id === fokus) - (a.id === fokus));
+  if (!tc.length) return '<div class="empty">Belum ada TC yang membuka pendaftaran.</div>';
+  return '<div class="note" style="margin-bottom:12px">Pendaftaran diperiksa otomatis. Setelah mendaftar, permohonan Anda disetujui oleh Koordinator BPK keuskupan Anda, lalu tim BPN penyelenggara TC. Anda akan menerima email.</div>' + tc.map((t) => {
+    const m = t.mine, bisa = t.cek.ok && (!m || /^Ditolak/.test(m.status)) && t.daftar === 'Dibuka';
+    return `<div class="card" style="margin-bottom:16px"><h3>${esc(t.nama)}<small>${esc(lsDate(t.mulai))} – ${esc(lsDate(t.selesai))}</small></h3>
+      ${m ? `<div class="chips" style="margin-bottom:8px">${lsStat(m.status)}</div>${m.catBpk ? `<p class="sub">Catatan BPK: ${esc(m.catBpk)}</p>` : ''}${m.catBnh ? `<p class="sub">Catatan BPN: ${esc(m.catBnh)}</p>` : ''}` : ''}
+      <h4>Syarat</h4><ul class="syr">${t.cek.items.map((x) => `<li>${x.ok ? '✅' : '❌'} ${esc(x.label)}${!x.ok && x.info ? ` <span class="sub">— ${esc(x.info)}</span>` : ''}</li>`).join('')}</ul>
+      ${bisa ? `<div class="eform">${t.syarat.surat ? `<div class="full"><label>Surat rekomendasi (PDF/JPG/PNG, maks 3 MB)</label><input type="file" id="sr-${t.id}" accept="application/pdf,image/jpeg,image/png"></div>` : ''}</div><div class="err" id="dfe-${t.id}"></div><div class="acts"><button class="btn" data-ls="daftar|${t.id}">Daftar sekarang</button></div>` : !m && !t.cek.ok ? '<p class="sub">Anda belum memenuhi syarat, jadi belum dapat mendaftar.</p>' : ''}</div>`;
+  }).join('');
+});
+async function lsDaftar(id, btn) {
+  const t = LS.daftar.tc.find((x) => x.id === id), err = $('#dfe-' + id); err.textContent = ''; btn.disabled = true;
+  try {
+    const body = { event: id };
+    if (t.syarat.surat) body.surat = await lsBerkas(document.getElementById('sr-' + id).files[0]);
+    await lsApi('daftar', body); lsReload('daftar');
+  } catch (e) { err.textContent = e.message; btn.disabled = false; }
+}
+PAGES['ls/pendaftar'] = () => lsPage('pendaftar', 'pendaftar', (s) => {
+  if (!s.rows.length) return '<div class="empty">Belum ada pendaftar.</div>';
+  return `<div class="note" style="margin-bottom:12px">Koordinator BPK / PIC Pewartaan menyetujui pendaftar dari keuskupannya lebih dulu; setelah itu tim BPN penyelenggara TC menyetujui dan menentukan kelompok.</div><div class="tw"><table><thead><tr><th>Nama</th><th>TC</th><th>Keuskupan</th><th>Status</th><th>Surat</th><th></th></tr></thead><tbody>${s.rows.map((r) => `<tr><td>${esc(r.nama)}<div class="sub">${esc(r.email)} ${esc(r.wa)}</div></td><td>${esc(r.eventNama)}</td><td>${esc(r.keus)}</td><td>${lsStat(r.status)}${r.catBpk ? `<div class="sub">BPK: ${esc(r.catBpk)}</div>` : ''}${r.catBnh ? `<div class="sub">BPN: ${esc(r.catBnh)}</div>` : ''}</td><td>${r.suratUrl ? `<a href="${esc(r.suratUrl)}" target="_blank" rel="noopener">${esc(r.suratNama || 'Lihat')}</a>` : '–'}</td><td>${r.bisaBpk || r.bisaBnh ? `<button class="btn" data-ls="putus|${r.id}" data-aksi="setuju">Setujui</button> <button class="ghost" data-ls="putus|${r.id}" data-aksi="tolak">Tolak</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
+});
+function lsPutus(id, aksi) {
+  const r = LS.pendaftar.rows.find((x) => x.id === id), tahapBnh = r.status === 'Disetujui BPK';
+  const f = [];
+  if (aksi === 'setuju' && tahapBnh) f.push({ k: 'kelompok', label: 'Kelompok', type: 'select', val: '', opts: [['', '— pilih kelompok —'], ...LS.pendaftar.kelompok.map((k) => [k.id, k.nama])], full: true });
+  f.push({ k: 'catatan', label: aksi === 'tolak' ? 'Alasan penolakan (wajib)' : 'Catatan (opsional)', type: 'area', full: true });
+  lsForm(`${aksi === 'setuju' ? 'Setujui' : 'Tolak'} ${r.nama}`, f, async (v) => { await lsApi('putus', { id, aksi, catatan: v.catatan, kelompok: v.kelompok }); lsReload('pendaftar', 'laporan'); }, tahapBnh && aksi === 'setuju' ? 'Setelah disetujui, peserta langsung mendapat learning path dan email pemberitahuan.' : '');
+}
+PAGES['ls/peserta'] = () => lsPage('belajar', 'belajar', (s) => {
+  if (!s.kelas.length) return '<div class="empty">Anda belum terdaftar di TC mana pun. Lihat tab <b>Daftar TC</b>.</div>';
+  return s.kelas.map((k) => `<div class="card" style="margin-bottom:16px"><h3>${esc(k.event)}<small>Kelompok ${esc(k.kelompok || '–')} · Pengajar ${esc(k.pengajar || '–')}</small></h3>
+    <div class="chips" style="margin-bottom:8px">${lsStat(k.status)}${chip(`${k.bab.filter((b) => b.selesai).length}/${k.bab.length} bab ditonton`, 'blue')}</div>${k.ket ? `<p class="sub">${esc(k.ket)}</p>` : ''}
+    <div class="tw"><table><thead><tr><th>Bab</th><th>Materi</th><th>Tonton</th><th>Tugas (PDF/gambar, maks 3 MB)</th><th>Hasil</th></tr></thead><tbody>${k.bab.map((b) => `<tr><td>${esc(b.judul)}</td><td>${b.yt ? `<a href="${esc(b.yt)}" target="_blank" rel="noopener">Video</a> ` : ''}${b.tautan.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">Materi ${i + 1}</a>`).join(' ')}</td><td><button class="ghost" data-ls="tonton|${b.id}" data-on="${b.selesai ? 0 : 1}">${b.selesai ? '✓ Sudah' : 'Tandai selesai'}</button></td><td>${b.tugas.map((n) => `<div class="sub">📎 ${esc(n)}</div>`).join('')}<input type="file" id="tg-${b.id}" accept="application/pdf,image/jpeg,image/png"> <button class="ghost" data-ls="tugas|${b.id}">Unggah</button><div class="err" id="tge-${b.id}"></div></td><td>${b.izin ? chip(b.izin, 'green') : '–'}${b.cat ? `<div class="sub">${esc(b.cat)}</div>` : ''}</td></tr>`).join('')}</tbody></table></div>
+    <h4 style="margin-top:12px">Komentar pengajar</h4>${k.komentar.map((c) => `<div class="riw"><b>${esc(c.penulis)}</b> <span class="sub">${esc(lsDate(c.tgl))}</span><div>${esc(c.isi)}</div></div>`).join('') || '<p class="sub">Belum ada komentar.</p>'}</div>`).join('');
+});
+async function lsTonton(id, on) { try { await lsApi('tonton', { detail: id, selesai: on }); lsReload('belajar'); } catch (e) { alert(e.message); } }
+async function lsTugas(id) {
+  const err = $('#tge-' + id); err.textContent = '';
+  try { await lsApi('tugas', { detail: id, file: await lsBerkas(document.getElementById('tg-' + id).files[0]) }); lsReload('belajar'); } catch (e) { err.textContent = e.message; }
+}
+PAGES['ls/laporan'] = () => lsPage('laporan', 'laporan', (s) => {
+  if (!s.rows.length) return '<div class="empty">Belum ada pendaftar dari keuskupan Anda.</div>';
+  return `<div class="note" style="margin-bottom:12px">Laporan peserta dari keuskupan Anda: siapa yang mendaftar, siapa yang lulus, bab yang boleh diajar, dan komentar pengajar.</div><div class="tw"><table><thead><tr><th>Nama</th><th>TC</th><th>Pendaftaran</th><th>Kelulusan</th><th>Bab (boleh mengajar)</th><th>Komentar &amp; catatan akhir</th></tr></thead><tbody>${s.rows.map((r) => `<tr><td>${esc(r.nama)}<div class="sub">${esc(r.keus)}</div></td><td>${esc(r.event)}</td><td>${lsStat(r.daftar)}</td><td>${r.status ? lsStat(r.status) : '–'}${r.ket ? `<div class="sub">${esc(r.ket)}</div>` : ''}</td><td>${r.bab.map((b) => `<div>${esc(b.bab)}: ${esc(b.izin)}${b.cat ? ` <span class="sub">(${esc(b.cat)})</span>` : ''}</div>`).join('') || '–'}</td><td>${r.catBpk ? `<div><b>Catatan akhir:</b> ${esc(r.catBpk)}</div>` : ''}${r.komentar.map((k) => `<div class="sub">${esc(k.penulis)}: ${esc(k.isi)}</div>`).join('')}</td></tr>`).join('')}</tbody></table></div>`;
+});
 
 const tabsOf = (m) => (m.tabs ? m.tabs.filter(([id]) => (D.perm[`${m.id}/${id}`] || 0) >= 1) : []);
 const visible = () => MENU.filter((m) => m.always || (m.tabs ? tabsOf(m).length : (D.perm[m.id] || 0) >= 1));
