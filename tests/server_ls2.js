@@ -15,11 +15,12 @@ const db = {
 };
 const base = {
   fetchAll: async (t, f, ex = {}) => {
+    if ((f || []).some((x) => !/^fld/.test(x))) throw new Error('kolom tidak valid: ' + f.filter((x) => !/^fld/.test(x)));
     const fm = (ex && ex.filterByFormula) || '', rows = db[t] || [], m = /\{Email Peserta\}='([^']*)'/.exec(fm);
     if (t === 'tblZhieD2iLA6xSxa' && m) return rows.filter((r) => r.fields.fldWYrEa3TbJ7IxTd === m[1] || r.fields.fldl95vg3BSSkSue2 === m[1]);
     return rows;
   },
-  listByIds: async (t, ids) => (db[t] || []).filter((r) => ids.includes(r.id)),
+  listByIds: async (t, ids, f) => (f || []).some((x) => !/^fld/.test(x)) ? (() => { throw new Error('kolom tidak valid'); })() : (db[t] || []).filter((r) => ids.includes(r.id)),
   update: async (t, id, f) => { calls.push(['update', t, id, f]); const r = (db[t] || []).find((x) => x.id === id); if (r) Object.assign(r.fields, f); return {}; },
   create: async (t, f) => { calls.push(['create', t, f]); const r = { id: 'recNEW' + String(calls.length).padStart(11, '0'), fields: f }; (db[t] = db[t] || []).push(r); return r; },
   createMany: async (t, l) => { calls.push(['many', t, l.length]); return l.map(() => ({})); },

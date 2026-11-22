@@ -9,8 +9,9 @@ const db = {
   tblHdbfsd6vT0pxp5: [{ id: D1, fields: { fldRkmZ12W4cP91mD: [H1], fld4X9x4KzYGOu2MQ: 'Bab 1', fldHE0iiUherGR6Y7: { name: 'Selesai Menonton' } } }, { id: D2, fields: { fldRkmZ12W4cP91mD: [H2], fld4X9x4KzYGOu2MQ: 'Bab 1' } }],
 };
 const base = {
-  fetchAll: async (t, f, ex = {}) => { const m = /\{Email Mentor\}='([^']*)'/.exec((ex && ex.filterByFormula) || ''); return (db[t] || []).filter((r) => !m || r.fields.fldl95vg3BSSkSue2 === m[1]); },
-  listByIds: async (t, ids) => (db[t] || []).filter((r) => ids.includes(r.id)),
+  fetchAll: async (t, f, ex = {}) => {
+    if ((f || []).some((x) => !/^fld/.test(x))) throw new Error('kolom tidak valid: ' + f.filter((x) => !/^fld/.test(x))); const m = /\{Email Mentor\}='([^']*)'/.exec((ex && ex.filterByFormula) || ''); return (db[t] || []).filter((r) => !m || r.fields.fldl95vg3BSSkSue2 === m[1]); },
+  listByIds: async (t, ids, f) => (f || []).some((x) => !/^fld/.test(x)) ? (() => { throw new Error('kolom tidak valid'); })() : (db[t] || []).filter((r) => ids.includes(r.id)),
   update: async (t, id, f) => { calls.push(['update', t, id, f]); return {}; },
   create: async (t, f) => { calls.push(['create', t, f]); return { id: 'recNEW0000000001' }; },
 };
