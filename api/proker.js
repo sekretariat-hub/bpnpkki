@@ -1,7 +1,7 @@
 // Ubah isi program kerja (PROKER BPN). Hanya untuk pengguna dengan hak edit di menu Program Kerja.
 const { update, listByIds } = require('../lib/airtable');
 const { getSession } = require('../lib/auth');
-const { getAccess, canEditProker } = require('../lib/access');
+const { getAccess, canEditProker, canEditSeksi } = require('../lib/access');
 
 const T = 'tblJVp60qiZ4mz40v';
 const FIELD = { status: 'fldaVg9ti2zI8wqF6', acc: 'fldgSos4roG4zcZsZ', deal: 'fldHv5JtZ4QiMuooY', bulan: 'fld3c0GcOXMa6gXgw', tahun: 'fldCLTSfeaWv6E1GF',
@@ -29,6 +29,11 @@ module.exports = async (req, res) => {
   }
   if (!Object.keys(out).length) return res.status(400).json({ error: 'Tidak ada perubahan' });
   try {
+    if (acc.seksiEdit) {
+      const [r] = await listByIds(T, [id], ['fldSo9KHoZeU6nelG']);
+      const sk = r ? [].concat(r.fields.fldSo9KHoZeU6nelG || []).map((x) => (x && x.name) || x) : [];
+      if (!canEditSeksi(acc, sk)) return res.status(403).json({ error: 'Anda hanya boleh mengedit program kerja seksi Anda sendiri' });
+    }
     if (acc.bpkIds) {
       const [r] = await listByIds(T, [id], ['fld97u5BWt6vL112x', 'fld6R2dagcciDPbZh']);
       const ids = r ? [...(r.fields.fld97u5BWt6vL112x || []), ...(r.fields.fld6R2dagcciDPbZh || [])] : [];

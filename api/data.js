@@ -162,7 +162,7 @@ module.exports = async (req, res) => {
     if (acc.bpkIds) scopeNames = new Set(d.bpkList.filter((b) => acc.bpkIds.includes(b.id)).map((b) => b.nama));
     const inScope = (arr) => !scopeNames || arr.some((n) => scopeNames.has(n));
     const body = {
-      user: { nama: acc.nama, email: acc.email, level: acc.peran, peran: acc.peran, scope: scopeNames ? [...scopeNames] : null },
+      user: { nama: acc.nama, email: acc.email, level: acc.peran, peran: acc.peran, scope: scopeNames ? [...scopeNames] : null, seksiEdit: acc.seksiEdit },
       perm: P, opsi: OPSI(d.proker), generatedAt: d.generatedAt, today: d.today,
       pewartaList: ok('dashboard') && !scopeNames ? d.pewartaList : [],
       kpis: ok('dashboard') ? d.kpis : { bpk: { now: 0, prev: 0, total: 0 }, pdpkk: { now: 0, prev: 0 }, pewarta: null },

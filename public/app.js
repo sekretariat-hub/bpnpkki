@@ -603,7 +603,7 @@ const split = (v) => String(v || '').split(', ').filter(Boolean);
 /* ===== Modal, menu program, profil BPK ===== */
 const PBmap = () => { if (!D._pb) { D._pb = {}; Object.values(D.bpkProfil || {}).forEach((b) => { D._pb[b.nama] = b; }); } return D._pb; };
 const bpkLinks = (names) => (names || []).map((n) => (PBmap()[n] ? `<a href="#" class="bpk" data-bpk="${esc(n)}">${esc(n)}</a>` : esc(n))).join(', ');
-const canEditP = () => ['keuskupan', 'semua', 'ringkasan', 'acc'].some((t) => (D.perm['proker/' + t] || 0) >= 2);
+const canEditP = (p) => ['keuskupan', 'semua', 'ringkasan', 'acc'].some((t) => (D.perm['proker/' + t] || 0) >= 2) && (!p || !D.user.seksiEdit || (p.seksi || []).some((n) => D.user.seksiEdit.map((x) => x.toLowerCase()).includes(String(n).toLowerCase())));
 function modal(html, wide) {
   closeModal();
   const o = document.createElement('div'); o.className = 'ov'; o.id = 'ov';
@@ -620,7 +620,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeMod
 function showMenu(id, ev) {
   closeMenu();
   const m = document.createElement('div'); m.id = 'pmenu'; m.className = 'pmenu';
-  m.innerHTML = `<button data-a="detail">🔍 Lihat detail</button>${canEditP() ? '<button data-a="edit">✏️ Edit program</button>' : ''}`;
+  m.innerHTML = `<button data-a="detail">🔍 Lihat detail</button>${canEditP(D.proker.find((x) => x.id === id)) ? '<button data-a="edit">✏️ Edit program</button>' : ''}`;
   document.body.appendChild(m);
   const w = m.offsetWidth, h = m.offsetHeight;
   m.style.left = Math.min(ev.clientX, innerWidth - w - 8) + 'px'; m.style.top = Math.min(ev.clientY, innerHeight - h - 8) + 'px';
@@ -646,7 +646,7 @@ function openDetail(id) {
   modal(`<h2>${esc(p.program || p.label)}</h2>${p.detil ? `<p class="sub">${esc(p.detil)}</p>` : ''}${stChips(p)}
     <div class="kvs">${row('Waktu', esc(waktu(p)))}${row('Dilayani (penerima)', bpkLinks(p.penerima))}${row('Melayani (pelaksana)', bpkLinks(p.pelaksana) || (p.pelaksanaTipe === 'BPN' ? 'BPN' : ''))}${row('Pelaksana', esc(p.pelaksanaTipe))}${row('Metode', esc(p.metode))}${row('Sumber dana', esc(p.sumberDana))}${row('Anggaran dari BPN', p.anggaran ? rp(p.anggaran) : '')}${row('Seksi penanggung jawab', esc(p.seksi.join(', ')))}${row('Jenis kegiatan', esc(p.jenis.join(', ')))}${row('Kaitan modul', esc(p.modul.join(', ')))}${row('Catatan', esc(p.catatan))}</div>
     <h4>Syarat ACC</h4><div class="rules2">${tick(sy.pelaksana, 'Pelaksana = BPK')}${tick(sy.deal, 'Deal')}${tick(sy.acc, 'ACC disetujui')}</div>
-    ${canEditP() ? '<div class="mact"><button class="btn" id="goedit">✏️ Edit program</button></div>' : ''}`, true);
+    ${canEditP(p) ? '<div class="mact"><button class="btn" id="goedit">✏️ Edit program</button></div>' : ''}`, true);
   $('#goedit')?.addEventListener('click', () => openEdit(id));
 }
 function openEdit(id) {
