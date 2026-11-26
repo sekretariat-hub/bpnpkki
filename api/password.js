@@ -9,6 +9,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Metode tidak diizinkan' });
   const s = getSession(req);
   if (!s) return res.status(401).json({ error: 'Belum login' });
+  if (s.as) return res.status(403).json({ error: 'Tidak tersedia saat mode Login sebagai' });
   const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
   const baru = String(b.baru || ''), ulang = String(b.ulang || '');
   if (baru !== ulang) return res.status(400).json({ error: 'Kedua password harus sama' });

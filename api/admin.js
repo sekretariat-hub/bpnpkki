@@ -1,7 +1,7 @@
 // Administrasi pengguna (hanya Admin).
 const crypto = require('crypto');
 const { fetchAll, update, create } = require('../lib/airtable');
-const { getSession, hashPassword } = require('../lib/auth');
+const { getSession, hashPassword, reissueSession } = require('../lib/auth');
 const { T, F } = require('../lib/users');
 const A = require('../lib/access');
 const R = require('../lib/roles');
@@ -25,6 +25,26 @@ const temp = () => { const c = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ2
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const s = getSession(req);
+  // "Login sebagai" (khusus Super Admin). Ditangani sebelum pemeriksaan hak karena saat mode aktif, hak sesi = hak pengguna yang dilihat.
+  if (s && req.method === 'POST') {
+    const b0 = typeof req.body === 'string' ? (() => { try { return JSON.parse(req.body || '{}'); } catch { return {}; } })() : req.body || {};
+    if (['imp', 'impedit', 'impstop'].includes(b0.action)) {
+      try {
+        const real = await A.getAccess({ rid: s.rid, email: s.email });
+        if (!real || !real.superAdmin) return res.status(403).json({ error: 'Hanya Super Admin' });
+        if (b0.action === 'impstop') { reissueSession(res, s, null); console.log('LOGIN-SEBAGAI selesai', real.email); return res.json({ ok: true }); }
+        if (b0.action === 'impedit') { if (!s.as) return res.status(400).json({ error: 'Mode Login sebagai tidak aktif' }); reissueSession(res, s, s.as, !!b0.edit); return res.json({ ok: true }); }
+        const id = String(b0.id || '');
+        if (!/^rec[A-Za-z0-9]{14}$/.test(id) || id === real.id) return res.status(400).json({ error: 'Pengguna tidak valid' });
+        const t = await A.getAccess({ rid: id, email: '' }).catch(() => null);
+        if (!t) return res.status(404).json({ error: 'Pengguna tidak ditemukan atau tidak aktif' });
+        if (t.superAdmin) return res.status(400).json({ error: 'Tidak bisa melihat sebagai Super Admin lain' });
+        reissueSession(res, s, id, true);
+        console.log('LOGIN-SEBAGAI mulai', real.email, '->', t.email || t.nama, id);
+        return res.json({ ok: true, nama: t.nama });
+      } catch (e) { console.error('imp error', e.message); return res.status(502).json({ error: 'Gagal memproses' }); }
+    }
+  }
   const acc = s && (await A.getAccess(s).catch(() => null));
   if (!acc) return res.status(401).json({ error: 'Belum login' });
   if (!A.can(acc, 'admin', 1)) return res.status(403).json({ error: 'Hanya Admin' });
@@ -47,7 +67,7 @@ module.exports = async (req, res) => {
         return { id: r.id, email: f[F.email] || '', wa: mask(waDigits(f[F.wa])), nama: f[F.nama] || '', aktif: !!f[F.aktif], pending: !f[F.disetujui], roles: manual, auto, lastLogin: f[F.lastLogin] || '', person };
       }).sort((x, y) => x.nama.localeCompare(y.nama, 'id'));
       const list = names.map((n) => { const r = roles.find((x) => x.nama === n) || {}; const m = A.mapOf(n, roles); return { id: r.id || '', nama: n, sistem: R.SISTEM.includes(n), terkunci: R.ADMIN_ROLES.includes(n), hak: Object.fromEntries(Object.entries(m).map(([k, v]) => [k, A.NAME[v]])), cakupan: r.cakupan || (A.NASIONAL.includes(n) ? 'Nasional' : 'Terbatas'), seksi: r.seksi || '', tingkat: r.tingkat || '', kat: r.kat || '', desk: r.desk || '', pakai: users.filter((u) => u.roles.includes(n) || u.auto.includes(n)).length, diubah: !!(r.hak && Object.keys(r.hak).length) }; });
-      return res.json({ tree: A.TREE, roles: list, seksi, users });
+      return res.json({ tree: A.TREE, roles: list, seksi, users, superAdmin: !!acc.superAdmin });
     }
     if (req.method !== 'POST') return res.status(405).json({ error: 'Metode tidak diizinkan' });
     if (!A.can(acc, 'admin', 2)) return res.status(403).json({ error: 'Tidak punya hak mengubah' });
@@ -67,6 +87,29 @@ module.exports = async (req, res) => {
       console.log('admin create', acc.email, wa, rl.join(','));
       const kirim = await kirimUndangan(wa, p.fields[PF.nama] || '', rl.join(', '), iv.link);
       return res.json({ ok: true, wa: mask(wa), password: pw, link: iv.link, ...kirim });
+    }
+    if (b.action === 'bulktim') { // Buat akun untuk anggota Tim Kerja (AKTIF) yang belum punya akun. Per panggilan maks 10 orang; ulangi sampai sisa 0.
+      const kirimWaFlag = !!b.kirim;
+      const tim = (await R.loadTim()).filter((t) => t.kat === 'TIM KERJA');
+      const pids = [...new Set(tim.flatMap((t) => t.orang))].filter((x) => /^rec[A-Za-z0-9]{14}$/.test(x));
+      const users = await fetchAll(T, [F.person, F.wa]);
+      const adaP = new Set(users.map((u) => u.fields[F.person]).filter(Boolean)), adaW = new Set(users.map((u) => waDigits(u.fields[F.wa])).filter(Boolean));
+      const todo = pids.filter((x) => !adaP.has(x));
+      const persons = todo.length ? await fetchAll(PERSON, [PF.nama, PF.email, PF.wa], { filterByFormula: `OR(${todo.map((x) => `RECORD_ID()='${x}'`).join(',')})` }) : [];
+      const calon = persons.map((p) => ({ p, wa: waDigits(p.fields[PF.wa]) })), tanpaWa = calon.filter((c) => !c.wa || adaW.has(c.wa)).map((c) => c.p.fields[PF.nama] || c.p.id);
+      const antre = calon.filter((c) => c.wa && !adaW.has(c.wa));
+      const out = { dibuat: 0, terkirim: 0, tautan: [], tanpaWa };
+      for (const c of antre.slice(0, 10)) {
+        const iv = inv(req), email = String(c.p.fields[PF.email] || '').toLowerCase(), nama = c.p.fields[PF.nama] || c.wa;
+        await create(T, { ...iv.f, [F.email]: email || c.wa, [F.nama]: nama, [F.wa]: c.wa, [F.level]: 'Pengurus', [A.FX.manual]: '[]', [F.aktif]: true, [F.disetujui]: true, [F.hash]: hashPassword(temp()), [F.person]: c.p.id, [A.FX.khusus]: '{}' });
+        out.dibuat++;
+        if (kirimWaFlag) { const k = await kirimUndangan(c.wa, nama, 'anggota Tim Kerja', iv.link); if (k.terkirim) { out.terkirim++; continue; } }
+        out.tautan.push({ nama, wa: mask(c.wa), link: iv.link });
+      }
+      out.sisa = Math.max(0, antre.length - out.dibuat);
+      A.forgetAll();
+      console.log('admin bulktim', acc.email, 'dibuat', out.dibuat, 'kirimwa', kirimWaFlag, 'terkirim', out.terkirim, 'sisa', out.sisa);
+      return res.json({ ok: true, ...out });
     }
     if (b.action === 'role') {
       const nama = String(b.nama || '').trim().slice(0, 60);

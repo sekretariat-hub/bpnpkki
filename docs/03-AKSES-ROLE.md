@@ -42,3 +42,14 @@ Super Admin, Admin, Editor BPN, Pengurus BPN Harian, Koordinator BPK, PIC BPK, K
 - **Paket role** (tombol di halaman Role): Koordinator Bidang (jabatan memuat "Bidang"), Koordinator Seksi (semua jabatan koordinator BPN Harian), Anggota BPN Inti, Anggota Tim Kerja.
 - **Role baru sistem:** `Pengajar TC` (otomatis dari tabel Mentor & Petugas Schole) dan `Peserta TC`; menu `ls` (Learning System).
 - Role otomatis memakai `/koord/i`, sehingga salah ketik "Koordiantor" tetap dikenali.
+
+## Login sebagai (khusus Super Admin)
+- Administrasi → Pengguna: kartu "Login sebagai" (pilih pengguna) atau tombol "Lihat sebagai" di tiap baris. Tidak bisa melihat sebagai Super Admin lain atau diri sendiri.
+- Selama mode aktif: menu, data, dan cakupan mengikuti pengguna yang dilihat (termasuk akun yang belum aktivasi). Menu Administrasi tertutup. Ganti password dinonaktifkan.
+- Banner kuning di atas: kotak "Boleh edit" (default aktif) dan tombol "Kembali ke akun saya". Edit aktif = semua menu yang terlihat bisa diubah dan tanpa batas seksi; nama pengubah yang tercatat adalah nama Super Admin, bukan pengguna yang dilihat.
+- Teknis: cookie sesi membawa `as` (id pengguna) dan `edit`; `lib/access.js → getAs` memeriksa ulang Super Admin di setiap permintaan. Aksi `imp`/`impedit`/`impstop` ada di `api/admin.js` (tanpa file api baru). Jejak: log Vercel berawalan `LOGIN-SEBAGAI` (mulai, selesai, tiap aksi tulis). Belum ada tabel audit di Airtable.
+- Catatan: data milik pengguna yang dilihat (mis. profil sendiri, pendaftaran Learning System) tetap tersimpan pada pengguna itu; yang atas nama Super Admin adalah kolom "diubah oleh/penulis".
+
+## Role seksi dan akun Tim Kerja
+- 20 role (Koordinator dan Anggota × 10 seksi) dibuat di tabel Role Akses: lihat semua menu kecuali Administrasi, edit Program Kerja (tab Ringkasan dan ACC hanya lihat), Learning System peserta/daftar/diskusi bisa edit. Cakupan data: Nasional. Edit Proker tetap dibatasi ke seksi sendiri.
+- Tombol "Buat akun anggota Tim Kerja" (Administrasi → Pengguna) membuat akun semua anggota Tim Kerja AKTIF yang belum punya akun (10 orang per putaran, otomatis diulang), dengan pilihan kirim undangan WhatsApp atau tampilkan tautan.
