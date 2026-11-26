@@ -1,6 +1,6 @@
 // Data utama Sistem Informasi BPN PKKI (hanya untuk pengguna yang sudah login).
 // Token Airtable tidak pernah dikirim ke browser. Kontak (WA/email) hanya untuk level Admin.
-const { fetchAll, listByIds } = require('../lib/airtable');
+const { fetchAll, listByIds, create, update } = require('../lib/airtable');
 const { getSession } = require('../lib/auth');
 const { labels } = require('../lib/aggregate');
 const { getAccess } = require('../lib/access');
@@ -126,6 +126,7 @@ async function build() {
         jabatanBpn: L(f.fldXQjbXYwlQGFkXH), jabatanBpk: L(f.fldc19IS7qf3hUFdP),
       };
     }),
+    seksiList: seksi.map((r) => ({ id: r.id, nama: names[r.id] || '', bidang: L(r.fields.fldHR7n95OKVB50jx)[0] || '' })).filter((x) => x.nama),
     kelompok: { inti: Object.values(inti) },
     jabatanBpk: jabBpk.map((r) => ({ id: r.id, nama: String(r.fields.fld1D1ejz3qnx7A8h || '').trim() })).filter((x) => x.nama).sort((a, b) => a.nama.localeCompare(b.nama, 'id')),
     riwayatPengurus: riwayat.map((r) => ({ id: r.id, jabatan: r.fields.fldV7IAegtyjm2lV4 || '', orang: person(r.fields.fldPCsNiSY7fO0LU2)[0] || null, selesai: r.fields.fldfPGyXH4MGPLa8x || '', pengganti: r.fields.fldJ9VuWtPiEceSe6 || '' })).filter((x) => x.orang).sort((a, b) => String(b.selesai).localeCompare(String(a.selesai))),
@@ -146,6 +147,71 @@ const OPSI = (rows) => ({
 });
 const uniqSorted = (a) => [...new Set(a.filter(Boolean))].sort();
 
+
+// ---- Tim Saya: siapa memimpin/ikut apa. Koordinator Bidang = jabatan "Wakil Koordinator BPN Bidang N" di Pengurus BPN;
+// Koordinator Seksi = jabatan "Koordinator Seksi X". Mereka boleh mengelola keanggotaan seksi di bawahnya.
+const L2 = (v, d) => ((v || [])[0] && (d.bpkList.find((b) => b.id === v[0]) || {}).nama) || '';
+const nz = (t) => String(t || '').toLowerCase().replace(/^tim kerja\s*/, '').replace(/[^a-z0-9]/g, '');
+function timScope(acc, d) {
+  const out = { ada: false, bidang: [], seksiKoord: [], seksiAnggota: [], seksiEdit: [], seksi: [], semua: false, bidangSeksi: {} };
+  const adm = (acc.roles || []).some((r) => ['Admin', 'Super Admin', 'Editor BPN'].includes(r));
+  const sl = d.seksiList || [];
+  if (adm) { out.semua = true; out.seksi = out.seksiEdit = sl.map((x) => x.nama); out.ada = out.seksi.length > 0; sl.forEach((x) => { (out.bidangSeksi[x.bidang || 'Lainnya'] = out.bidangSeksi[x.bidang || 'Lainnya'] || []).push(x.nama); }); return out; }
+  const pid = acc.pid; if (!pid) return out;
+  for (const r of d.pengurus.filter((x) => x.orang.some((o) => o.id === pid))) {
+    let m = /wakil\s*koordinator.*bidang\s*(\d+)/i.exec(r.jabatan); if (m) out.bidang.push('Bidang ' + m[1]);
+    m = /koordinator\s*seksi\s+(.+)/i.exec(r.jabatan);
+    if (m) { const k = nz(m[1]); const ex = sl.filter((x) => nz(x.nama) === k); (ex.length ? ex : sl.filter((x) => k && (nz(x.nama).includes(k) || k.includes(nz(x.nama))))).forEach((x) => out.seksiKoord.push(x.nama)); }
+  }
+  out.bidang = [...new Set(out.bidang)]; out.seksiKoord = [...new Set(out.seksiKoord)];
+  out.bidang.forEach((b) => { out.bidangSeksi[b] = sl.filter((x) => x.bidang === b).map((x) => x.nama); });
+  const diBidang = out.bidang.flatMap((b) => out.bidangSeksi[b]);
+  out.seksiEdit = [...new Set([...out.seksiKoord, ...diBidang])];
+  out.seksiAnggota = [...new Set(d.tim.filter((t) => t.orang && t.orang.id === pid && t.status === 'AKTIF').flatMap((t) => t.seksi))].filter((n) => !out.seksiEdit.includes(n));
+  out.seksi = [...out.seksiEdit, ...out.seksiAnggota];
+  out.ada = out.seksi.length > 0;
+  return out;
+}
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIMF = { orang: 'fldomDq2DVSouEZRg', seksi: 'fldPcVBoJjOxvmm60', mulai: 'fldIxbYPMVzW1vrr0', selesai: 'fld5QO8ATqA0DA4c6' };
+const PERS = 'tbl21zOSogH7Anlu2';
+async function fresh() { if (!cache.data || Date.now() - cache.at > TTL) cache = { at: Date.now(), data: await build() }; return cache.data; }
+
+// Ubah keanggotaan tim (tabel Tim BPN). Hanya Koordinator Bidang/Seksi untuk seksi di bawahnya (dan Admin/Editor BPN).
+async function timEdit(req, res, acc) {
+  if (acc.pending || acc.mustChange) return res.status(403).json({ error: 'Akun belum aktif' });
+  if (acc.imp && !acc.imp.edit) return res.status(403).json({ error: 'Mode Login sebagai sedang lihat saja. Aktifkan "Boleh edit" di banner.' });
+  const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+  const d = await fresh(), sc = timScope(acc, d);
+  const boleh = (nama) => sc.seksiEdit.includes(nama);
+  if (b.op === 'tambah') {
+    const seksi = d.seksiList.find((x) => x.nama === b.seksi);
+    if (!seksi || !boleh(seksi.nama)) return res.status(403).json({ error: 'Anda tidak mengelola seksi ini' });
+    if (!ID_RE.test(String(b.personId || ''))) return res.status(400).json({ error: 'Pilih orang dari daftar' });
+    const mulai = b.mulai ? String(b.mulai) : iso(wita()); if (!DATE_RE.test(mulai)) return res.status(400).json({ error: 'Tanggal mulai tidak valid' });
+    if (d.tim.some((t) => t.orang && t.orang.id === b.personId && t.status === 'AKTIF' && t.seksi.includes(seksi.nama))) return res.status(409).json({ error: 'Orang ini sudah aktif di seksi tersebut' });
+    await create(T.tim, { [TIMF.orang]: [b.personId], [TIMF.seksi]: [seksi.id], [TIMF.mulai]: mulai });
+    console.log('tim tambah', acc.email, acc.imp ? 'LOGIN-SEBAGAI ' + acc.imp.sebagai : '', seksi.nama, b.personId);
+  } else if (['akhiri', 'aktifkan', 'tanggal'].includes(b.op)) {
+    if (!ID_RE.test(String(b.id || ''))) return res.status(400).json({ error: 'ID tidak valid' });
+    const rec = (await listByIds(T.tim, [b.id], [TIMF.seksi]))[0]; if (!rec) return res.status(404).json({ error: 'Penugasan tidak ditemukan' });
+    const nm = (rec.fields[TIMF.seksi] || []).map((i) => (d.seksiList.find((x) => x.id === i) || {}).nama).filter(Boolean);
+    if (!nm.some(boleh)) return res.status(403).json({ error: 'Anda tidak mengelola seksi penugasan ini' });
+    const f = {};
+    if (b.op === 'akhiri') { const t = b.selesai ? String(b.selesai) : iso(wita()); if (!DATE_RE.test(t)) return res.status(400).json({ error: 'Tanggal tidak valid' }); f[TIMF.selesai] = t; }
+    if (b.op === 'aktifkan') f[TIMF.selesai] = null;
+    if (b.op === 'tanggal') {
+      if (b.mulai !== undefined) { if (b.mulai && !DATE_RE.test(String(b.mulai))) return res.status(400).json({ error: 'Tanggal mulai tidak valid' }); f[TIMF.mulai] = b.mulai || null; }
+      if (b.selesai !== undefined) { if (b.selesai && !DATE_RE.test(String(b.selesai))) return res.status(400).json({ error: 'Tanggal selesai tidak valid' }); f[TIMF.selesai] = b.selesai || null; }
+      if (!Object.keys(f).length) return res.status(400).json({ error: 'Tidak ada yang diubah' });
+    }
+    await update(T.tim, b.id, f);
+    console.log('tim', b.op, acc.email, acc.imp ? 'LOGIN-SEBAGAI ' + acc.imp.sebagai : '', b.id);
+  } else return res.status(400).json({ error: 'Aksi tidak dikenal' });
+  cache = { at: 0, data: null };
+  return res.json({ ok: true });
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'private, no-store');
   const s = getSession(req);
@@ -155,6 +221,14 @@ module.exports = async (req, res) => {
     if (!acc) return res.status(401).json({ error: 'Akun tidak aktif' });
     if (acc.pending) return res.status(403).json({ pending: true, nama: acc.nama, error: 'Menunggu persetujuan Admin' });
     if (acc.mustChange) return res.status(403).json({ mustChange: true, error: 'Ganti password terlebih dahulu' });
+    if (req.method === 'POST') return await timEdit(req, res, acc);
+    if (req.query.cari) { // cari orang untuk ditambahkan ke tim (tanpa kontak)
+      const dd = await fresh(), sc0 = timScope(acc, dd);
+      if (!sc0.seksiEdit.length) return res.status(403).json({ error: 'Tidak diizinkan' });
+      const t = String(req.query.cari).toLowerCase().replace(/\\/g, '').replace(/'/g, "\\'").slice(0, 60); if (t.length < 2) return res.json({ orang: [] });
+      const rows = await fetchAll(T.person, ['fldVU2gofcKEhWHmB', 'fldwJ7RnXW1nLaOcv'], { filterByFormula: `SEARCH('${t}', LOWER({Nama Lengkap}))`, maxRecords: '12' });
+      return res.json({ orang: rows.map((r) => ({ id: r.id, nama: String(r.fields.fldVU2gofcKEhWHmB || '').trim(), keuskupan: L2(r.fields.fldwJ7RnXW1nLaOcv, dd) })).filter((x) => x.nama) });
+    }
     if (!cache.data || Date.now() - cache.at > TTL || (req.query.refresh === '1' && Date.now() - cache.at > 10000)) cache = { at: Date.now(), data: await build() };
     const d = cache.data, P = acc.perm, ok = (k) => (P[k] || 0) >= 1;
     const anyOf = (m) => Object.keys(P).some((k) => (k === m || k.startsWith(m + '/')) && P[k] >= 1);
@@ -162,7 +236,7 @@ module.exports = async (req, res) => {
     if (acc.bpkIds) scopeNames = new Set(d.bpkList.filter((b) => acc.bpkIds.includes(b.id)).map((b) => b.nama));
     const inScope = (arr) => !scopeNames || arr.some((n) => scopeNames.has(n));
     const body = {
-      user: { nama: acc.tampil || acc.nama, email: acc.email, superAdmin: !!acc.superAdmin, imp: acc.imp || null, level: acc.peran, peran: acc.peran, scope: scopeNames ? [...scopeNames] : null, seksiEdit: acc.seksiEdit },
+      user: { nama: acc.tampil || acc.nama, email: acc.email, superAdmin: !!acc.superAdmin, imp: acc.imp || null, tim: timScope(acc, d), level: acc.peran, peran: acc.peran, scope: scopeNames ? [...scopeNames] : null, seksiEdit: acc.seksiEdit },
       perm: P, opsi: OPSI(d.proker), generatedAt: d.generatedAt, today: d.today,
       pewartaList: ok('dashboard') && !scopeNames ? d.pewartaList : [],
       kpis: ok('dashboard') ? d.kpis : { bpk: { now: 0, prev: 0, total: 0 }, pdpkk: { now: 0, prev: 0 }, pewarta: null },

@@ -45,7 +45,7 @@ const MENU = [
   { id: 'profil', label: 'Profil Saya', icon: I.star, sub: 'Lihat dan lengkapi data diri Anda', c: '#E0661A', always: true, hide: true },
   { id: 'pengurus', label: 'Pengurus BPN', icon: I.star, sub: 'Susunan pengurus BPN', c: '#8B7CF6' },
   { id: 'pd', label: 'Koordinator PD', icon: I.pd, sub: 'Persekutuan Doa dan koordinatornya', c: '#14B8A6', tabs: [['daftar', 'Daftar PD'], ['ringkasan', 'Ringkasan']] },
-  { id: 'tim', label: 'Tim Kerja BPN', icon: I.team, sub: 'Siapa saja yang bertugas di BPN', c: '#FF7A6B', tabs: [['bagan', 'Bagan Tim Aktif'], ['daftar', 'Daftar Tim Kerja']] },
+  { id: 'tim', label: 'Tim Kerja BPN', icon: I.team, sub: 'Siapa saja yang bertugas di BPN', c: '#FF7A6B', tabs: [['saya', 'Tim Saya'], ['bagan', 'Bagan Tim Aktif'], ['daftar', 'Daftar Tim Kerja']] },
   { id: 'modul', label: 'Modul Berjenjang', icon: I.book, sub: 'Retret berjenjang BPN: peserta lulus, pengajar, dan sebarannya', c: '#7C5CE0', tabs: [['ringkasan', 'Ringkasan'], ['permodul', 'Per Modul'], ['peserta', 'Peserta Lulus'], ['pengajar', 'Pengajar']] },
   { id: 'umat', label: 'Data Umat', icon: I.pd, sub: 'Profil umat yang terdaftar di sistem BPN', c: '#0EA5A4', tabs: [['ringkasan', 'Infografis'], ['daftar', 'Daftar Umat']] },
   { id: 'pendataan', label: 'Pendataan PIC', icon: I.pd, sub: 'Pejabat dan PIC di setiap BPK, lengkap dengan riwayatnya', c: '#E0661A' },
@@ -359,12 +359,27 @@ PAGES.profil = () => {
   return S.prof.edit ? profilForm() : profilView();
 };
 
+
+// Kartu "Login sebagai" (khusus Super Admin) di Profil Saya. Daftar pengguna dimuat sekali saat kartu tampil.
+function profilImp() {
+  setTimeout(async () => {
+    const sel = $('#impsel'); if (!sel || sel.dataset.ok) return;
+    try {
+      if (!ADM) { const j = await fetch('/api/admin', { credentials: 'same-origin' }).then((r) => r.json()); if (j.error) throw new Error(j.error); ADM = j; }
+      sel.dataset.ok = '1'; sel.innerHTML = '<option value="">— pilih pengguna —</option>' + ADM.users.filter((u) => u.aktif && !u.roles.includes('Super Admin')).map((u) => `<option value="${esc(u.id)}">${esc(u.nama)}</option>`).join('');
+      $('#impgo').disabled = false;
+    } catch (e) { sel.innerHTML = `<option>${esc(e.message)}</option>`; }
+    $('#impgo').onclick = async (e) => { if (!$('#impsel').value) return; e.target.disabled = true; try { await loginSebagai($('#impsel').value); } catch (x) { alert(x.message); e.target.disabled = false; } };
+  });
+  return `<div class="card" style="margin-bottom:16px"><h3>Login sebagai<small>khusus Super Admin: lihat sistem seperti pengguna lain. Perubahan yang Anda buat tersimpan atas nama Anda, bukan nama mereka.</small></h3><div class="filters" style="margin:0"><div class="q"><label>Pilih pengguna</label><select id="impsel"><option>Memuat…</option></select></div><div><label>&nbsp;</label><button class="btn" id="impgo" type="button" disabled>Lihat sebagai</button></div></div></div>`;
+}
 function profilView() {
   const P = S.prof, p = P.profil, o = P.opsi;
   const pel = p.pelayanan.map((id) => nmOf(o.pelayanan, id)), ajar = pel.some((n) => PENGAJAR.test(n));
   const lahir = p.tgl && p.bln && p.thn ? `${p.tgl} ${Object.values(BLN)[p.bln - 1]} ${p.thn}` : '';
   const list = (a) => (a.length ? `<div class="chips">${a.map((x) => chip(x, 'blue')).join('')}</div>` : '');
-  return `${P.milik ? '' : `<div class="warnbox" style="margin-bottom:16px">Anda melihat profil <b>${esc(p.nama)}</b> sebagai Admin/Editor.</div>`}
+  const impKartu = D.user.superAdmin && !D.user.imp && P.milik ? profilImp() : '';
+  return `${impKartu}${P.milik ? '' : `<div class="warnbox" style="margin-bottom:16px">Anda melihat profil <b>${esc(p.nama)}</b> sebagai Admin/Editor.</div>`}
   ${P.kurang.length ? `<div class="warnbox" style="margin-bottom:16px"><b>${P.milik ? 'Profil Anda' : 'Profil ini'} belum lengkap.</b> Yang masih perlu diisi:<ul>${P.kurang.map((x) => `<li>${esc(x)}</li>`).join('')}</ul><button class="btn" id="prled" style="width:auto;margin:0">Lengkapi sekarang</button></div>` : '<div class="okmsg" style="margin-bottom:16px">✓ Data profil sudah lengkap.</div>'}
   <div class="card"><div class="phead">${p.foto ? `<img class="pfoto" src="${esc(p.foto)}" alt="Foto ${esc(p.nama)}">` : `<div class="pfoto" style="display:grid;place-items:center;background:${hue(p.nama)};color:#fff;font-size:32px;font-weight:700">${esc(initials(p.nama))}</div>`}
     <div style="flex:1;min-width:200px"><h2 style="margin:0">${esc(p.nama)}</h2><div class="sub">${esc(p.pan ? 'Dipanggil ' + p.pan : '')}</div><div class="chips" style="margin-top:8px">${p.kategori ? chip(p.kategori, 'violet') : ''}${ajar ? chip('Pewarta / Pengajar', 'teal') : ''}</div></div>
@@ -512,6 +527,55 @@ PAGES['pd/ringkasan'] = () => {
 /* --- Tim Kerja --- */
 const timRows = () => { const f = S.tf, q = f.q.toLowerCase(); return D.tim.filter((x) => (!f.status || x.status === f.status) && (!f.kat || x.kategori === f.kat) && (!f.bidang || x.bidang.includes(f.bidang)) && (!q || ((x.orang?.nama || '') + ' ' + x.seksi.join(' ')).toLowerCase().includes(q))); };
 const katTone = { 'BPN INTI': 'violet', 'BPN HARIAN': 'blue', 'TIM KERJA': 'teal' };
+
+/* --- Tim Saya (tab di Tim Kerja BPN): tim bidang, tim kerja (seksi), dan program kerja terkait --- */
+const timApi = async (body) => { const r = await fetch('/api/data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ action: 'tim', ...body }) }); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Gagal'); return j; };
+const nzs = (t) => String(t || '').toLowerCase().replace(/^tim kerja\s*/, '').replace(/[^a-z0-9]/g, '');
+PAGES['tim/saya'] = () => {
+  const T0 = D.user.tim, boleh = (n) => T0.seksiEdit.includes(n);
+  const seksiDari = (g) => T0.bidangSeksi[g] || [];
+  const anggota = (nama) => D.tim.filter((x) => x.orang && x.seksi.includes(nama)).sort((a, b) => (a.status === b.status ? cmp(a.orang.nama, b.orang.nama) : a.status === 'AKTIF' ? -1 : 1));
+  const pemimpin = (nama) => D.pengurus.filter((x) => /koordinator\s*seksi/i.test(x.jabatan) && nzs(x.jabatan.replace(/.*koordinator\s*seksi\s*/i, '')) === nzs(nama)).flatMap((x) => x.orang.map((o) => o.nama));
+  const baris = (x, edit) => `<tr><td><b>${esc(x.orang.nama)}</b><div class="sub">${esc(x.orang.keuskupan || '')}</div></td><td>${esc(x.jabatanBpn.join(', ') || '–')}</td><td class="sub">${esc(x.mulai ? fdate(x.mulai) : '–')}${x.selesai ? ' → ' + esc(fdate(x.selesai)) : ''}</td><td>${chip(x.status || '–', x.status === 'AKTIF' ? 'green' : 'gray')}</td>${edit ? `<td style="white-space:nowrap">${x.status === 'AKTIF' ? `<button class="ghost" data-tkak="${esc(x.id)}">Akhiri</button>` : `<button class="ghost" data-tkon="${esc(x.id)}">Aktifkan lagi</button>`} <button class="ghost" data-tktg="${esc(x.id)}">Ubah tanggal</button></td>` : ''}</tr>`;
+  const blokSeksi = (nama) => {
+    const rows = anggota(nama), edit = boleh(nama), aktif = rows.filter((x) => x.status === 'AKTIF').length, ld = pemimpin(nama);
+    return `<div class="card" style="margin-bottom:16px"><h3>${esc(nama)}<small>${aktif} aktif${rows.length > aktif ? ' · ' + (rows.length - aktif) + ' selesai' : ''}${ld.length ? ' · Koordinator: ' + esc(ld.join(', ')) : ''}</small></h3>
+      ${edit ? `<div class="acts" style="margin-bottom:10px"><button class="btn" data-tkadd="${esc(nama)}" style="width:auto;margin:0">+ Tambah anggota</button></div>` : '<p class="note">Anda anggota seksi ini (hanya lihat).</p>'}
+      <div class="tw"><table><thead><tr><th>Nama</th><th>Jabatan di BPN</th><th>Periode</th><th>Status</th>${edit ? '<th></th>' : ''}</tr></thead><tbody>${rows.map((x) => baris(x, edit)).join('') || `<tr><td colspan="${edit ? 5 : 4}" class="sub">Belum ada anggota.</td></tr>`}</tbody></table></div></div>`;
+  };
+  const peran = [...T0.bidang.map((b) => chip('Koordinator ' + b, 'violet')), ...T0.seksiKoord.map((n) => chip('Koordinator ' + n.replace(/^Tim Kerja\s*/, ''), 'blue')), ...T0.seksiAnggota.map((n) => chip('Anggota ' + n.replace(/^Tim Kerja\s*/, ''), 'teal'))].join('');
+  const bidangHtml = Object.keys(T0.bidangSeksi).filter((g) => T0.semua || T0.bidang.includes(g)).sort(cmp).map((g) => {
+    const sk = seksiDari(g), all = sk.flatMap((n) => anggota(n)), aktif = all.filter((x) => x.status === 'AKTIF');
+    const lead = D.pengurus.filter((x) => new RegExp('wakil\\s*koordinator.*' + g.replace(' ', '\\s*'), 'i').test(x.jabatan)).flatMap((x) => x.orang.map((o) => o.nama));
+    return `<div class="card" style="margin-bottom:16px"><h3>Tim ${esc(g)}<small>${sk.length} seksi · ${aktif.length} anggota aktif${lead.length ? ' · Koordinator Bidang: ' + esc(lead.join(', ')) : ''}</small></h3>
+      <div class="tw"><table><thead><tr><th>Seksi</th><th>Koordinator Seksi</th><th>Anggota aktif</th></tr></thead><tbody>${sk.map((n) => `<tr><td><b>${esc(n)}</b></td><td>${esc(pemimpin(n).join(', ') || '–')}</td><td>${anggota(n).filter((x) => x.status === 'AKTIF').length}</td></tr>`).join('')}</tbody></table></div></div>`;
+  }).join('');
+  const rel = D.proker.filter((p) => p.seksi.some((n) => T0.seksi.includes(n))).sort((a, b) => String(b.tahun).localeCompare(String(a.tahun)) || (a.bulanIdx - b.bulanIdx));
+  const prog = `<div class="card"><h3>Program Kerja terkait<small>${rel.length} program yang penanggung jawabnya seksi Anda</small></h3><div class="tw"><table><thead><tr><th>Program</th><th>Seksi</th><th>Waktu</th><th>Status</th><th>ACC</th></tr></thead><tbody>${rel.map((p) => `<tr><td><b>${esc(p.program || p.label)}</b>${p.detil ? `<div class="sub">${esc(p.detil)}</div>` : ''}<div class="sub">${esc(p.penerima.join(', '))}</div></td><td>${esc(p.seksi.filter((n) => T0.seksi.includes(n)).join(', '))}</td><td>${esc([p.bulan, p.tahun].filter(Boolean).join(' '))}</td><td>${chip(p.status || '–', 'blue')}</td><td>${esc(p.acc || '–')}</td></tr>`).join('') || '<tr><td colspan="5" class="sub">Belum ada program yang tertaut ke seksi Anda.</td></tr>'}</tbody></table></div><p class="note" style="margin-top:10px">Untuk mengubah program, buka menu <b>Program Kerja</b>.</p></div>`;
+  setTimeout(() => {
+    const run = async (btn, body) => { btn.disabled = true; try { await timApi(body); await load(true); } catch (e) { alert(e.message); btn.disabled = false; } };
+    document.querySelectorAll('[data-tkak]').forEach((el) => el.addEventListener('click', () => { if (confirm('Akhiri keanggotaan ini mulai hari ini?')) run(el, { op: 'akhiri', id: el.dataset.tkak }); }));
+    document.querySelectorAll('[data-tkon]').forEach((el) => el.addEventListener('click', () => { if (confirm('Aktifkan kembali keanggotaan ini (tanggal selesai dikosongkan)?')) run(el, { op: 'aktifkan', id: el.dataset.tkon }); }));
+    document.querySelectorAll('[data-tktg]').forEach((el) => el.addEventListener('click', () => { const x = D.tim.find((t) => t.id === el.dataset.tktg); if (x) timTanggal(x); }));
+    document.querySelectorAll('[data-tkadd]').forEach((el) => el.addEventListener('click', () => timTambah(el.dataset.tkadd)));
+  });
+  return `<div class="note" style="margin-bottom:12px">Peran Anda: <span class="chips" style="display:inline-flex">${peran || chip('Administrator', 'violet')}</span><br>Koordinator Bidang dan Koordinator Seksi dapat menambah anggota, mengakhiri/mengaktifkan keanggotaan, dan mengubah tanggal di seksi yang dipimpinnya. Anggota biasa hanya melihat.</div>
+  ${bidangHtml ? `<h3 style="margin:18px 0 8px">Tim Bidang</h3>${bidangHtml}` : ''}<h3 style="margin:18px 0 8px">Tim Kerja (Seksi)</h3>${T0.seksi.map(blokSeksi).join('')}${prog}`;
+};
+function timTanggal(x) {
+  modal(`<h2>Ubah tanggal: ${esc(x.orang.nama)}</h2><p class="sub">${esc(x.seksi.join(', '))}</p><div class="eform" style="grid-template-columns:1fr 1fr"><div><label>Tanggal mulai</label><input type="date" id="tgm" value="${esc(x.mulai || '')}"></div><div><label>Tanggal selesai</label><input type="date" id="tgs" value="${esc(x.selesai || '')}"><div class="sub">Kosongkan bila masih aktif.</div></div></div><div class="err" id="tge"></div><div class="mact"><button class="btn" id="tgo" type="button">Simpan</button></div>`);
+  $('#tgo').onclick = async (e) => { e.target.disabled = true; try { await timApi({ op: 'tanggal', id: x.id, mulai: $('#tgm').value, selesai: $('#tgs').value }); closeModal(); await load(true); } catch (err) { $('#tge').textContent = err.message; e.target.disabled = false; } };
+}
+function timTambah(seksi) {
+  let pilih = null;
+  modal(`<h2>Tambah anggota</h2><p class="sub">${esc(seksi)}</p><div class="eform" style="grid-template-columns:1fr 1fr"><div style="grid-column:1/-1;position:relative"><label>Cari nama (harus sudah ada di data umat)</label><input id="tcq" autocomplete="off" placeholder="Ketik minimal 2 huruf…"><div id="tcr"></div></div><div><label>Tanggal mulai</label><input type="date" id="tcm" value="${esc(D.today || '')}"></div><div><label>Terpilih</label><div id="tcp" class="sub">Belum ada</div></div></div><div class="err" id="tce"></div><div class="mact"><button class="btn" id="tco" type="button" disabled>Tambahkan</button></div>`);
+  const q = $('#tcq');
+  q.addEventListener('input', () => { clearTimeout(q._t); pilih = null; $('#tco').disabled = true; $('#tcp').textContent = 'Belum ada'; if (q.value.trim().length < 2) { $('#tcr').innerHTML = ''; return; }
+    q._t = setTimeout(async () => { const j = await fetch('/api/data?cari=' + encodeURIComponent(q.value.trim()), { credentials: 'same-origin' }).then((r) => r.json()).catch(() => ({ orang: [] }));
+      $('#tcr').innerHTML = (j.orang || []).map((o) => `<button type="button" class="ghost" style="display:block;width:100%;text-align:left;margin-top:4px" data-pid="${esc(o.id)}" data-nm="${esc(o.nama)}">${esc(o.nama)}<span class="sub"> ${esc(o.keuskupan)}</span></button>`).join('') || '<div class="sub">Tidak ditemukan.</div>';
+      document.querySelectorAll('#tcr [data-pid]').forEach((b) => b.addEventListener('click', () => { pilih = b.dataset.pid; $('#tcp').textContent = b.dataset.nm; $('#tcr').innerHTML = ''; $('#tco').disabled = false; })); }, 300); });
+  $('#tco').onclick = async (e) => { e.target.disabled = true; try { await timApi({ op: 'tambah', seksi, personId: pilih, mulai: $('#tcm').value }); closeModal(); await load(true); } catch (err) { $('#tce').textContent = err.message; e.target.disabled = false; } };
+}
 PAGES['tim/daftar'] = () => {
   const draw = () => {
     const rows = timRows().sort((a, b) => cmp(a.orang?.nama, b.orang?.nama));
@@ -816,8 +880,6 @@ PAGES['admin/pengguna'] = () => {
         } catch (x) { $('#bke').textContent = x.message + (dibuat ? ` (sudah ${dibuat} akun dibuat sebelum berhenti)` : ''); e.target.disabled = false; e.target.textContent = 'Coba lagi'; }
       };
     });
-    document.querySelectorAll('button[data-imp]').forEach((el) => el.addEventListener('click', async () => { el.disabled = true; try { await loginSebagai(el.dataset.imp); } catch (e) { alert(e.message); el.disabled = false; } }));
-    $('#impgo')?.addEventListener('click', async (e) => { const v = $('#impsel').value; if (!v) return; e.target.disabled = true; try { await loginSebagai(v); } catch (x) { alert(x.message); e.target.disabled = false; } });
     document.querySelectorAll('button[data-prof]').forEach((el) => el.addEventListener('click', () => { location.hash = '#/profil/' + el.dataset.prof; }));
     document.querySelectorAll('button[data-kwa]').forEach((el) => el.addEventListener('click', async () => { if (!confirm('Kirim ulang tautan masuk lewat WhatsApp ke pengguna ini? Tautan lama tidak berlaku lagi.')) return; el.disabled = true; el.textContent = 'Mengirim…'; try { showPw(await admApi({ action: 'kirimwa', id: el.dataset.kwa }), 'Kirim ulang tautan'); } catch (e) { alert(e.message); } el.disabled = false; el.textContent = 'Kirim WA'; }));
     document.querySelectorAll('button[data-reset]').forEach((el) => el.addEventListener('click', async () => { if (!confirm('Buat password sementara baru untuk pengguna ini?')) return; try { showPw(await admApi({ action: 'reset', id: el.dataset.reset }), 'Password baru'); } catch (e) { alert(e.message); } }));
@@ -826,11 +888,11 @@ PAGES['admin/pengguna'] = () => {
     q?.addEventListener('input', () => { clearTimeout(q._t); sel = null; $('#adadd').disabled = true; if (q.value.trim().length < 2) { box.innerHTML = ''; return; } q._t = setTimeout(async () => { const j = await fetch('/api/admin?q=' + encodeURIComponent(q.value.trim()), { credentials: 'same-origin' }).then((r) => r.json()).catch(() => ({ orang: [] })); box.innerHTML = (j.orang || []).map((o) => `<button type="button" class="opt" data-e="${esc(o.id)}" data-n="${esc(o.nama)}"><b>${esc(o.nama)}</b> <span class="sub">WA ${esc(o.wa)}</span></button>`).join('') || '<div class="sub">Tidak ada yang cocok (harus ada di M-Person dengan nomor WhatsApp).</div>'; box.querySelectorAll('.opt').forEach((b2) => b2.addEventListener('click', () => { sel = b2.dataset.e; q.value = b2.dataset.n; box.innerHTML = ''; $('#adadd').disabled = false; })); }, 300); });
     $('#adadd')?.addEventListener('click', async () => { if (!sel) return; $('#adadd').disabled = true; try { const j = await admApi({ action: 'create', personId: sel, roles: [$('#adp').value] }); showPw(j, 'Pengguna ditambahkan'); admReload(); } catch (e) { $('#ade').textContent = e.message; $('#adadd').disabled = false; } });
   });
-  const impCard = ADM.superAdmin ? `<div class="card" style="margin-bottom:16px"><h3>Login sebagai<small>khusus Super Admin: lihat sistem seperti pengguna lain. Perubahan yang Anda buat tersimpan atas nama Anda, bukan nama mereka.</small></h3><div class="filters" style="margin:0"><div class="q"><label>Pilih pengguna</label><select id="impsel"><option value="">— pilih pengguna —</option>${ADM.users.filter((u) => u.aktif && !u.roles.includes('Super Admin')).map((u) => `<option value="${u.id}">${esc(u.nama)}</option>`).join('')}</select></div><div><label>&nbsp;</label><button class="btn" id="impgo" type="button">Lihat sebagai</button></div></div></div>` : '';
+  const impCard = '';
   const tgl = (u) => `${esc(u.nama)}${u.pending ? ' ' + chip('menunggu persetujuan', 'amber') : ''}<div class="sub">WA ${esc(u.wa || '–')}${u.email && !/^\d+$/.test(u.email) ? ' · ' + esc(u.email) : ''}</div>`;
   const bulkCard = edit ? `<div class="card" style="margin-bottom:16px"><h3>Akun Tim Kerja<small>buat akun sekaligus untuk semua anggota Tim Kerja yang AKTIF dan belum punya akun. Role mengikuti seksi mereka secara otomatis.</small></h3><button class="btn" id="bulktim" type="button">Buat akun anggota Tim Kerja</button></div>` : '';
   return `${impCard}${bulkCard}${edit ? `<div class="card" style="margin-bottom:16px"><h3>Tambah pengguna<small>pilih dari M-Person (harus punya nomor WhatsApp). Role lain bisa ditambah setelahnya. Orang juga bisa mendaftar sendiri dari halaman login.</small></h3><div class="filters" style="margin:0"><div class="q" style="position:relative"><label>Cari nama</label><input id="adq" autocomplete="off" placeholder="Ketik minimal 2 huruf…"><div id="adr" class="sres"></div></div><div><label>Role awal</label><select id="adp">${ADM.roles.map((x) => `<option>${esc(x.nama)}</option>`).join('')}</select></div><div style="flex:none;align-self:end"><button class="btn" id="adadd" disabled>Tambah</button></div></div><div class="err" id="ade"></div></div>` : ''}
-  <div class="card"><h3>Pengguna<small>${ADM.users.length} akun</small></h3><div class="tw"><table><thead><tr><th>Pengguna</th><th>Role</th><th>Aktif</th><th>Terakhir masuk</th><th></th></tr></thead><tbody>${ADM.users.map((u) => `<tr><td>${tgl(u)}</td><td><div class="chips">${u.roles.map((n) => roleChip(n)).join('')}${u.auto.map((n) => roleChip(n, true)).join('')}${!u.roles.length && !u.auto.length ? chip('belum ada role', 'amber') : ''}</div></td><td><input type="checkbox" data-aktif="${u.id}" ${u.aktif ? 'checked' : ''} ${edit ? '' : 'disabled'} style="width:auto"></td><td class="sub">${u.lastLogin ? esc(new Date(u.lastLogin).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })) : '–'}</td><td style="white-space:nowrap">${edit ? `<button class="ghost" data-akses="${u.id}">Atur role</button> ` : ''}${u.person ? `<button class="ghost" data-prof="${esc(u.person)}">Profil</button> ` : ''}${edit && (u.roles.length || u.auto.length) && !u.pending && u.aktif && u.wa && u.wa !== '****' ? `<button class="ghost" data-kwa="${u.id}">Kirim WA</button> ` : ''}${edit ? `<button class="ghost" data-reset="${u.id}">Reset password</button> ` : ''}${ADM.superAdmin && u.aktif && !u.roles.includes('Super Admin') ? `<button class="ghost" data-imp="${u.id}">Lihat sebagai</button>` : ''}</td></tr>`).join('')}</tbody></table></div>
+  <div class="card"><h3>Pengguna<small>${ADM.users.length} akun</small></h3><div class="tw"><table><thead><tr><th>Pengguna</th><th>Role</th><th>Aktif</th><th>Terakhir masuk</th><th></th></tr></thead><tbody>${ADM.users.map((u) => `<tr><td>${tgl(u)}</td><td><div class="chips">${u.roles.map((n) => roleChip(n)).join('')}${u.auto.map((n) => roleChip(n, true)).join('')}${!u.roles.length && !u.auto.length ? chip('belum ada role', 'amber') : ''}</div></td><td><input type="checkbox" data-aktif="${u.id}" ${u.aktif ? 'checked' : ''} ${edit ? '' : 'disabled'} style="width:auto"></td><td class="sub">${u.lastLogin ? esc(new Date(u.lastLogin).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })) : '–'}</td><td style="white-space:nowrap">${edit ? `<button class="ghost" data-akses="${u.id}">Atur role</button> ` : ''}${u.person ? `<button class="ghost" data-prof="${esc(u.person)}">Profil</button> ` : ''}${edit && (u.roles.length || u.auto.length) && !u.pending && u.aktif && u.wa && u.wa !== '****' ? `<button class="ghost" data-kwa="${u.id}">Kirim WA</button> ` : ''}${edit ? `<button class="ghost" data-reset="${u.id}">Reset password</button> ` : ''}</td></tr>`).join('')}</tbody></table></div>
   <p class="note" style="margin-top:12px">Hak akses menu diatur di tab <b>Role &amp; Hak Akses</b>, bukan per orang. Pengguna baru yang mendaftar sendiri menunggu sampai diberi minimal satu role.</p></div>`;
 };
 
@@ -1197,7 +1259,7 @@ async function lsIngatkan(btn) {
   btn.disabled = false;
 }
 
-const tabsOf = (m) => (m.tabs ? m.tabs.filter(([id]) => (D.perm[`${m.id}/${id}`] || 0) >= 1) : []);
+const tabsOf = (m) => (m.tabs ? m.tabs.filter(([id]) => (D.perm[`${m.id}/${id}`] || 0) >= 1 && !(m.id === 'tim' && id === 'saya' && !(D.user.tim && D.user.tim.ada))) : []);
 const visible = () => MENU.filter((m) => m.always || (m.tabs ? tabsOf(m).length : (D.perm[m.id] || 0) >= 1));
 function route() { const ms = visible(); const [m = 'dashboard', t] = location.hash.replace(/^#\/?/, '').split('/'); const menu = ms.find((x) => x.id === m) || ms.find((x) => !x.hide) || ms[0]; if (!menu) return { menu: null, tab: null, tabs: [] }; const tabs = tabsOf(menu); return { menu, tabs, tab: menu.tabs ? (tabs.find((x) => x[0] === t) || tabs[0])[0] : null }; }
 function render() {

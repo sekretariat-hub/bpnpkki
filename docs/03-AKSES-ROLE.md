@@ -44,12 +44,19 @@ Super Admin, Admin, Editor BPN, Pengurus BPN Harian, Koordinator BPK, PIC BPK, K
 - Role otomatis memakai `/koord/i`, sehingga salah ketik "Koordiantor" tetap dikenali.
 
 ## Login sebagai (khusus Super Admin)
-- Administrasi → Pengguna: kartu "Login sebagai" (pilih pengguna) atau tombol "Lihat sebagai" di tiap baris. Tidak bisa melihat sebagai Super Admin lain atau diri sendiri.
+- Profil Saya: kartu "Login sebagai" di bagian atas (hanya muncul untuk Super Admin; role Super Admin harus ada di akun, mis. lewat Administrasi → Pengguna → Atur role). Tidak bisa melihat sebagai Super Admin lain atau diri sendiri.
 - Selama mode aktif: menu, data, dan cakupan mengikuti pengguna yang dilihat (termasuk akun yang belum aktivasi). Menu Administrasi tertutup. Ganti password dinonaktifkan.
-- Banner kuning di atas: kotak "Boleh edit" (default aktif) dan tombol "Kembali ke akun saya". Edit aktif = semua menu yang terlihat bisa diubah dan tanpa batas seksi; nama pengubah yang tercatat adalah nama Super Admin, bukan pengguna yang dilihat.
+- Banner kuning di atas: kotak "Boleh edit" (default aktif; bila dimatikan = mode lihat saja, semua hak dibatasi ke Lihat dan penulisan ke Airtable ditolak) dan tombol "Kembali ke akun saya". Edit aktif = semua menu yang terlihat bisa diubah dan tanpa batas seksi; nama pengubah yang tercatat adalah nama Super Admin, bukan pengguna yang dilihat.
 - Teknis: cookie sesi membawa `as` (id pengguna) dan `edit`; `lib/access.js → getAs` memeriksa ulang Super Admin di setiap permintaan. Aksi `imp`/`impedit`/`impstop` ada di `api/admin.js` (tanpa file api baru). Jejak: log Vercel berawalan `LOGIN-SEBAGAI` (mulai, selesai, tiap aksi tulis). Belum ada tabel audit di Airtable.
 - Catatan: data milik pengguna yang dilihat (mis. profil sendiri, pendaftaran Learning System) tetap tersimpan pada pengguna itu; yang atas nama Super Admin adalah kolom "diubah oleh/penulis".
 
 ## Role seksi dan akun Tim Kerja
 - 20 role (Koordinator dan Anggota × 10 seksi) dibuat di tabel Role Akses: lihat semua menu kecuali Administrasi, edit Program Kerja (tab Ringkasan dan ACC hanya lihat), Learning System peserta/daftar/diskusi bisa edit. Cakupan data: Nasional. Edit Proker tetap dibatasi ke seksi sendiri.
 - Tombol "Buat akun anggota Tim Kerja" (Administrasi → Pengguna) membuat akun semua anggota Tim Kerja AKTIF yang belum punya akun (10 orang per putaran, otomatis diulang), dengan pilihan kirim undangan WhatsApp atau tampilkan tautan.
+
+## Tim Saya (tab di menu Tim Kerja BPN)
+- Tab "Tim Saya" hanya muncul bila pengguna punya seksi: sebagai Koordinator Bidang, Koordinator Seksi, atau anggota aktif. Admin, Super Admin, dan Editor BPN melihat semua seksi dan boleh mengelola semuanya.
+- Koordinator Bidang = jabatan "Wakil Koordinator BPN Bidang N" di tabel Pengurus BPN → mengelola semua seksi di Bidang N (relasi M-Bidang pada M-Seksi). Koordinator Seksi = jabatan "Koordinator Seksi X" di Pengurus BPN (dicocokkan ke nama seksi tanpa awalan "Tim Kerja"). Cakupan dihitung di `timScope` (`api/data.js`) dan dikirim ke klien sebagai `user.tim`.
+- Isi tab: Tim Bidang (seksi, koordinator seksi, jumlah anggota aktif), Tim Kerja per seksi (anggota, periode, status), dan Program Kerja yang penanggung jawabnya seksi tersebut (hanya baca; ubah di menu Program Kerja).
+- Yang boleh diubah koordinator (hanya seksi di bawahnya): tambah anggota (cari dari M-Person), akhiri keanggotaan, aktifkan lagi, ubah tanggal mulai/selesai. Status AKTIF/SELESAI di Airtable adalah rumus dari **Tgl Selesai** (`fld5QO8ATqA0DA4c6`), jadi "akhiri" mengisi tanggal itu dan "aktifkan" mengosongkannya. Jabatan (Koordinator Seksi/Bidang) tetap diatur di tabel Pengurus BPN, bukan di tab ini.
+- Endpoint: POST `/api/data` dengan `{action:'tim', op:'tambah|akhiri|aktifkan|tanggal'}`; GET `/api/data?cari=` untuk mencari orang (tanpa kontak). Semua ditolak saat mode Login sebagai lihat-saja.
