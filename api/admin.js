@@ -89,7 +89,8 @@ module.exports = async (req, res) => {
       return res.json({ ok: true, wa: mask(wa), password: pw, link: iv.link, ...kirim });
     }
     if (b.action === 'bulktim') { // Buat akun untuk anggota Tim Kerja (AKTIF) yang belum punya akun. Per panggilan maks 10 orang; ulangi sampai sisa 0.
-      const kirimWaFlag = !!b.kirim;
+      const kirimKe = String(b.kirimKe || '').slice(0, 80); // '' = tidak kirim, '*' = semua, selain itu nama seksi
+      const keySek = kirimKe.replace(/^Tim Kerja\s*/i, '').toLowerCase();
       const tim = (await R.loadTim()).filter((t) => t.kat === 'TIM KERJA');
       const pids = [...new Set(tim.flatMap((t) => t.orang))].filter((x) => /^rec[A-Za-z0-9]{14}$/.test(x));
       const users = await fetchAll(T, [F.person, F.wa]);
@@ -103,12 +104,13 @@ module.exports = async (req, res) => {
         const iv = inv(req), email = String(c.p.fields[PF.email] || '').toLowerCase(), nama = c.p.fields[PF.nama] || c.wa;
         await create(T, { ...iv.f, [F.email]: email || c.wa, [F.nama]: nama, [F.wa]: c.wa, [F.level]: 'Pengurus', [A.FX.manual]: '[]', [F.aktif]: true, [F.disetujui]: true, [F.hash]: hashPassword(temp()), [F.person]: c.p.id, [A.FX.khusus]: '{}' });
         out.dibuat++;
-        if (kirimWaFlag) { const k = await kirimUndangan(c.wa, nama, 'anggota Tim Kerja', iv.link); if (k.terkirim) { out.terkirim++; continue; } }
+        const sasaran = kirimKe === '*' || (kirimKe && tim.some((t) => t.orang.includes(c.p.id) && (t.seksi.includes(kirimKe) || (keySek && t.jab.toLowerCase().includes(keySek)))));
+        if (sasaran) { const k = await kirimUndangan(c.wa, nama, 'anggota Tim Kerja', iv.link); if (k.terkirim) { out.terkirim++; continue; } }
         out.tautan.push({ nama, wa: mask(c.wa), link: iv.link });
       }
       out.sisa = Math.max(0, antre.length - out.dibuat);
       A.forgetAll();
-      console.log('admin bulktim', acc.email, 'dibuat', out.dibuat, 'kirimwa', kirimWaFlag, 'terkirim', out.terkirim, 'sisa', out.sisa);
+      console.log('admin bulktim', acc.email, 'dibuat', out.dibuat, 'kirimKe', kirimKe || '-', 'terkirim', out.terkirim, 'sisa', out.sisa);
       return res.json({ ok: true, ...out });
     }
     if (b.action === 'role') {

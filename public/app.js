@@ -804,14 +804,17 @@ PAGES['admin/pengguna'] = () => {
   setTimeout(() => {
     document.querySelectorAll('input[data-aktif]').forEach((el) => el.addEventListener('change', async () => { try { await admApi({ action: 'update', id: el.dataset.aktif, aktif: el.checked }); admReload(); } catch (e) { alert(e.message); admReload(); } }));
     document.querySelectorAll('button[data-akses]').forEach((el) => el.addEventListener('click', () => openRolesUser(ADM.users.find((u) => u.id === el.dataset.akses))));
-    $('#bulktim')?.addEventListener('click', async (e) => {
-      const kirim = confirm('Buat akun untuk semua anggota Tim Kerja yang belum punya akun.\n\nOK = buat akun DAN kirim undangan WhatsApp ke tiap orang.\nBatal = lanjut pilihan berikutnya.');
-      if (!kirim && !confirm('Buat akun SAJA tanpa mengirim WhatsApp? Tautan masuk akan ditampilkan agar bisa Anda bagikan sendiri.')) return;
-      e.target.disabled = true; let dibuat = 0, terkirim = 0, tautan = [], tanpa = []; e.target.textContent = 'Memproses…';
-      try { for (let i = 0; i < 20; i++) { const j = await admApi({ action: 'bulktim', kirim }); dibuat += j.dibuat; terkirim += j.terkirim; tautan = tautan.concat(j.tautan); tanpa = j.tanpaWa; if (!j.sisa || !j.dibuat) break; }
-        modal(`<h2>Akun Tim Kerja</h2><p>${dibuat} akun dibuat · ${terkirim} undangan WhatsApp terkirim.</p>${tanpa.length ? `<p class="note">Dilewati (tidak punya nomor WhatsApp valid atau nomor sudah dipakai): ${esc(tanpa.join(', '))}</p>` : ''}${tautan.length ? `<p class="note">Tautan masuk (sekali pakai, berlaku 14 hari) untuk yang belum terkirim:</p><div class="tw" style="max-height:40vh;overflow:auto"><table><tbody>${tautan.map((t) => `<tr><td>${esc(t.nama)}<div class="sub">${esc(t.wa)}</div></td><td style="word-break:break-all">${esc(t.link)}</td></tr>`).join('')}</tbody></table></div>` : ''}`);
-      } catch (x) { alert(x.message + (dibuat ? ` (sudah ${dibuat} akun dibuat sebelum berhenti)` : '')); }
-      admReload();
+    $('#bulktim')?.addEventListener('click', () => {
+      modal(`<h2>Buat akun anggota Tim Kerja</h2><p class="sub">Akun dibuat untuk semua anggota Tim Kerja AKTIF yang belum punya akun. Pilih siapa yang langsung dikirimi undangan WhatsApp; yang lain tidak dikirimi apa pun (tautan masuknya ditampilkan agar bisa Anda bagikan nanti).</p><div class="eform" style="grid-template-columns:1fr"><div><label>Kirim undangan WhatsApp ke</label><select id="bkke"><option value="">Tidak ada (hanya buat akun)</option>${ADM.seksi.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('')}<option value="*">Semua anggota Tim Kerja</option></select></div></div><div class="err" id="bke"></div><div class="mact"><button class="btn" id="bkgo" type="button">Buat akun</button></div>`);
+      $('#bkgo').onclick = async (e) => {
+        const kirimKe = $('#bkke').value; e.target.disabled = true; e.target.textContent = 'Memproses…'; let dibuat = 0, terkirim = 0, tautan = [], tanpa = [];
+        try {
+          for (let i = 0; i < 20; i++) { const j = await admApi({ action: 'bulktim', kirimKe }); dibuat += j.dibuat; terkirim += j.terkirim; tautan = tautan.concat(j.tautan); tanpa = j.tanpaWa; if (!j.sisa || !j.dibuat) break; }
+          closeModal(); ADM = null;
+          modal(`<h2>Akun Tim Kerja</h2><p>${dibuat} akun dibuat · ${terkirim} undangan WhatsApp terkirim.</p>${kirimKe && !terkirim && dibuat ? '<p class="note">Tidak ada WhatsApp yang terkirim. Pastikan <b>BABLAST_API_KEY</b> sudah diisi di Vercel (lalu Redeploy), kemudian pakai tombol "Kirim WA" di baris pengguna.</p>' : ''}${tanpa.length ? `<p class="note">Dilewati (tidak punya nomor WhatsApp valid atau nomor sudah dipakai): ${esc(tanpa.join(', '))}</p>` : ''}${tautan.length ? `<p class="note">Tautan masuk (sekali pakai, berlaku 14 hari) untuk yang belum dikirimi WhatsApp:</p><div class="tw" style="max-height:40vh;overflow:auto"><table><tbody>${tautan.map((t) => `<tr><td>${esc(t.nama)}<div class="sub">${esc(t.wa)}</div></td><td style="word-break:break-all">${esc(t.link)}</td></tr>`).join('')}</tbody></table></div>` : ''}`);
+          render();
+        } catch (x) { $('#bke').textContent = x.message + (dibuat ? ` (sudah ${dibuat} akun dibuat sebelum berhenti)` : ''); e.target.disabled = false; e.target.textContent = 'Coba lagi'; }
+      };
     });
     document.querySelectorAll('button[data-imp]').forEach((el) => el.addEventListener('click', async () => { el.disabled = true; try { await loginSebagai(el.dataset.imp); } catch (e) { alert(e.message); el.disabled = false; } }));
     $('#impgo')?.addEventListener('click', async (e) => { const v = $('#impsel').value; if (!v) return; e.target.disabled = true; try { await loginSebagai(v); } catch (x) { alert(x.message); e.target.disabled = false; } });
