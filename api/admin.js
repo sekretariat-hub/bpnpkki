@@ -34,6 +34,11 @@ module.exports = async (req, res) => {
         if (!real || !real.superAdmin) return res.status(403).json({ error: 'Hanya Super Admin' });
         if (b0.action === 'impstop') { reissueSession(res, s, null); console.log('LOGIN-SEBAGAI selesai', real.email); return res.json({ ok: true }); }
         if (b0.action === 'impedit') { if (!s.as) return res.status(400).json({ error: 'Mode Login sebagai tidak aktif' }); reissueSession(res, s, s.as, !!b0.edit); return res.json({ ok: true }); }
+        if (/^role:/.test(String(b0.id || ''))) {
+          const rn = String(b0.id).slice(5); const rl = await R.loadRoles().catch(() => []);
+          if (rn === 'Super Admin' || ![...R.SISTEM, ...rl.map((r) => r.nama)].includes(rn)) return res.status(400).json({ error: 'Role tidak valid' });
+          reissueSession(res, s, 'role:' + rn, false); console.log('LIHAT-SEBAGAI-ROLE', real.email, '->', rn); return res.json({ ok: true, nama: 'Role: ' + rn });
+        }
         const id = String(b0.id || '');
         if (!/^rec[A-Za-z0-9]{14}$/.test(id) || id === real.id) return res.status(400).json({ error: 'Pengguna tidak valid' });
         const t = await A.getAccess({ rid: id, email: '' }).catch(() => null);

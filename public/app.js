@@ -503,20 +503,23 @@ PAGES.profil = () => {
 
 // "Login sebagai" (khusus Super Admin): dibuka dari menu nama di sidebar. Daftar pengguna dimuat sekali.
 function bukaImp() {
-  modal(`<h2 style="margin:0 0 6px">Login sebagai</h2><p class="note" style="margin:0 0 14px">Lihat sistem seperti pengguna lain. Perubahan yang Anda buat tersimpan atas nama Anda, bukan nama mereka.</p><div class="q"><label>Cari pengguna</label><input id="impq" autocomplete="off" placeholder="Ketik nama atau email…" disabled></div><div id="impl" class="sres" style="max-height:240px;overflow:auto;position:static;margin-top:6px"><div class="sub" style="padding:8px">Memuat…</div></div><div id="imps" class="card" style="margin-top:12px;display:none"></div><button class="btn" id="impgo" type="button" style="margin-top:14px" disabled>Lihat sebagai</button>`);
+  modal(`<h2 style="margin:0 0 6px">Login sebagai</h2><p class="note" style="margin:0 0 14px">Lihat sistem seperti pengguna lain. Perubahan yang Anda buat tersimpan atas nama Anda, bukan nama mereka.</p><div style="display:flex;gap:6px;margin-bottom:10px"><button class="btn" id="impm1" type="button">Pengguna</button><button class="btn ghost" id="impm2" type="button">Role</button></div><div class="q"><label id="impql">Cari pengguna</label><input id="impq" autocomplete="off" placeholder="Ketik nama atau email…" disabled></div><div id="impl" class="sres" style="max-height:240px;overflow:auto;position:static;margin-top:6px"><div class="sub" style="padding:8px">Memuat…</div></div><div id="imps" class="card" style="margin-top:12px;display:none"></div><button class="btn" id="impgo" type="button" style="margin-top:14px" disabled>Lihat sebagai</button>`);
   (async () => {
     let pilih = '';
     try {
       if (!ADM) { const j = await fetch('/api/admin', { credentials: 'same-origin' }).then((r) => r.json()); if (j.error) throw new Error(j.error); ADM = j; }
       const us = ADM.users.filter((u) => u.aktif && !u.roles.includes('Super Admin')).sort((x, y) => cmp(x.nama, y.nama));
+      let mode = 'u'; const rl = (ADM.roles || []).filter((r) => r.nama !== 'Super Admin').map((r) => ({ id: 'role:' + r.nama, nama: r.nama, roles: [], email: '', aktif: true, isRole: true })).sort((x, y) => cmp(x.nama, y.nama));
+      const setMode = (m) => { mode = m; pilih = ''; $('#imps').style.display = 'none'; $('#impgo').disabled = true; $('#impm1').classList.toggle('ghost', m !== 'u'); $('#impm2').classList.toggle('ghost', m !== 'r'); $('#impql').textContent = m === 'u' ? 'Cari pengguna' : 'Cari role'; $('#impq').value = ''; gambar(); };
       const gambar = () => {
-        const q = $('#impq').value.trim().toLowerCase(), l = us.filter((u) => !q || `${u.nama} ${u.email || ''}`.toLowerCase().includes(q)).slice(0, 60);
+        const q = $('#impq').value.trim().toLowerCase(), l = (mode === 'r' ? rl : us).filter((u) => !q || `${u.nama} ${u.email || ''}`.toLowerCase().includes(q)).slice(0, 60);
         $('#impl').innerHTML = l.map((u) => `<div class="sr${u.id === pilih ? ' on' : ''}" data-u="${esc(u.id)}" style="padding:9px 10px;cursor:pointer;border-radius:8px"><b>${esc(u.nama)}</b> <small class="sub">${esc((u.roles || []).join(', '))}</small></div>`).join('') || '<div class="sub" style="padding:8px">Tidak ada yang cocok.</div>';
       };
       $('#impq').disabled = false; $('#impq').focus(); gambar();
+      $('#impm1').onclick = () => setMode('u'); $('#impm2').onclick = () => setMode('r');
       $('#impq').addEventListener('input', gambar);
       $('#impl').addEventListener('click', (e) => {
-        const r = e.target.closest('[data-u]'); if (!r) return; pilih = r.dataset.u; const u = us.find((x) => x.id === pilih);
+        const r = e.target.closest('[data-u]'); if (!r) return; pilih = r.dataset.u; const u = (mode === 'r' ? rl : us).find((x) => x.id === pilih);
         $('#imps').style.display = 'block'; $('#imps').innerHTML = `<div class="sub">Akan melihat sebagai</div><b style="font-size:16px">${esc(u.nama)}</b><div style="margin-top:4px">${(u.roles || []).map((x) => chip(x, 'blue')).join(' ') || '<span class="sub">Tanpa role</span>'}</div>${u.email ? `<div class="sub">${esc(u.email)}</div>` : ''}`;
         $('#impgo').disabled = false; gambar();
       });
@@ -1550,8 +1553,8 @@ function impBar() {
   let b = $('#impbar'); const m = D && D.user && D.user.imp;
   if (!m) { if (b) b.remove(); return; }
   if (!b) { b = document.createElement('div'); b.id = 'impbar'; document.querySelector('.main').prepend(b); }
-  b.innerHTML = `<span>👁 Anda melihat sebagai <b>${esc(m.sebagai)}</b>${m.edit ? ` · perubahan tersimpan atas nama <b>${esc(m.oleh)}</b>` : ' · mode lihat saja'}</span><label><input type="checkbox" id="impe"${m.edit ? ' checked' : ''}> Boleh edit</label><button class="btn" id="impx" type="button">Kembali ke akun saya</button>`;
-  $('#impe').onchange = async (e) => { e.target.disabled = true; try { await admApi({ action: 'impedit', edit: e.target.checked }); await load(true); } catch (x) { alert(x.message); e.target.disabled = false; } };
+  b.innerHTML = `<span>👁 Anda melihat sebagai <b>${esc(m.sebagai)}</b>${m.edit ? ` · perubahan tersimpan atas nama <b>${esc(m.oleh)}</b>` : ' · mode lihat saja'}${m.role ? ' · pratinjau menu role (tanpa data pribadi)' : ''}</span>${m.role ? '' : `<label><input type="checkbox" id="impe"${m.edit ? ' checked' : ''}> Boleh edit</label>`}<button class="btn" id="impx" type="button">Kembali ke akun saya</button>`;
+  if ($('#impe')) $('#impe').onchange = async (e) => { e.target.disabled = true; try { await admApi({ action: 'impedit', edit: e.target.checked }); await load(true); } catch (x) { alert(x.message); e.target.disabled = false; } };
   $('#impx').onclick = async (e) => { e.target.disabled = true; try { await admApi({ action: 'impstop' }); location.hash = '#/admin/pengguna'; await load(true); } catch (x) { alert(x.message); e.target.disabled = false; } };
 }
 async function loginSebagai(id) { await admApi({ action: 'imp', id }); location.hash = ''; await load(true); }
