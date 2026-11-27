@@ -1615,12 +1615,19 @@ function profilFields(kus, pre) {
     <label>Tanggal lahir</label><div class="dob"><select id="f_tgl"><option value="">Tgl</option>${Array.from({ length: 31 }, (_, i) => `<option>${i + 1}</option>`).join('')}</select><select id="f_bln"><option value="">Bulan</option>${BLN3.map((b, i) => `<option value="${i + 1}">${b}</option>`).join('')}</select><select id="f_thn"><option value="">Tahun</option>${Array.from({ length: yr - 1919 }, (_, i) => `<option>${yr - i}</option>`).join('')}</select></div>
     <label>Alamat surat (opsional)</label><input id="f_alamat">`;
 }
+// Pendaftaran awal: hanya yang penting. Keuskupan terkunci bila sudah tercatat (mis. dari BPK tempat PIC menjabat).
+function profilSederhana(kus, pre) {
+  const kunci = pre.kus && kus.some((k) => k.id === pre.kus), nmKus = kunci ? (kus.find((k) => k.id === pre.kus) || {}).nama : '';
+  return `<label>Nama lengkap</label><input id="f_nama" autocomplete="name" value="${esc(pre.nama || '')}"><label>Jenis kelamin</label><select id="f_jk"><option value="">Pilih…</option><option${pre.jk === 'Pria' ? ' selected' : ''}>Pria</option><option${pre.jk === 'Wanita' ? ' selected' : ''}>Wanita</option></select>
+    <label>Keuskupan domisili</label>${kunci ? `<input id="f_kusn" value="${esc(nmKus)}" disabled><input id="f_kus" type="hidden" value="${esc(pre.kus)}"><p class="note" style="text-align:left;margin:4px 0 0">Terisi otomatis sesuai BPK Anda.</p>` : `<select id="f_kus"><option value="">Pilih…</option>${kus.map((k) => `<option value="${k.id}">${esc(k.nama)}</option>`).join('')}</select>`}
+    <p class="note" style="text-align:left;margin:8px 0 0">Data lain (email, tanggal lahir, dan lainnya) bisa dilengkapi nanti setelah masuk.</p>`;
+}
 async function stepProfil() {
   let kus = []; try { kus = (await (await fetch('/api/akses')).json()).keuskupan || []; } catch { /* kosong */ }
   const pre = LG.pre || {};
-  lstep(`<p class="note" style="text-align:left">${pre.nama ? `Nomor terverifikasi. Anda sudah didata di BPN${pre.nama ? ` sebagai <b>${esc(pre.nama)}</b>` : ''}; lengkapi profil Anda dulu.` : 'Nomor terverifikasi, tetapi belum ada di data BPN. Lengkapi profil Anda.'}</p>${profilFields(kus, pre)}${pwFields}<button class="btn" id="lb" type="submit">Daftar</button>`, () => {
+  lstep(`<p class="note" style="text-align:left">${pre.nama ? `Nomor terverifikasi. Anda sudah didata di BPN${pre.nama ? ` sebagai <b>${esc(pre.nama)}</b>` : ''}; isi data singkat berikut dan buat password.` : 'Nomor terverifikasi, tetapi belum ada di data BPN. Isi data singkat berikut dan buat password.'}</p>${profilSederhana(kus, pre)}${pwFields}<button class="btn" id="lb" type="submit">Daftar</button>`, () => {
     $('#lf').onsubmit = async (ev) => { ev.preventDefault(); busy($('#lb'), true); lerr(''); const v = (id) => $('#' + id).value;
-      try { const j = await post('/api/akses', { action: 'simpan', grant: LG.grant, password: v('p1'), ulang: v('p2'), profil: { nama: v('f_nama'), panggilan: v('f_pan'), jk: v('f_jk'), email: v('f_email'), keuskupan: v('f_kus'), tgl: v('f_tgl'), bln: v('f_bln'), thn: v('f_thn'), alamat: v('f_alamat') } }); await afterAuth(j); }
+      try { const j = await post('/api/akses', { action: 'simpan', grant: LG.grant, password: v('p1'), ulang: v('p2'), profil: { nama: v('f_nama'), jk: v('f_jk'), keuskupan: v('f_kus') } }); await afterAuth(j); }
       catch (e) { lerr(e.message); busy($('#lb'), false); } };
   });
 }

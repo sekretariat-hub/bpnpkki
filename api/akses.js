@@ -56,7 +56,7 @@ module.exports = async (req, res) => {
       const person = tujuan === 'daftar' ? await personByWa(wa) : null;
       const grant = sign({ k: 'grant', wa, tujuan, exp: Date.now() + 15 * 60 * 1000 });
       const jk = person && person.fields[PF.jk] && (person.fields[PF.jk].name || person.fields[PF.jk]);
-      return res.json({ ok: true, tujuan, grant, orang: person ? { nama: person.fields[PF.nama] || '', jk: jk || '' } : null, perluProfil: tujuan === 'daftar' && (!person || !PX.lengkap(person)) });
+      return res.json({ ok: true, tujuan, grant, orang: person ? { nama: person.fields[PF.nama] || '', jk: jk || '', kus: (person.fields[PF.dom] || [])[0] || '' } : null, perluProfil: tujuan === 'daftar' && (!person || !PX.lengkap(person)) });
     }
     if (b.action === 'simpan') {
       let g; try { g = verify(b.grant); } catch { g = null; }
@@ -74,15 +74,18 @@ module.exports = async (req, res) => {
       if (existing) return bad(res, 'Nomor ini sudah punya akun. Silakan masuk atau pakai Lupa password.', 409);
       let person = await personByWa(g.wa), nama, email;
       if (!person || !PX.lengkap(person)) {
+        // Pendaftaran awal sederhana: wajib nama, jenis kelamin, keuskupan. Sisanya dilengkapi nanti (ada pengingat di dalam sistem).
         const p = b.profil || {}, s = (v, n = 200) => String(v || '').trim().slice(0, n);
-        const tgl = +p.tgl, bln = +p.bln, thn = +p.thn;
-        const err = !s(p.nama) ? 'Nama lengkap wajib diisi' : !s(p.panggilan) ? 'Nama panggilan wajib diisi' : !['Pria', 'Wanita'].includes(p.jk) ? 'Pilih jenis kelamin'
-          : !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s(p.email)) ? 'Email tidak valid' : !/^rec[A-Za-z0-9]{14}$/.test(s(p.keuskupan)) ? 'Pilih keuskupan domisili'
-          : !(tgl >= 1 && tgl <= 31 && bln >= 1 && bln <= 12 && thn >= 1920 && thn <= new Date().getFullYear()) ? 'Tanggal lahir tidak valid' : '';
+        const domLama = person ? (person.fields[PF.dom] || [])[0] : '';
+        const kus = domLama || s(p.keuskupan); // keuskupan yang sudah tercatat (mis. dari BPK tempat PIC menjabat) dikunci
+        const tgl = +p.tgl, bln = +p.bln, thn = +p.thn, adaTgl = !!(p.tgl || p.bln || p.thn);
+        const err = !s(p.nama) ? 'Nama lengkap wajib diisi' : !['Pria', 'Wanita'].includes(p.jk) ? 'Pilih jenis kelamin'
+          : s(p.email) && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s(p.email)) ? 'Email tidak valid' : !/^rec[A-Za-z0-9]{14}$/.test(kus) ? 'Pilih keuskupan domisili'
+          : adaTgl && !(tgl >= 1 && tgl <= 31 && bln >= 1 && bln <= 12 && thn >= 1920 && thn <= new Date().getFullYear()) ? 'Tanggal lahir tidak valid' : '';
         if (err) return bad(res, err);
-        const flds = { [PF.nama]: s(p.nama), [PF.pan]: s(p.panggilan, 60), [PF.wa]: '+' + g.wa, [PF.jk]: p.jk, [PF.email]: s(p.email), [PF.dom]: [s(p.keuskupan)], [PF.tgl]: tgl, [PF.bln]: bln, [PF.thn]: thn, ...(s(p.alamat, 300) ? { [PF.alamat]: s(p.alamat, 300) } : {}) };
+        const flds = { [PF.nama]: s(p.nama), [PF.wa]: '+' + g.wa, [PF.jk]: p.jk, [PF.dom]: [kus], ...(s(p.panggilan, 60) ? { [PF.pan]: s(p.panggilan, 60) } : {}), ...(s(p.email) ? { [PF.email]: s(p.email) } : {}), ...(adaTgl ? { [PF.tgl]: tgl, [PF.bln]: bln, [PF.thn]: thn } : {}), ...(s(p.alamat, 300) ? { [PF.alamat]: s(p.alamat, 300) } : {}) };
         if (person) { delete flds[PF.wa]; await update(PERSON, person.id, flds); } else person = await create(PERSON, flds);
-        person = person; nama = s(p.nama); email = s(p.email).toLowerCase();
+        nama = s(p.nama); email = (s(p.email) || String((person.fields && person.fields[PF.email]) || '')).toLowerCase();
       } else { nama = person.fields[PF.nama] || g.wa; email = String(person.fields[PF.email] || '').toLowerCase(); }
       // Pejabat/PIC BPK yang aktif (didaftarkan koordinator) langsung disetujui, tidak perlu menunggu Admin.
       let setuju = false;
