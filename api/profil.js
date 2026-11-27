@@ -25,11 +25,11 @@ async function opsi() {
   if (Date.now() - OC.at < 5 * 60 * 1000 && OC.v) return OC.v;
   const [kus, pel, mod] = await Promise.all([
     fetchAll(BPK, ['fldxvUJvguk6J81mP']),
-    fetchAll(PEL, ['fldBHtlKeydYGUfPo']),
+    fetchAll(PEL, ['fldBHtlKeydYGUfPo', 'flduRyaRVWOYFqT9n']),
     fetchAll(MOD, ['fldocxJbZYt5nn9NS', 'fld04TLxwRqpdkS1V']),
   ]);
   const groups = new Map(); // pelayanan bernama sama digabung satu pilihan
-  pel.forEach((r) => { const n = s(r.fields.fldBHtlKeydYGUfPo); if (!n) return; const k = n.toLowerCase(); if (!groups.has(k)) groups.set(k, { id: r.id, nama: n, ids: [] }); groups.get(k).ids.push(r.id); });
+  pel.forEach((r) => { const n = s(r.fields.fldBHtlKeydYGUfPo); if (!n || r.fields.flduRyaRVWOYFqT9n) return; const k = n.toLowerCase(); if (!groups.has(k)) groups.set(k, { id: r.id, nama: n, ids: [] }); groups.get(k).ids.push(r.id); });
   const v = {
     keuskupan: kus.map((r) => ({ id: r.id, nama: s(r.fields.fldxvUJvguk6J81mP) })).filter((x) => x.nama).sort((a, b) => a.nama.localeCompare(b.nama, 'id')),
     pelayanan: [...groups.values()].sort((a, b) => a.nama.localeCompare(b.nama, 'id')),
