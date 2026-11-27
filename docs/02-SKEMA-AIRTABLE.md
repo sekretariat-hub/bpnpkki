@@ -27,6 +27,9 @@ Kode memakai **ID field**, bukan nama field. Jangan menghapus atau mengganti tip
 ## M-Person (field)
 nama `fldVU2gofcKEhWHmB` · WhatsApp `fldGsFt4GflTXoTa0` · panggilan `fldstVCm8Oa3tyxNA` · jenis kelamin `fld3A1rRGfWxbuase` · tgl/bln/thn lahir `fld6yev36uF0pzxcu`/`fldmCKGMF57RMV3tE`/`fldmTqYBcGuYVkkgM` · alamat `fldZC8crJW8pETX6J` · kota `fld9IxSm1629bESxL` · PD `fld3CxECAgWwecw77` · pelayanan `fldT8TCaA94MhNfri` · foto `fldIuYdJWnN77zoaT` · email `fldhjOTrQfLGC6hWj` · paroki `fldUTfjEjaznMj8m0` · ukuran baju `fldmI7S44OZMRVYJL` · modul diikuti `fldQaSUFxcYVFFKAX` · modul diajar `fldhP55DjyWd3Lpmb` · kategori `fldkvwhgXy1CgJYr1` · baptis `fldb4MKCMsEulvR7H` · krisma `fldjg2iLicQIr7Vh3` · bab `fldJJbI82Q4k6bVCg` (disembunyikan, `TAMPIL_BAB=false` di `lib/profil.js`) · keuskupan domisili `fldwJ7RnXW1nLaOcv` · usia `fldpIbuKfSaL6uJY2` · provinsi `fld74efY9G9hb6nIG`.
 
+## M-Pelayanan
+nama `fldBHtlKeydYGUfPo` · **Sembunyikan** (centang) `flduRyaRVWOYFqT9n`: pilihan yang dicentang tidak muncul di Profil dan Analitik (dipakai untuk pelayanan dobel yang datanya sudah dipindah; jangan dihapus). Nama yang sama di beberapa record digabung otomatis oleh kode.
+
 ## M-PDPKK
 nama `fldzIeY3YMiHMo4ky` · keuskupan `fldWcO7mYhPFpFXlA` · jenis `fldq43MYnCIKg34ts` · umat `fldYgMqtmX7AbHfU3` · koordinator PD (tautan ke M-Person) `fldxlRQG4ikb8coP2` · nama koordinator (lookup) `fldTkyK4Y7dGMpAXn`.
 
