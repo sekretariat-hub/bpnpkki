@@ -351,7 +351,7 @@ PAGES.profil = () => {
   const hid = location.hash.replace(/^#\/?/, '').split('/')[1] || '', pid = /^rec[A-Za-z0-9]{14}$/.test(hid) ? hid : '';
   if (!S.prof || S.prof.pid !== pid) {
     S.prof = { pid, loading: true };
-    fetch('/api/profil' + (pid ? '?id=' + pid : ''), { credentials: 'same-origin' }).then(async (r) => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Gagal memuat profil'); S.prof = { pid, ...j }; render(); })
+    fetch('/api/profil' + (pid ? '?id=' + pid : ''), { credentials: 'same-origin' }).then(async (r) => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Gagal memuat profil'); S.prof = { pid, ...j }; if (S.wantEdit && j.milik) S.prof.edit = true; S.wantEdit = false; render(); })
       .catch((e) => { S.prof = { pid, err: e.message }; render(); });
   }
   if (S.prof.loading) return '<div class="load"><div class="sp"></div><div>Memuat profil…</div></div>';
@@ -360,26 +360,52 @@ PAGES.profil = () => {
 };
 
 
-// Kartu "Login sebagai" (khusus Super Admin) di Profil Saya. Daftar pengguna dimuat sekali saat kartu tampil.
-function profilImp() {
-  setTimeout(async () => {
-    const sel = $('#impsel'); if (!sel || sel.dataset.ok) return;
+// "Login sebagai" (khusus Super Admin): dibuka dari menu nama di sidebar. Daftar pengguna dimuat sekali.
+function bukaImp() {
+  modal(`<h2 style="margin:0 0 6px">Login sebagai</h2><p class="note" style="margin:0 0 14px">Lihat sistem seperti pengguna lain. Perubahan yang Anda buat tersimpan atas nama Anda, bukan nama mereka.</p><div class="q"><label>Pilih pengguna</label><select id="impsel"><option>Memuat…</option></select></div><button class="btn" id="impgo" type="button" style="margin-top:14px" disabled>Lihat sebagai</button>`);
+  (async () => {
+    const sel = $('#impsel');
     try {
       if (!ADM) { const j = await fetch('/api/admin', { credentials: 'same-origin' }).then((r) => r.json()); if (j.error) throw new Error(j.error); ADM = j; }
-      sel.dataset.ok = '1'; sel.innerHTML = '<option value="">— pilih pengguna —</option>' + ADM.users.filter((u) => u.aktif && !u.roles.includes('Super Admin')).map((u) => `<option value="${esc(u.id)}">${esc(u.nama)}</option>`).join('');
+      sel.innerHTML = '<option value="">— pilih pengguna —</option>' + ADM.users.filter((u) => u.aktif && !u.roles.includes('Super Admin')).map((u) => `<option value="${esc(u.id)}">${esc(u.nama)}</option>`).join('');
       $('#impgo').disabled = false;
     } catch (e) { sel.innerHTML = `<option>${esc(e.message)}</option>`; }
-    $('#impgo').onclick = async (e) => { if (!$('#impsel').value) return; e.target.disabled = true; try { await loginSebagai($('#impsel').value); } catch (x) { alert(x.message); e.target.disabled = false; } };
-  });
-  return `<div class="card" style="margin-bottom:16px"><h3>Login sebagai<small>khusus Super Admin: lihat sistem seperti pengguna lain. Perubahan yang Anda buat tersimpan atas nama Anda, bukan nama mereka.</small></h3><div class="filters" style="margin:0"><div class="q"><label>Pilih pengguna</label><select id="impsel"><option>Memuat…</option></select></div><div><label>&nbsp;</label><button class="btn" id="impgo" type="button" disabled>Lihat sebagai</button></div></div></div>`;
+    $('#impgo').onclick = async (e) => { if (!$('#impsel').value) return; e.target.disabled = true; try { await loginSebagai($('#impsel').value); closeModal(); } catch (x) { alert(x.message); e.target.disabled = false; } };
+  })();
 }
+// Menu nama di sidebar: Profil Saya, Ubah profil, Login sebagai (Super Admin), Keluar.
+function meMenu() {
+  const m = $('#memenu'), u = D.user, imp = u.superAdmin && !u.imp;
+  m.innerHTML = `<button type="button" data-a="profil" role="menuitem">Profil Saya</button><button type="button" data-a="ubah" role="menuitem">✏️ Ubah profil</button>${imp ? '<button type="button" data-a="imp" role="menuitem">👁 Login sebagai…</button>' : ''}<hr><button type="button" class="out" data-a="keluar" role="menuitem">Keluar</button>`;
+}
+const meTutup = () => { $('#memenu')?.classList.add('hide'); $('#me')?.setAttribute('aria-expanded', 'false'); };
+function meToggle(e) {
+  if (e) e.stopPropagation();
+  const m = $('#memenu'), buka = m.classList.contains('hide');
+  meTutup(); if (!buka) return;
+  meMenu(); m.classList.remove('hide'); $('#me').setAttribute('aria-expanded', 'true');
+}
+async function keluar() { await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); showLogin(); }
+$('#me').addEventListener('click', meToggle);
+$('#me').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); meToggle(); } if (e.key === 'Escape') meTutup(); });
+document.addEventListener('click', (e) => { if (!e.target.closest('#memenu')) meTutup(); });
+$('#memenu').addEventListener('click', async (e) => {
+  const a = e.target.closest('button')?.dataset.a; if (!a) return; meTutup();
+  if (a === 'keluar') return keluar();
+  if (a === 'imp') return bukaImp();
+  if (a === 'profil') { location.hash = '#/profil'; $('#side').classList.remove('open'); return; }
+  if (a === 'ubah') {
+    $('#side').classList.remove('open');
+    if (/^#\/profil(\/|$)/.test(location.hash) && S.prof && S.prof.milik && !S.prof.loading) { S.prof.edit = true; render(); return; }
+    S.wantEdit = true; if (/^#\/profil(\/|$)/.test(location.hash)) { S.prof = null; render(); } else location.hash = '#/profil';
+  }
+});
 function profilView() {
   const P = S.prof, p = P.profil, o = P.opsi;
   const pel = p.pelayanan.map((id) => nmOf(o.pelayanan, id)), ajar = pel.some((n) => PENGAJAR.test(n));
   const lahir = p.tgl && p.bln && p.thn ? `${p.tgl} ${Object.values(BLN)[p.bln - 1]} ${p.thn}` : '';
   const list = (a) => (a.length ? `<div class="chips">${a.map((x) => chip(x, 'blue')).join('')}</div>` : '');
-  const impKartu = D.user.superAdmin && !D.user.imp && P.milik ? profilImp() : '';
-  return `${impKartu}${P.milik ? '' : `<div class="warnbox" style="margin-bottom:16px">Anda melihat profil <b>${esc(p.nama)}</b> sebagai Admin/Editor.</div>`}
+  return `${P.milik ? '' : `<div class="warnbox" style="margin-bottom:16px">Anda melihat profil <b>${esc(p.nama)}</b> sebagai Admin/Editor.</div>`}
   ${P.kurang.length ? `<div class="warnbox" style="margin-bottom:16px"><b>${P.milik ? 'Profil Anda' : 'Profil ini'} belum lengkap.</b> Yang masih perlu diisi:<ul>${P.kurang.map((x) => `<li>${esc(x)}</li>`).join('')}</ul><button class="btn" id="prled" style="width:auto;margin:0">Lengkapi sekarang</button></div>` : '<div class="okmsg" style="margin-bottom:16px">✓ Data profil sudah lengkap.</div>'}
   <div class="card"><div class="phead">${p.foto ? `<img class="pfoto" src="${esc(p.foto)}" alt="Foto ${esc(p.nama)}">` : `<div class="pfoto" style="display:grid;place-items:center;background:${hue(p.nama)};color:#fff;font-size:32px;font-weight:700">${esc(initials(p.nama))}</div>`}
     <div style="flex:1;min-width:200px"><h2 style="margin:0">${esc(p.nama)}</h2><div class="sub">${esc(p.pan ? 'Dipanggil ' + p.pan : '')}</div><div class="chips" style="margin-top:8px">${p.kategori ? chip(p.kategori, 'violet') : ''}${ajar ? chip('Pewarta / Pengajar', 'teal') : ''}</div></div>
@@ -1271,7 +1297,7 @@ function render() {
   $('#ptitle').textContent = menu.label; $('#psub').textContent = menu.sub;
   $('#tabs').innerHTML = menu.tabs ? tabs.map(([id, l]) => `<a href="#/${menu.id}/${id}" class="${id === tab ? 'on' : ''}">${esc(l)}</a>`).join('') : '';
   const fn = PAGES[tab ? `${menu.id}/${tab}` : menu.id];
-  $('#meprof')?.classList.toggle('on', menu.id === 'profil');
+  $('#me')?.classList.toggle('on', menu.id === 'profil');
   if (menu.id !== 'profil') S.prof = null;
   $('#page').innerHTML = (menu.id === 'profil' ? '' : bannerPr()) + (fn ? fn() : '<div class="empty">Halaman tidak ditemukan.</div>');
   $('#done')?.addEventListener('change', (e) => { S.showDone = e.target.checked; render(); });
@@ -1373,7 +1399,6 @@ function stepPending(nama) {
 }
 async function afterAuth(j) { if (j && j.pending) return stepPending(); await load(); }
 $('#rf').onclick = async () => { $('#rf').disabled = true; $('#rf').textContent = 'Memuat…'; await load(true); $('#rf').disabled = false; $('#rf').textContent = 'Muat ulang'; };
-$('#lo').onclick = async () => { await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); showLogin(); };
 $('#pwbtn')?.addEventListener('click', () => showChangePw(false));
 $('#burger').onclick = () => $('#side').classList.toggle('open');
 (async () => {
