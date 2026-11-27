@@ -426,6 +426,30 @@ async function ringkasPr() {
   try { const r = await fetch('/api/profil?act=ringkas', { credentials: 'same-origin' }); if (!r.ok || !D) return; const j = await r.json(); const was = JSON.stringify(D.pr || null); D.pr = j; if (JSON.stringify(j) !== was) render(); } catch { /* abaikan */ }
 }
 const bannerPr = () => (D && D.pr && D.pr.kurang && D.pr.kurang.length ? `<div class="warnbox" style="margin-bottom:16px"><b>Profil Anda belum lengkap.</b> Mohon lengkapi: ${D.pr.kurang.map((x) => esc(x)).join(', ')}. <a href="#/profil" style="font-weight:700">Lengkapi sekarang →</a></div>` : '');
+// Atur posisi foto: geser dan perbesar/perkecil di bingkai persegi, hasilnya dipotong persegi supaya tidak terpotong lagi di avatar.
+const aturFoto = (file) => new Promise((ok, no) => {
+  const img = new Image(), u = URL.createObjectURL(file), V = 300, OUT = 800;
+  img.onerror = () => { URL.revokeObjectURL(u); no(new Error('Foto tidak bisa dibaca')); };
+  img.onload = () => {
+    const fit = Math.min(V / img.width, V / img.height), cover = Math.max(V / img.width, V / img.height);
+    let s = cover, ox = (V - img.width * s) / 2, oy = (V - img.height * s) / 2, zmax = cover * 3;
+    modal(`<h2 style="margin:0 0 6px">Atur posisi foto</h2><p class="note" style="margin:0 0 10px">Geser foto agar wajah di tengah, dan gunakan penggeser untuk memperbesar atau memperkecil. Bingkai bulat menunjukkan tampilan di avatar.</p>
+      <div style="display:flex;justify-content:center"><div style="position:relative;width:${V}px;height:${V}px;touch-action:none"><canvas id="aft" width="${V}" height="${V}" style="border-radius:14px;border:1px solid var(--line);cursor:grab;width:${V}px;height:${V}px"></canvas><div style="position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 999px rgba(255,255,255,.55);pointer-events:none"></div></div></div>
+      <input id="afz" type="range" min="${fit}" max="${zmax}" step="0.001" value="${s}" style="width:100%;margin:12px 0"><div class="acts" style="justify-content:center"><button class="btn" id="afok" type="button" style="width:auto">Gunakan foto</button><button class="ghost" id="afx" type="button">Batal</button></div>`);
+    const c = $('#aft'), g = c.getContext('2d');
+    const gambar = (ctx, k, w) => { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, w); ctx.drawImage(img, ox * k, oy * k, img.width * s * k, img.height * s * k); };
+    const lukis = () => gambar(g, 1, V); lukis();
+    let drag = null;
+    c.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, ox, oy }; c.setPointerCapture(e.pointerId); c.style.cursor = 'grabbing'; });
+    c.addEventListener('pointermove', (e) => { if (!drag) return; ox = drag.ox + e.clientX - drag.x; oy = drag.oy + e.clientY - drag.y; lukis(); });
+    c.addEventListener('pointerup', () => { drag = null; c.style.cursor = 'grab'; });
+    $('#afz').addEventListener('input', (e) => { const n = Number(e.target.value), cx = V / 2, cy = V / 2; ox = cx - ((cx - ox) / s) * n; oy = cy - ((cy - oy) / s) * n; s = n; lukis(); });
+    const tutup = () => { URL.revokeObjectURL(u); closeModal(); };
+    $('#afx').onclick = () => { tutup(); ok(null); };
+    $('#afok').onclick = () => { const o = document.createElement('canvas'); o.width = o.height = OUT; gambar(o.getContext('2d'), OUT / V, OUT); tutup(); ok(o.toDataURL('image/jpeg', 0.88)); };
+  };
+  img.src = u;
+});
 const resizeImg = (file, max = 900) => new Promise((ok, no) => { const img = new Image(), u = URL.createObjectURL(file); img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u); ok(c.toDataURL('image/jpeg', 0.85)); }; img.onerror = () => no(new Error('Foto tidak bisa dibaca')); img.src = u; });
 const profUrl = (extra) => '/api/profil' + (S.prof && S.prof.pid ? '?id=' + S.prof.pid + (extra ? '&' + extra : '') : extra ? '?' + extra : '');
 const nmOf = (list, id) => (list.find((x) => x.id === id) || {}).nama || '';
@@ -584,8 +608,8 @@ function bindProfil() {
   f.querySelectorAll('input[name=pel]').forEach((c) => c.addEventListener('change', () => { $('#pf_ajar').style.display = [...f.querySelectorAll('input[name=pel]:checked')].some((x) => PENGAJAR.test(x.dataset.n)) ? '' : 'none'; }));
   $('#pf_batal').onclick = () => { S.prof.edit = false; render(); };
   $('#pf_file').addEventListener('change', async (ev) => {
-    const file = ev.target.files[0]; if (!file) return; $('#pf_fe').textContent = 'Mengunggah…';
-    try { const j = await post('/api/profil', { act: 'foto', id: P.pid || undefined, file: await resizeImg(file) }); AN = null; Object.assign(S.prof, { profil: j.profil, kurang: j.kurang }); if (P.milik && D) D.pr = { kurang: j.kurang, lengkap: !j.kurang.length }; $('#pf_img').outerHTML = `<img class="pfoto" id="pf_img" src="${esc(j.profil.foto)}" alt="">`; $('#pf_fe').textContent = '✓ Foto tersimpan'; }
+    const file = ev.target.files[0]; if (!file) return; $('#pf_fe').textContent = '';
+    try { const dataUrl = await aturFoto(file); ev.target.value = ''; if (!dataUrl) return; $('#pf_fe').textContent = 'Mengunggah…'; const j = await post('/api/profil', { act: 'foto', id: P.pid || undefined, file: dataUrl }); AN = null; Object.assign(S.prof, { profil: j.profil, kurang: j.kurang }); if (P.milik && D) D.pr = { kurang: j.kurang, lengkap: !j.kurang.length }; $('#pf_img').outerHTML = `<img class="pfoto" id="pf_img" src="${esc(j.profil.foto)}" alt="">`; $('#pf_fe').textContent = '✓ Foto tersimpan'; }
     catch (e) { $('#pf_fe').textContent = e.message; }
   });
   $('#pf_pdb').addEventListener('click', (ev) => { ev.preventDefault(); formPdBaru(v('kus'), (j) => { if (!cbPd.items.some((x) => x.id === j.pd.id)) cbPd.items.unshift({ id: j.pd.id, nama: j.pd.nama, label: j.pd.nama, cari: j.pd.nama.toLowerCase() }); cbPd.enable(true, 'Ketik untuk mencari PD…'); cbPd.pick(j.pd.id); }); });
