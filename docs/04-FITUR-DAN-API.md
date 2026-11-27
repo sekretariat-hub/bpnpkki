@@ -1,23 +1,19 @@
 # Fitur, menu, dan API
 
-## Menu (sidebar; sub-menu berupa tab)
-| Menu | Tab | Isi |
-|---|---|---|
-| Dashboard | – | Ringkasan program, agenda, tugas |
-| Program Kerja | Per Keuskupan · Semua Program · Ringkasan & Grafik · Syarat ACC | Proker BPK/BPN, edit bagi yang berhak |
-| Pengurus BPN | – | Jabatan, pemegang, ganti/akhiri jabatan, riwayat |
-| Koordinator PD | Daftar PD · Ringkasan | PD per keuskupan, koordinator PD |
-| Tim Kerja BPN | Bagan · Daftar | Anggota tim per seksi/bidang |
-| Pendataan PIC | – | Formulir pejabat BPK/PIC per keuskupan (dengan penjelasan centang penggantian) |
-| Modul Berjenjang | Ringkasan · Per Modul · Peserta Lulus · Pengajar | Retret berjenjang: peserta lulus ("pernah diikuti" = lulus), pengajar, sebaran per keuskupan, filter, klik untuk detail |
-| Data Umat | Infografis · Daftar Umat | Infografis klik-lihat (JK, usia, kategori, sakramen, ukuran baju, keuskupan, provinsi, pelayanan, PD, kelengkapan profil) dan daftar dengan filter |
-| Laporan | Pleno · TC SHDR · Kepemudaan | Laporan agregat |
-| Learning System | Kelola TC · Pengajar (Peserta, Laporan BPK menyusul) | TC + learning path + tautan pendaftaran; progres kelompok, nilai bab, kelulusan, komentar, catatan akhir untuk BPK. Data di base Schole. Lihat `06-LEARNING-SYSTEM.md` |
-| Administrasi | Pengguna · Role & Hak Akses | Kelola akun dan role (hanya Admin/Super Admin) |
-| Profil Saya | – | Lihat/ubah profil, foto, PD (cari), paroki, pelayanan, modul diikuti/diajar; kotak peringatan jika data belum lengkap. Admin/Editor bisa membuka profil orang lain (`#/profil/<personId>`) |
+## Menu (sidebar berkelompok; sub-menu berupa tab)
+| Kelompok | Menu | Tab | Isi |
+|---|---|---|---|
+| – | Dashboard | – | Pribadi: tugas saya, program dan tugas seksi saya, agenda. Admin/pengurus tanpa seksi melihat ringkasan umum |
+| PROGRAM | Program Kerja | Per Keuskupan · Semua Program · Ringkasan & Grafik · Syarat ACC | Proker BPK/BPN, edit bagi yang berhak (kartu angka termasuk "Program sedang berjalan") |
+| PROGRAM | Laporan | Pleno · TC SHDR · Kepemudaan | Laporan agregat |
+| ORGANISASI | Organisasi | Tim Saya · Bagan Tim Saya · Bagan Seluruh Tim · Daftar Pengurus BPN · Daftar Anggota Tim | Gabungan Pengurus BPN dan Tim Kerja. Tab Tim Saya dan Bagan Tim Saya hanya untuk yang punya seksi. Pemimpin di bagan bisa diklik menuju Daftar Pengurus |
+| DATA | Data Umat | Infografis · Daftar Umat | Infografis klik-lihat dan daftar dengan filter |
+| DATA | Koordinator PD | Daftar PD · Ringkasan | PD per keuskupan (ringkasan memuat kartu "BPK di Indonesia") |
+| DATA | Pendataan PIC | – | Formulir pejabat BPK/PIC per keuskupan |
+| BELAJAR | Belajar | Belajar · Diskusi · Daftar TC · Dasbor · Pendaftar · Laporan BPK · Kelola TC · Pengajar · Modul: Ringkasan · Daftar Modul · Modul: Per Modul · Modul: Peserta Lulus · Modul: Pengajar | Learning System digabung Modul Berjenjang |
+| (menu nama) | Profil Saya, Ubah profil, Login sebagai (Super Admin), Administrasi (Admin), Keluar | | Klik nama di kiri bawah. Administrasi (Pengguna · Role & Hak Akses) tidak lagi di sidebar |
 
-## API Learning System
-`GET/POST /api/report?ls=<aksi>` (di `api/report.js` → `lib/ls.js`): `tclist`, `tcsave`, `materisave`, `babsave`, `pengajar`, `nilai`, `lulus`, `komentar`.
+Hak akses tetap memakai kunci lama (`pengurus`, `tim/*`, `modul/*`, `ls/*`, `admin/*`). Tab menu mendefinisikan `[id, label, kunciHak, kunciHalaman, hanyaUntukPunyaSeksi]` di `MENU` (`public/app.js`). Alamat lama (`#/pengurus`, `#/tim/...`, `#/modul/...`) dialihkan oleh `ALIAS` di `migrasiHash()`.
 
 ## File kode
 - `api/login.js`, `logout.js`, `password.js`, `akses.js`, `invite.js` — masuk, keluar, ganti password, alur OTP/pendaftaran, undangan.

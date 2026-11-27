@@ -136,7 +136,7 @@ async function build() {
     })),
     bpkList: bpk.map((r) => ({ id: r.id, nama: String(r.fields.fldxvUJvguk6J81mP || '').trim(), status: first(r.fields.fldcvLPHh5A9E3S0G), aktif: !!r.fields.fldvPkDbxZn38WFrJ, lat: r.fields.fldphfJk5nqDLTGB6 ?? null, lng: r.fields.flde1x6UBt0lZ9oc6 ?? null })),
     event: event.filter((r) => r.fields.fldqLzgGmTFR7CkMV).map((r) => ({ id: r.id, nama: r.fields.flduBRbHd5qS10GGC || '', tanggal: r.fields.fldqLzgGmTFR7CkMV, status: first(r.fields.fld4fFsOg9vwjxzYw) })),
-    tugas: task.map((r) => ({ id: r.id, nama: String(r.fields.fldry0ymZWhzbsvN7 || '').trim(), status: first(r.fields.fldFTszJpZtVvuBRs), prioritas: first(r.fields.fldPliH590gA6RsPc), tenggat: r.fields.fldXsegGJCM9Rk065 || '', seksi: L(r.fields.fldQ62QG6uFvzHHBx), penanggungjawab: person(r.fields.fldNwimQQb6Ms1Rhv).map((p) => p.nama) })),
+    tugas: task.map((r) => ({ id: r.id, nama: String(r.fields.fldry0ymZWhzbsvN7 || '').trim(), status: first(r.fields.fldFTszJpZtVvuBRs), prioritas: first(r.fields.fldPliH590gA6RsPc), tenggat: r.fields.fldXsegGJCM9Rk065 || '', seksi: L(r.fields.fldQ62QG6uFvzHHBx), penanggungjawab: person(r.fields.fldNwimQQb6Ms1Rhv).map((p) => p.nama), pj: person(r.fields.fldNwimQQb6Ms1Rhv).map((p) => p.id) })),
   };
   return out;
 }
@@ -236,7 +236,7 @@ module.exports = async (req, res) => {
     if (acc.bpkIds) scopeNames = new Set(d.bpkList.filter((b) => acc.bpkIds.includes(b.id)).map((b) => b.nama));
     const inScope = (arr) => !scopeNames || arr.some((n) => scopeNames.has(n));
     const body = {
-      user: { nama: acc.tampil || acc.nama, email: acc.email, superAdmin: !!acc.superAdmin, imp: acc.imp || null, tim: timScope(acc, d), level: acc.peran, peran: acc.peran, scope: scopeNames ? [...scopeNames] : null, seksiEdit: acc.seksiEdit },
+      user: { nama: acc.tampil || acc.nama, pid: acc.pid || '', email: acc.email, superAdmin: !!acc.superAdmin, imp: acc.imp || null, tim: timScope(acc, d), level: acc.peran, peran: acc.peran, scope: scopeNames ? [...scopeNames] : null, seksiEdit: acc.seksiEdit },
       perm: P, opsi: OPSI(d.proker), generatedAt: d.generatedAt, today: d.today,
       pewartaList: ok('dashboard') && !scopeNames ? d.pewartaList : [],
       kpis: ok('dashboard') ? d.kpis : { bpk: { now: 0, prev: 0, total: 0 }, pdpkk: { now: 0, prev: 0 }, pewarta: null },

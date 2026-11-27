@@ -40,18 +40,16 @@ const I = {
   key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/>',
 };
 const MENU = [
-  { id: 'dashboard', label: 'Dashboard', icon: I.home, sub: 'Agenda terdekat dan angka kunci', c: '#3B82F6' },
-  { id: 'proker', label: 'Program Kerja', icon: I.clip, sub: 'Program kerja BPN untuk Keuskupan', c: '#F5A524', tabs: [['keuskupan', 'Per Keuskupan'], ['semua', 'Semua Program'], ['ringkasan', 'Ringkasan & Grafik'], ['acc', 'Syarat ACC']] },
+  { id: 'dashboard', label: 'Dashboard', icon: I.home, sub: 'Ringkasan tugas, program, dan agenda untuk Anda', c: '#3B82F6' },
+  { g: 'PROGRAM', id: 'proker', label: 'Program Kerja', icon: I.clip, sub: 'Program kerja BPN untuk Keuskupan', c: '#F5A524', tabs: [['keuskupan', 'Per Keuskupan'], ['semua', 'Semua Program'], ['ringkasan', 'Ringkasan & Grafik'], ['acc', 'Syarat ACC']] },
+  { g: 'PROGRAM', id: 'laporan', label: 'Laporan', icon: I.chart, sub: 'Ringkasan kegiatan', c: '#34C28A', tabs: [['pleno', 'Pleno & Golden Jubilee'], ['tc', 'TC SHDR'], ['kepemudaan', 'Kepemudaan']] },
   { id: 'profil', label: 'Profil Saya', icon: I.star, sub: 'Lihat dan lengkapi data diri Anda', c: '#E0661A', always: true, hide: true },
-  { id: 'pengurus', label: 'Pengurus BPN', icon: I.star, sub: 'Susunan pengurus BPN', c: '#8B7CF6' },
-  { id: 'pd', label: 'Koordinator PD', icon: I.pd, sub: 'Persekutuan Doa dan koordinatornya', c: '#14B8A6', tabs: [['daftar', 'Daftar PD'], ['ringkasan', 'Ringkasan']] },
-  { id: 'tim', label: 'Tim Kerja BPN', icon: I.team, sub: 'Siapa saja yang bertugas di BPN', c: '#FF7A6B', tabs: [['saya', 'Tim Saya'], ['bagan', 'Bagan Tim Aktif'], ['daftar', 'Daftar Tim Kerja']] },
-  { id: 'modul', label: 'Modul Berjenjang', icon: I.book, sub: 'Retret berjenjang BPN: peserta lulus, pengajar, dan sebarannya', c: '#7C5CE0', tabs: [['ringkasan', 'Ringkasan'], ['permodul', 'Per Modul'], ['peserta', 'Peserta Lulus'], ['pengajar', 'Pengajar']] },
-  { id: 'umat', label: 'Data Umat', icon: I.pd, sub: 'Profil umat yang terdaftar di sistem BPN', c: '#0EA5A4', tabs: [['ringkasan', 'Infografis'], ['daftar', 'Daftar Umat']] },
-  { id: 'pendataan', label: 'Pendataan PIC', icon: I.pd, sub: 'Pejabat dan PIC di setiap BPK, lengkap dengan riwayatnya', c: '#E0661A' },
-  { id: 'laporan', label: 'Laporan', icon: I.chart, sub: 'Ringkasan kegiatan', c: '#34C28A', tabs: [['pleno', 'Pleno & Golden Jubilee'], ['tc', 'TC SHDR'], ['kepemudaan', 'Kepemudaan']] },
-  { id: 'ls', label: 'Learning System', icon: I.book, sub: 'TC, learning path, dan penilaian pengajar', c: '#6D28D9', tabs: [['peserta', 'Belajar'], ['diskusi', 'Diskusi'], ['daftar', 'Daftar TC'], ['dasbor', 'Dasbor'], ['pendaftar', 'Pendaftar'], ['laporan', 'Laporan BPK'], ['tc', 'Kelola TC'], ['pengajar', 'Pengajar']] },
-  { id: 'admin', label: 'Administrasi', icon: I.key, sub: 'Kelola pengguna dan hak akses', c: '#6B7A99', tabs: [['pengguna', 'Pengguna'], ['role', 'Role & Hak Akses']] },
+  { g: 'ORGANISASI', id: 'org', label: 'Organisasi', icon: I.team, sub: 'Tim, bagan, dan pengurus BPN', c: '#FF7A6B', tabs: [['saya', 'Tim Saya', 'tim/saya', 'tim/saya', 1], ['bagansaya', 'Bagan Tim Saya', 'tim/bagan', 'org/bagansaya', 1], ['bagan', 'Bagan Seluruh Tim', 'tim/bagan', 'tim/bagan'], ['pengurus', 'Daftar Pengurus BPN', 'pengurus', 'pengurus'], ['daftar', 'Daftar Anggota Tim', 'tim/daftar', 'tim/daftar']] },
+  { g: 'DATA', id: 'umat', label: 'Data Umat', icon: I.pd, sub: 'Profil umat yang terdaftar di sistem BPN', c: '#0EA5A4', tabs: [['ringkasan', 'Infografis'], ['daftar', 'Daftar Umat']] },
+  { g: 'DATA', id: 'pd', label: 'Koordinator PD', icon: I.pd, sub: 'Persekutuan Doa dan koordinatornya', c: '#14B8A6', tabs: [['daftar', 'Daftar PD'], ['ringkasan', 'Ringkasan']] },
+  { g: 'DATA', id: 'pendataan', label: 'Pendataan PIC', icon: I.pd, sub: 'Pejabat dan PIC di setiap BPK, lengkap dengan riwayatnya', c: '#E0661A' },
+  { g: 'BELAJAR', id: 'ls', label: 'Belajar', icon: I.book, sub: 'Learning System (TC, learning path, penilaian pengajar) dan Modul Berjenjang', c: '#6D28D9', tabs: [['peserta', 'Belajar'], ['diskusi', 'Diskusi'], ['daftar', 'Daftar TC'], ['dasbor', 'Dasbor'], ['pendaftar', 'Pendaftar'], ['laporan', 'Laporan BPK'], ['tc', 'Kelola TC'], ['pengajar', 'Pengajar'], ['m-ringkasan', 'Modul: Ringkasan', 'modul/ringkasan', 'modul/ringkasan'], ['m-daftar', 'Daftar Modul', 'modul/permodul', 'modul/daftar'], ['m-permodul', 'Modul: Per Modul', 'modul/permodul', 'modul/permodul'], ['m-peserta', 'Modul: Peserta Lulus', 'modul/peserta', 'modul/peserta'], ['m-pengajar', 'Modul: Pengajar', 'modul/pengajar', 'modul/pengajar']] },
+  { id: 'admin', hide: true, label: 'Administrasi', icon: I.key, sub: 'Kelola pengguna dan hak akses', c: '#6B7A99', tabs: [['pengguna', 'Pengguna'], ['role', 'Role & Hak Akses']] },
 ];
 
 /* ===== komponen ===== */
@@ -121,7 +119,7 @@ function bindFilters(cb) {
 }
 function prokerKpis(rows) {
   const ok = rows.filter(lolos).length;
-  return `<div class="grid g4" style="margin-bottom:16px">${kpi('Program kerja', rows.length, { c: 'var(--navy)', t: 'var(--blue-t)', go: () => openDrill('Program kerja', rows, C.proker) })}${kpi('Anggaran dari BPN', 0, { c: '#9A6200', t: 'var(--amber-t)', go: () => openDrill('Program kerja berdasarkan anggaran', rows.filter((p) => p.anggaran).sort((a, b) => b.anggaran - a.anggaran), C.proker) }).replace('>0<', `>${rpShort(sum(rows, (p) => p.anggaran))}<`)}${kpi('Keuskupan dilayani', uniq(rows.flatMap((p) => p.penerima)).length, { c: '#0B8277', t: 'var(--teal-t)', go: () => openDrill('Keuskupan yang dilayani', count(rows, (p) => p.penerima).map((x) => ({ nama: x.label, n: x.value })), [['Keuskupan', (x) => `<b>${esc(x.nama)}</b>`], ['Jumlah program', (x) => x.n]]) })}${kpi('Memenuhi syarat ACC', ok, { c: '#13805A', t: 'var(--green-t)', note: S.pf.scope === 'resmi' ? 'Pelaksana BPK · Deal · ACC disetujui' : `${nf.format(rows.length - ok)} belum memenuhi`, go: () => openDrill('Program yang memenuhi syarat ACC', rows.filter(lolos), C.proker) })}</div>`;
+  return `<div class="grid g4" style="margin-bottom:16px">${kpi('Program kerja', rows.length, { c: 'var(--navy)', t: 'var(--blue-t)', go: () => openDrill('Program kerja', rows, C.proker) })}${kpi('Anggaran dari BPN', 0, { c: '#9A6200', t: 'var(--amber-t)', go: () => openDrill('Program kerja berdasarkan anggaran', rows.filter((p) => p.anggaran).sort((a, b) => b.anggaran - a.anggaran), C.proker) }).replace('>0<', `>${rpShort(sum(rows, (p) => p.anggaran))}<`)}${kpi('Keuskupan dilayani', uniq(rows.flatMap((p) => p.penerima)).length, { c: '#0B8277', t: 'var(--teal-t)', go: () => openDrill('Keuskupan yang dilayani', count(rows, (p) => p.penerima).map((x) => ({ nama: x.label, n: x.value })), [['Keuskupan', (x) => `<b>${esc(x.nama)}</b>`], ['Jumlah program', (x) => x.n]]) })}${kpi('Memenuhi syarat ACC', ok, { c: '#13805A', t: 'var(--green-t)', note: S.pf.scope === 'resmi' ? 'Pelaksana BPK · Deal · ACC disetujui' : `${nf.format(rows.length - ok)} belum memenuhi`, go: () => openDrill('Program yang memenuhi syarat ACC', rows.filter(lolos), C.proker) })}${kpi('Program sedang berjalan', rows.filter((p) => p.status === 'ON PROGRESS').length, { c: '#5B4CD1', t: 'var(--violet-t)', note: 'berstatus ON PROGRESS', go: () => openDrill('Program sedang berjalan', rows.filter((p) => p.status === 'ON PROGRESS'), C.proker) })}</div>`;
 }
 
 /* ===== PAGES ===== */
@@ -129,33 +127,31 @@ const PAGES = {};
 
 PAGES.dashboard = () => {
   const t = D.today, ym = t.slice(0, 7), now = new Date(t + 'T00:00:00');
-  const k = D.kpis, running = D.proker.filter((p) => p.status === 'ON PROGRESS');
+  const T0 = D.user.tim || {}, mine = !!(T0.ada && !T0.semua), P = mine ? D.proker.filter((p) => p.seksi.some((n) => T0.seksi.includes(n))) : D.proker, running = P.filter((p) => p.status === 'ON PROGRESS');
+  const saya = (x) => (x.pj || []).includes(D.user.pid) || (!D.user.pid && x.penanggungjawab.includes(D.user.nama)), seksiku = (x) => mine && x.seksi.some((n) => T0.seksi.includes(n));
+  const myOpen = D.tugas.filter((x) => saya(x) && x.status !== 'Selesai').sort((a, b) => (a.tenggat || '9999').localeCompare(b.tenggat || '9999')), seksiOpen = D.tugas.filter((x) => seksiku(x) && x.status !== 'Selesai');
   const nextYm = (n) => { const d = new Date(now.getFullYear(), now.getMonth() + n, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
   const win = [nextYm(0), nextYm(1), nextYm(2)];
   const pym = (p) => (p.tahun && p.bulanIdx >= 0 ? `${p.tahun}-${String(p.bulanIdx + 1).padStart(2, '0')}` : '');
-  const up = D.proker.filter((p) => win.includes(pym(p)) && p.acc === 'DISETUJUI' && !['SELESAI', 'DIBATALKAN'].includes(p.status));
+  const up = P.filter((p) => win.includes(pym(p)) && p.acc === 'DISETUJUI' && !['SELESAI', 'DIBATALKAN'].includes(p.status));
   const byM = by(up, pym);
   const events = D.event.filter((e) => e.tanggal >= t && e.status !== 'Done').sort((a, b) => cmp(a.tanggal, b.tanggal));
   const lim = new Date(now.getTime() + 30 * 864e5).toISOString().slice(0, 10);
-  const tasks = D.tugas.filter((x) => x.tenggat && x.tenggat >= t && x.tenggat <= lim && x.status !== 'Selesai').sort((a, b) => cmp(a.tenggat, b.tenggat));
+  const tasks = D.tugas.filter((x) => (!mine || saya(x) || seksiku(x)) && x.tenggat && x.tenggat >= t && x.tenggat <= lim && x.status !== 'Selesai').sort((a, b) => cmp(a.tenggat, b.tenggat));
   const dbox = (iso) => { const [, m, d] = iso.split('-'); return `<div class="date"><b>${+d}</b><span>${BLN3[+m - 1]}</span></div>`; };
   const fixed = [...events.map((e) => ({ d: e.tanggal, t: e.nama, s: 'Agenda BPN', tone: 'blue' })), ...tasks.map((x) => ({ d: x.tenggat, t: x.nama, s: `Tenggat tugas${x.seksi.length ? ' · ' + x.seksi[0] : ''}`, tone: 'coral' }))].sort((a, b) => cmp(a.d, b.d));
   const pLine = (p) => `<div class="tli prow" data-pid="${p.id}"><div style="flex:1;min-width:0"><div class="t">${esc(p.program || p.label)}${p.detil ? ` <span class="s">· ${esc(p.detil)}</span>` : ''}</div><div class="s">${p.penerima.length ? 'Dilayani: ' + esc(p.penerima.join(', ')) : 'Penerima belum diisi'}${p.pelaksana.length ? ' · Melayani: ' + esc(p.pelaksana.join(', ')) : ''}</div></div><div>${chip(p.metode || '—', 'blue')}</div></div>`;
-  return `<div class="hero"><div><h2>Halo, ${esc((D.user.nama || '').split(' ')[0])} 👋</h2><p>${esc(fdate(t))} · Semoga pelayanan hari ini berbuah.</p></div></div>
-  <div class="grid g4" style="margin-bottom:18px">
-    ${kpi('BPK di Indonesia', k.bpk.now, { c: '#1F56C4', t: 'var(--blue-t)', delta: k.bpk, note: `dari ${k.bpk.total} keuskupan terdata`, go: () => openPeta() })}
-    ${kpi('PDPKK terdaftar', k.pdpkk.now, { c: '#0B8277', t: 'var(--teal-t)', delta: k.pdpkk, go: () => openDrill('PDPKK terdaftar', [...D.pdpkk].sort((a, b) => cmp(a.keuskupan, b.keuskupan) || cmp(a.nama, b.nama)), C.pd) })}
-    ${kpi('Pewarta pengajar terdaftar', k.pewarta ? k.pewarta.now : 0, { c: '#9A6200', t: 'var(--amber-t)', delta: k.pewarta || { now: 0, prev: 0 }, go: () => openDrill('Pewarta pengajar terdaftar', D.pewartaList || [], C.orang) })}
-    ${kpi('Program sedang berjalan', running.length, { c: '#5B4CD1', t: 'var(--violet-t)', note: 'berstatus ON PROGRESS', go: () => openDrill('Program sedang berjalan', running, C.proker) })}
-  </div>
+  return `<div class="hero"><div><h2>Halo, ${esc((D.user.nama || '').split(' ')[0])} 👋</h2><p>${esc(fdate(t))} · Semoga pelayanan hari ini berbuah.${mine ? ` · Seksi Anda: ${esc(T0.seksi.map((n) => n.replace(/^Tim Kerja\s*/, '')).join(', '))}` : ''}</p></div></div>
+  ${mine || myOpen.length ? `<div class="grid g3" style="margin-bottom:18px">${kpi('Tugas saya', myOpen.length, { c: '#E0661A', t: 'var(--amber-t)', note: myOpen.length ? `${myOpen.filter((x) => x.tenggat && x.tenggat < t).length} lewat tenggat` : 'tidak ada tugas terbuka' })}${mine ? kpi('Program kerja seksi saya', P.length, { c: '#5B4CD1', t: 'var(--violet-t)', note: `${running.length} sedang berjalan`, go: () => openDrill('Program kerja seksi saya', P, C.proker) }) : ''}${mine ? kpi('Tugas seksi belum selesai', seksiOpen.length, { c: '#0B8277', t: 'var(--teal-t)', note: 'dari semua anggota seksi' }) : ''}</div>
+  ${myOpen.length ? `<div class="card" style="margin-bottom:18px"><h3>Tugas saya<small>belum selesai, urut tenggat</small></h3>${myOpen.slice(0, 8).map((x) => `<div class="tli"><div style="flex:1"><div class="t">${esc(x.nama)}</div><div class="s">${esc(x.seksi.join(', '))}${x.prioritas ? ' · ' + esc(x.prioritas) : ''}</div></div>${chip(x.status || 'Belum dimulai', x.status === 'Dalam proses' ? 'amber' : 'gray')}${x.tenggat ? chip(fdate(x.tenggat), x.tenggat < t ? 'coral' : 'blue') : ''}</div>`).join('')}</div>` : ''}` : ''}
   <div class="grid g2">
     <div class="card"><h3>Agenda terdekat<small>Tanggal pasti, 30 hari ke depan</small></h3>${fixed.length ? `<div class="tl">${fixed.map((x) => `<div class="tli">${dbox(x.d)}<div style="flex:1"><div class="t">${esc(x.t)}</div><div class="s">${esc(x.s)}</div></div>${chip(fdate(x.d), x.tone)}</div>`).join('')}</div>` : '<div class="empty">Belum ada agenda bertanggal dalam 30 hari ke depan.</div>'}
       <h3 style="margin-top:18px">Program kerja yang dijadwalkan<small>ACC disetujui, 3 bulan ke depan</small></h3>
       ${win.map((m) => `<div class="mh"><i></i>${monthLabel(m)} ${byM[m] ? chip(byM[m].length + ' program', 'blue') : ''}</div>${byM[m] ? byM[m].map(pLine).join('') : '<div class="empty" style="margin-bottom:6px">Tidak ada program terjadwal.</div>'}`).join('')}
     </div>
     <div class="card"><h3>Program kerja sedang berjalan</h3>${running.length ? running.map(pLine).join('') : `<div class="empty">Belum ada program berstatus ON PROGRESS.<br>Ubah status program di Airtable menjadi ON PROGRESS agar tampil di sini.</div>`}
-      <h3 style="margin-top:18px">Ringkas<small>seluruh program kerja</small></h3>
-      <div class="chips">${chip(D.proker.length + ' program', 'blue')}${chip(D.proker.filter((p) => p.status === 'SELESAI').length + ' selesai', 'green')}${chip(D.proker.filter((p) => p.status === 'BELUM DIMULAI').length + ' belum dimulai', 'gray')}${chip(D.proker.filter(lolos).length + ' memenuhi syarat ACC', 'teal')}${chip(rpShort(sum(D.proker, (p) => p.anggaran)) + ' anggaran', 'amber')}</div>
+      <h3 style="margin-top:18px">Ringkas<small>${mine ? 'program kerja seksi Anda' : 'seluruh program kerja'}</small></h3>
+      <div class="chips">${chip(P.length + ' program', 'blue')}${chip(P.filter((p) => p.status === 'SELESAI').length + ' selesai', 'green')}${chip(P.filter((p) => p.status === 'BELUM DIMULAI').length + ' belum dimulai', 'gray')}${chip(P.filter(lolos).length + ' memenuhi syarat ACC', 'teal')}${chip(rpShort(sum(D.proker, (p) => p.anggaran)) + ' anggaran', 'amber')}</div>
       <p class="note" style="margin-top:12px">Angka naik/turun dihitung dari tanggal data masuk ke Airtable dibanding awal bulan ini.</p></div>
   </div>`;
 };
@@ -376,7 +372,7 @@ function bukaImp() {
 // Menu nama di sidebar: Profil Saya, Ubah profil, Login sebagai (Super Admin), Keluar.
 function meMenu() {
   const m = $('#memenu'), u = D.user, imp = u.superAdmin && !u.imp;
-  m.innerHTML = `<button type="button" data-a="profil" role="menuitem">Profil Saya</button><button type="button" data-a="ubah" role="menuitem">✏️ Ubah profil</button>${imp ? '<button type="button" data-a="imp" role="menuitem">👁 Login sebagai…</button>' : ''}<hr><button type="button" class="out" data-a="keluar" role="menuitem">Keluar</button>`;
+  m.innerHTML = `<button type="button" data-a="profil" role="menuitem">Profil Saya</button><button type="button" data-a="ubah" role="menuitem">✏️ Ubah profil</button>${imp ? '<button type="button" data-a="imp" role="menuitem">👁 Login sebagai…</button>' : ''}${(D.perm.admin || 0) >= 1 ? '<button type="button" data-a="admin" role="menuitem">⚙ Administrasi</button>' : ''}<hr><button type="button" class="out" data-a="keluar" role="menuitem">Keluar</button>`;
 }
 const meTutup = () => { $('#memenu')?.classList.add('hide'); $('#me')?.setAttribute('aria-expanded', 'false'); };
 function meToggle(e) {
@@ -386,6 +382,7 @@ function meToggle(e) {
   meMenu(); m.classList.remove('hide'); $('#me').setAttribute('aria-expanded', 'true');
 }
 async function keluar() { await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); showLogin(); }
+$('#page').addEventListener('click', (e) => { const g = e.target.closest('[data-go]'); if (g) location.hash = g.dataset.go; });
 $('#me').addEventListener('click', meToggle);
 $('#me').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); meToggle(); } if (e.key === 'Escape') meTutup(); });
 document.addEventListener('click', (e) => { if (!e.target.closest('#memenu')) meTutup(); });
@@ -393,6 +390,7 @@ $('#memenu').addEventListener('click', async (e) => {
   const a = e.target.closest('button')?.dataset.a; if (!a) return; meTutup();
   if (a === 'keluar') return keluar();
   if (a === 'imp') return bukaImp();
+  if (a === 'admin') { location.hash = '#/admin/pengguna'; $('#side').classList.remove('open'); return; }
   if (a === 'profil') { location.hash = '#/profil'; $('#side').classList.remove('open'); return; }
   if (a === 'ubah') {
     $('#side').classList.remove('open');
@@ -546,7 +544,7 @@ PAGES['pd/daftar'] = () => {
 };
 PAGES['pd/ringkasan'] = () => {
   const r = D.pdpkk;
-  return `<div class="grid g4" style="margin-bottom:16px">${kpi('PDPKK terdaftar', r.length, { c: '#0B8277', t: 'var(--teal-t)', delta: D.kpis.pdpkk, go: () => openDrill('PDPKK terdaftar', r, C.pd) })}${kpi('Keuskupan memiliki PD', uniq(r.map((x) => x.keuskupan).filter(Boolean)).length, { c: '#1F56C4', t: 'var(--blue-t)', go: () => openDrill('Keuskupan memiliki PD', count(r, (x) => x.keuskupan || '(kosong)').map((x) => ({ nama: x.label, n: x.value })), [['Keuskupan', (x) => `<b>${esc(x.nama)}</b>`], ['Jumlah PD', (x) => x.n]]) })}${kpi('Koordinator', uniq(r.flatMap((x) => x.koordinator.map((k) => k.id))).length, { c: '#9A6200', t: 'var(--amber-t)', go: () => openDrill('Koordinator PD', uniq(r.flatMap((x) => x.koordinator.map((k) => k.id))).map((id) => { const k = r.flatMap((x) => x.koordinator).find((z) => z.id === id); return { ...k, keuskupan: k.keuskupan || '' }; }), C.orang) })}${kpi('PD tanpa koordinator', r.filter((x) => !x.koordinator.length).length, { c: '#C2362B', t: 'var(--coral-t)', go: () => openDrill('PD tanpa koordinator', r.filter((x) => !x.koordinator.length), C.pd) })}</div>
+  return `<div class="grid g4" style="margin-bottom:16px">${D.kpis && D.kpis.bpk ? kpi('BPK di Indonesia', D.kpis.bpk.now, { c: '#1F56C4', t: 'var(--blue-t)', delta: D.kpis.bpk, note: `dari ${D.kpis.bpk.total} keuskupan terdata`, go: () => openPeta() }) : ''}${kpi('PDPKK terdaftar', r.length, { c: '#0B8277', t: 'var(--teal-t)', delta: D.kpis.pdpkk, go: () => openDrill('PDPKK terdaftar', r, C.pd) })}${kpi('Keuskupan memiliki PD', uniq(r.map((x) => x.keuskupan).filter(Boolean)).length, { c: '#1F56C4', t: 'var(--blue-t)', go: () => openDrill('Keuskupan memiliki PD', count(r, (x) => x.keuskupan || '(kosong)').map((x) => ({ nama: x.label, n: x.value })), [['Keuskupan', (x) => `<b>${esc(x.nama)}</b>`], ['Jumlah PD', (x) => x.n]]) })}${kpi('Koordinator', uniq(r.flatMap((x) => x.koordinator.map((k) => k.id))).length, { c: '#9A6200', t: 'var(--amber-t)', go: () => openDrill('Koordinator PD', uniq(r.flatMap((x) => x.koordinator.map((k) => k.id))).map((id) => { const k = r.flatMap((x) => x.koordinator).find((z) => z.id === id); return { ...k, keuskupan: k.keuskupan || '' }; }), C.orang) })}${kpi('PD tanpa koordinator', r.filter((x) => !x.koordinator.length).length, { c: '#C2362B', t: 'var(--coral-t)', go: () => openDrill('PD tanpa koordinator', r.filter((x) => !x.koordinator.length), C.pd) })}</div>
   <div class="grid g2">${donut('Jenis PD', count(r, (x) => x.jenis || 'Belum diisi'), { rows: r, get: (x) => x.jenis || 'Belum diisi', cols: C.pd })}${bars('PD per keuskupan', count(r, (x) => x.keuskupan || '(kosong)'), { max: 15, drill: { rows: r, get: (x) => x.keuskupan || '(kosong)', cols: C.pd } })}</div>`;
 };
 
@@ -614,17 +612,20 @@ PAGES['tim/daftar'] = () => {
   const o = (a) => a.filter(Boolean).sort(cmp).map((x) => `<option>${esc(x)}</option>`).join('');
   return `<div class="filters"><div><label>Status</label><select data-tf="status"><option value="">Semua</option>${o(uniq(D.tim.map((x) => x.status)))}</select></div><div><label>Kategori</label><select data-tf="kat"><option value="">Semua</option>${o(uniq(D.tim.map((x) => x.kategori)))}</select></div><div><label>Bidang</label><select data-tf="bidang"><option value="">Semua</option>${o(uniq(D.tim.flatMap((x) => x.bidang)))}</select></div><div class="q"><label>Cari</label><input data-tf="q" placeholder="Nama / seksi…"></div></div><div id="res"></div>`;
 };
-PAGES['tim/bagan'] = () => {
-  const aktif = D.tim.filter((x) => (S.showDone || x.status === 'AKTIF') && x.orang);
-  const top = D.pengurus.filter((x) => x.rank >= 70 && x.orang.length);
+const baganView = (saya) => {
+  const T0 = D.user.tim || { seksi: [] };
+  const aktif = D.tim.filter((x) => (S.showDone || x.status === 'AKTIF') && x.orang && (!saya || x.seksi.some((n) => T0.seksi.includes(n))));
+  const top = saya ? [] : D.pengurus.filter((x) => x.rank >= 70 && x.orang.length);
   const bd = by(aktif, (x) => x.bidang[0] || 'Seksi / Tim lain');
   const keys = Object.keys(bd).sort(cmp);
   const colours = ['#3B82F6', '#14B8A6', '#8B7CF6', '#F59E0B', '#EC6F8E', '#34C28A', '#38BDF8'];
   return `<div class="filters" style="justify-content:space-between"><div class="note"><b>${aktif.length}</b> orang aktif di tim BPN · ${keys.length} bidang</div><label style="display:flex;gap:8px;align-items:center;margin:0;font-size:13px"><input type="checkbox" id="done" style="width:auto" ${S.showDone ? 'checked' : ''}> Tampilkan yang sudah selesai</label></div>
   <div class="org"><div class="node"><img src="/logo.png" alt="">BPN PKKI</div><div class="vl"></div>
-    <div class="rail">${top.flatMap((x) => x.orang.map((o) => `<div class="lead">${av(o.nama)}<div><small>${esc(x.jabatan)}</small><b>${esc(o.nama)}</b><small>${esc(o.keuskupan)}</small></div></div>`)).join('')}</div><div class="vl"></div>
+    <div class="rail">${top.flatMap((x) => x.orang.map((o) => `<div class="lead" data-go="#/org/pengurus" title="Lihat daftar pengurus" style="cursor:pointer">${av(o.nama)}<div><small>${esc(x.jabatan)}</small><b>${esc(o.nama)}</b><small>${esc(o.keuskupan)}</small></div></div>`)).join('')}</div><div class="vl"></div>
     <div class="bidangs">${keys.map((b, i) => { const sk = by(bd[b], (x) => x.seksi[0] || 'Anggota'); return `<div class="bd"><header style="background:${colours[i % colours.length]}">${esc(b)}<small>${bd[b].length} orang</small></header>${Object.keys(sk).sort(cmp).map((s) => `<div class="sk"><h4>${esc(s)}</h4>${sk[s].sort((a, b) => cmp(a.orang.nama, b.orang.nama)).map((x) => `<div class="mem">${av(x.orang.nama)}<div style="min-width:0"><b>${esc(x.orang.nama)}</b><small>${esc(uniq([...x.jabatanBpn, ...x.jabatanBpk]).filter(Boolean).join(' · ') || x.kategori)} · ${esc(x.orang.keuskupan)}</small></div><span style="margin-left:auto">${chip(x.kategori, katTone[x.kategori] || 'gray')}</span></div>`).join('')}</div>`).join('')}</div>`; }).join('')}</div></div>`;
 };
+PAGES['tim/bagan'] = () => baganView(false);
+PAGES['org/bagansaya'] = () => baganView(true);
 
 /* --- Laporan (agregat) --- */
 const lap = (fn) => () => {
@@ -1008,6 +1009,15 @@ PAGES['modul/permodul'] = () => {
   };
   const h = anBar(); afBind(draw); return h;
 };
+PAGES['modul/daftar'] = () => {
+  const g = anGate(); if (g) return g;
+  const draw = () => {
+    const ms = mStats(anRows()).sort((a, b) => cmp(a.m.tahap || '', b.m.tahap || '') || cmp(a.m.nama, b.m.nama));
+    $('#res').innerHTML = `<div class="note" style="margin-bottom:8px">${nf.format(ms.length)} modul berjenjang</div><div class="tw"><table><thead><tr><th>Modul</th><th>Tahap formatio</th><th>Peserta lulus</th><th>Pengajar</th><th></th></tr></thead><tbody>${ms.map((x) => `<tr><td><b>${esc(x.m.nama)}</b></td><td>${esc(x.m.tahap || '–')}</td><td>${nf.format(x.pes.length)}</td><td>${nf.format(x.aj.length)}</td><td><button type="button" class="ghost" data-modul="${esc(x.m.id)}">Lihat detail</button></td></tr>`).join('')}</tbody></table></div>`;
+    document.querySelectorAll('[data-modul]').forEach((el) => el.addEventListener('click', () => openModul(el.dataset.modul)));
+  };
+  const h = anBar(); afBind(draw); return h;
+};
 function openModul(id) {
   const m = AN.mN[id], r = anRows(), pes = r.filter((o) => o.mi.includes(id)), aj = r.filter((o) => o.ma.includes(id));
   modal(`<h2>${esc(m.nama)}</h2><div class="note">${esc(m.tahap)} · ${nf.format(pes.length)} peserta lulus · ${nf.format(aj.length)} pengajar${S.af.kus ? ' · ' + esc(AN.kN[S.af.kus]) : ''}</div>
@@ -1285,18 +1295,24 @@ async function lsIngatkan(btn) {
   btn.disabled = false;
 }
 
-const tabsOf = (m) => (m.tabs ? m.tabs.filter(([id]) => (D.perm[`${m.id}/${id}`] || 0) >= 1 && !(m.id === 'tim' && id === 'saya' && !(D.user.tim && D.user.tim.ada))) : []);
+const tabsOf = (m) => (m.tabs ? m.tabs.filter((s) => (D.perm[s[2] || `${m.id}/${s[0]}`] || 0) >= 1 && !(s[4] && !(D.user.tim && D.user.tim.ada))) : []);
 const visible = () => MENU.filter((m) => m.always || (m.tabs ? tabsOf(m).length : (D.perm[m.id] || 0) >= 1));
-function route() { const ms = visible(); const [m = 'dashboard', t] = location.hash.replace(/^#\/?/, '').split('/'); const menu = ms.find((x) => x.id === m) || ms.find((x) => !x.hide) || ms[0]; if (!menu) return { menu: null, tab: null, tabs: [] }; const tabs = tabsOf(menu); return { menu, tabs, tab: menu.tabs ? (tabs.find((x) => x[0] === t) || tabs[0])[0] : null }; }
+// Alamat lama (sebelum menu digabung) dialihkan ke alamat baru supaya tautan dan bookmark tetap jalan.
+const ALIAS = { pengurus: 'org/pengurus', tim: 'org/saya', 'tim/saya': 'org/saya', 'tim/bagan': 'org/bagan', 'tim/daftar': 'org/daftar', modul: 'ls/m-ringkasan', 'modul/ringkasan': 'ls/m-ringkasan', 'modul/permodul': 'ls/m-permodul', 'modul/peserta': 'ls/m-peserta', 'modul/pengajar': 'ls/m-pengajar' };
+function migrasiHash() {
+  const seg = location.hash.replace(/^#\/?/, '').split('/'), k2 = seg.slice(0, 2).join('/'), to = ALIAS[k2] || ALIAS[seg[0]];
+  if (to && (ALIAS[k2] || seg.length === 1)) history.replaceState(null, '', location.pathname + location.search + '#/' + to + (seg.length > 2 ? '/' + seg.slice(2).join('/') : ''));
+}
+function route() { migrasiHash(); const ms = visible(); const [m = 'dashboard', t] = location.hash.replace(/^#\/?/, '').split('/'); const menu = ms.find((x) => x.id === m) || ms.find((x) => !x.hide) || ms[0]; if (!menu) return { menu: null, tab: null, tabs: [], spec: null }; const tabs = tabsOf(menu); const spec = menu.tabs ? (tabs.find((x) => x[0] === t) || tabs[0]) : null; return { menu, tabs, spec, tab: spec ? spec[0] : null }; }
 function render() {
   if (!D) return;
   DR = [];
-  const { menu, tab, tabs } = route();
+  const { menu, tab, tabs, spec } = route();
   if (!menu) { $('#nav').innerHTML = ''; $('#page').innerHTML = '<div class="empty">Akun Anda belum diberi akses ke menu apa pun. Hubungi Admin BPN.</div>'; return; }
-  $('#nav').innerHTML = visible().filter((m) => !m.hide).map((m) => `<a href="#/${m.id}" class="${m.id === menu.id ? 'on' : ''}"><svg viewBox="0 0 24 24">${m.icon}</svg>${esc(m.label)}${m.id === menu.id ? '' : `<span class="dot" style="background:${m.c}"></span>`}</a>`).join('');
+  let lastG = ''; $('#nav').innerHTML = visible().filter((m) => !m.hide).map((m) => { const h = m.g && m.g !== lastG ? `<div class="ngrp">${esc(m.g)}</div>` : ''; if (m.g) lastG = m.g; return `${h}<a href="#/${m.id}" class="${m.id === menu.id ? 'on' : ''}"><svg viewBox="0 0 24 24">${m.icon}</svg>${esc(m.label)}${m.id === menu.id ? '' : `<span class="dot" style="background:${m.c}"></span>`}</a>`; }).join('');
   $('#ptitle').textContent = menu.label; $('#psub').textContent = menu.sub;
   $('#tabs').innerHTML = menu.tabs ? tabs.map(([id, l]) => `<a href="#/${menu.id}/${id}" class="${id === tab ? 'on' : ''}">${esc(l)}</a>`).join('') : '';
-  const fn = PAGES[tab ? `${menu.id}/${tab}` : menu.id];
+  const fn = PAGES[tab ? (spec[3] || `${menu.id}/${tab}`) : menu.id];
   $('#me')?.classList.toggle('on', menu.id === 'profil');
   if (menu.id !== 'profil') S.prof = null;
   $('#page').innerHTML = (menu.id === 'profil' ? '' : bannerPr()) + (fn ? fn() : '<div class="empty">Halaman tidak ditemukan.</div>');
