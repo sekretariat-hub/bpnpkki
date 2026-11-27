@@ -14,7 +14,7 @@ const hariIni = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 1
 const nm = (v) => (v && v.name) || v || '';
 const aktifRow = (r) => /aktif/i.test(nm(r.fields[PJ.status])) && !/tidak/i.test(nm(r.fields[PJ.status]));
 
-const pesan = ({ nama, jabatan, bpk, oleh, olehJab, link }) => `Shalom ${String(nama).split(' ')[0]},\n\nNama Anda telah didata sebagai *${jabatan}* BPK ${bpk} oleh ${oleh}${olehJab ? ` (${olehJab})` : ''}.\n\nIni adalah pesan dari *Sistem Informasi BPN PKK Indonesia* (Badan Pelayanan Nasional Pembaruan Karismatik Katolik Indonesia). Kami mengundang Anda untuk bisa masuk ke sistem informasi BPN lewat tautan berikut:\n${link}\n\nSetelah tautan dibuka, Anda diminta membuat akun dan melengkapi profil terlebih dahulu.\n\nJika Anda merasa tidak mengenal hal ini, abaikan saja pesan ini.`;
+const pesan = ({ nama, jk, jabatan, bpk, oleh, olehJab, link }) => `Shalom ${jk === 'Pria' ? 'Bapak' : jk === 'Wanita' ? 'Ibu' : 'Bapak/Ibu'} ${String(nama).split(' ')[0]},\n\nNama Anda telah didata sebagai *${jabatan}* BPK ${bpk} oleh ${oleh}${olehJab ? ` (${olehJab})` : ''}.\n\nIni adalah pesan dari *Sistem Informasi BPN PKK Indonesia* (Badan Pelayanan Nasional Pembaruan Karismatik Katolik Indonesia). Kami mengundang Anda untuk bisa masuk ke sistem informasi BPN lewat tautan berikut:\n${link}\n\nSetelah tautan dibuka, Anda diminta membuat akun dan melengkapi profil terlebih dahulu.\n\nJika Anda merasa tidak mengenal hal ini, abaikan saja pesan ini.`;
 
 const pejabat = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -71,7 +71,7 @@ const pejabat = async (req, res) => {
     const oleh = acc.nama, olehJab = /Koordinator BPK/.test(acc.peran) ? `Koordinator BPK ${bpkNama}` : acc.peran === 'Admin' ? 'Admin sistem BPN PKKI' : acc.peran;
     const link = `https://${req.headers.host}/?hp=${wa}`;
     let kirim;
-    try { await kirimWa(wa, pesan({ nama, jabatan, bpk: bpkNama, oleh, olehJab, link })); kirim = { terkirim: true }; }
+    try { await kirimWa(wa, pesan({ nama, jk, jabatan, bpk: bpkNama, oleh, olehJab, link })); kirim = { terkirim: true }; }
     catch (e) { kirim = { terkirim: false, galat: e.code === 'NOKEY' ? 'Pengiriman WhatsApp belum diaktifkan di server (BABLAST_API_KEY)' : String(e.message).slice(0, 200) }; }
     console.log('pejabat tambah', acc.email, bpkNama, jabatan, wa, 'orangBaru', baru, 'wa', kirim.terkirim);
     return res.json({ ok: true, orangBaru: baru, link, ...kirim });

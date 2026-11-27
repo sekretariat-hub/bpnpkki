@@ -84,9 +84,12 @@ module.exports = async (req, res) => {
         if (person) { delete flds[PF.wa]; await update(PERSON, person.id, flds); } else person = await create(PERSON, flds);
         person = person; nama = s(p.nama); email = s(p.email).toLowerCase();
       } else { nama = person.fields[PF.nama] || g.wa; email = String(person.fields[PF.email] || '').toLowerCase(); }
-      const rec = await create(T, { [F.email]: email || g.wa, [F.nama]: nama, [F.wa]: g.wa, [F.aktif]: true, [F.disetujui]: false, [F.hash]: hash, [F.person]: person.id, [A.FX.khusus]: '{}', [F.lastLogin]: new Date().toISOString() });
+      // Pejabat/PIC BPK yang aktif (didaftarkan koordinator) langsung disetujui, tidak perlu menunggu Admin.
+      let setuju = false;
+      try { const pj = await require('../lib/airtable').fetchAll('tblGR9a8J4UOyJGep', ['fldCYWlWFYtnkjv6Z', 'fldyWZFFnXeN8CMlk']); setuju = pj.some((r) => (r.fields.fldCYWlWFYtnkjv6Z || []).includes(person.id) && /aktif/i.test(JSON.stringify(r.fields.fldyWZFFnXeN8CMlk || '')) && !/tidak/i.test(JSON.stringify(r.fields.fldyWZFFnXeN8CMlk || ''))); } catch { setuju = false; }
+      const rec = await create(T, { [F.email]: email || g.wa, [F.nama]: nama, [F.wa]: g.wa, [F.aktif]: true, [F.disetujui]: setuju, [F.hash]: hash, [F.person]: person.id, [A.FX.khusus]: '{}', [F.lastLogin]: new Date().toISOString() });
       setSession(res, { rid: rec.id, email, nama, level: 'Pengurus' });
-      return res.json({ ok: true, pending: true });
+      return res.json({ ok: true, pending: !setuju });
     }
     return bad(res, 'Aksi tidak dikenal');
   } catch (e) {
