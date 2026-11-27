@@ -10,12 +10,15 @@ const SELECT = ['status', 'acc', 'bulan', 'tahun', 'metode', 'sumberDana'];
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Metode tidak diizinkan' });
+  if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).json({ error: 'Metode tidak diizinkan' });
   const s = getSession(req);
   const acc = s && (await getAccess(s).catch(() => null));
   if (!acc) return res.status(401).json({ error: 'Belum login' });
-  if (!canEditProker(acc)) return res.status(403).json({ error: 'Anda tidak punya hak mengedit program kerja' });
+  // Proyek & Tugas Seksi (lib/h-tugas.js): hak dihitung dari keanggotaan seksi, bukan hak edit Program Kerja.
+  if (req.method === 'GET') return require('../lib/h-tugas').get(req, res, acc).catch((e) => { console.error('tugas get', e.message); res.status(502).json({ error: 'Gagal mengambil data dari Airtable' }); });
   const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+  if (body.op) return require('../lib/h-tugas').post(req, res, acc, body);
+  if (!canEditProker(acc)) return res.status(403).json({ error: 'Anda tidak punya hak mengedit program kerja' });
   const id = String(body.id || '');
   if (!/^rec[A-Za-z0-9]{14}$/.test(id)) return res.status(400).json({ error: 'ID program tidak valid' });
   const f = body.fields || {};

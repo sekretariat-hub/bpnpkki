@@ -47,3 +47,11 @@ Jenis `fldtshIUwxtOZb6iZ` · Keterangan `fldeWR6AslvMqxJnI` · Dibuat oleh `fldK
 
 ## Tabel Pengurus BPN
 jabatan `fldAZEb1CWjIEoEGB` · orang `fldJgxaz4f5MmEbnS` · urutan `fld3O21aDCbkTCin8`. Siapa pun yang tercatat di sini dianggap pengurus harian dan melihat data umat nasional.
+
+## Project Seksi (tblWsD2Ve9llum2jD)
+Nama (fldEPTTfq3VGessth), Seksi (link, fld3pPhXkIt8o4Pda), Program Kerja BPN (link opsional, flduiLSYqlTQlej8f), Deskripsi, Catatan, Status (Direncanakan/Berjalan/Selesai/Ditunda), Target selesai, Penanggung jawab (link Orang), Dibuat oleh (teks).
+
+## Komentar Tugas (tblnxHT3tqQOcBRZy)
+Isi (fldTtMYKx7a4g2zks), Tugas (link ke Task), Penulis (teks), Person ID penulis, Dibuat (createdTime). Komentar ada di level tugas; project cukup kolom Catatan.
+
+Tabel Task mendapat kolom Project Seksi (fldYwQ4Wh7xJEMy42) dan Dibuat oleh (fldkJAjy7MPZdVmPe).

@@ -30,3 +30,7 @@ Hak akses tetap memakai kunci lama (`pengurus`, `tim/*`, `modul/*`, `ls/*`, `adm
 - Routing: `#/menu/tab`. Tambah menu: entri di `MENU` + `PAGES['id/tab']` + kunci di `TREE` (`lib/access.js`) + preset bila perlu.
 - Semua perubahan data lewat server; browser tidak memegang token.
 - Batas 12 fungsi Vercel (lihat `00-PANDUAN-PROYEK`).
+
+## Proyek & Tugas Seksi (Program Kerja > Proyek & Tugas)
+Logika di `lib/h-tugas.js`, dipanggil dari `api/proker.js` (GET `?tugas=1`, GET `?komentar=<id>`, POST dengan `op`): projek_baru, projek_ubah, tugas_baru, tugas_ubah, tugas_hapus, komentar_tambah, komentar_hapus.
+Hak: lihat = anggota seksi; buat tugas = anggota seksi; ubah tugas = koordinator seksi/Admin, pembuat, atau yang di-tag; buat/ubah project = koordinator seksi/bidang atau Admin; komentar = siapa pun yang bisa melihat tugas (hapus: penulis/Admin). Mode Login sebagai wajib "Boleh edit". Tampilan: Kanban (seret kartu untuk ganti status), Daftar per project, Matriks prioritas 2x2.

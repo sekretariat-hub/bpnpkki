@@ -41,7 +41,7 @@ const I = {
 };
 const MENU = [
   { id: 'dashboard', label: 'Dashboard', icon: I.home, sub: 'Ringkasan tugas, program, dan agenda untuk Anda', c: '#3B82F6' },
-  { g: 'PROGRAM', id: 'proker', label: 'Program Kerja', icon: I.clip, sub: 'Program kerja BPN untuk Keuskupan', c: '#F5A524', tabs: [['keuskupan', 'Per Keuskupan'], ['semua', 'Semua Program'], ['ringkasan', 'Ringkasan & Grafik'], ['acc', 'Syarat ACC']] },
+  { g: 'PROGRAM', id: 'proker', label: 'Program Kerja', icon: I.clip, sub: 'Program kerja BPN untuk Keuskupan', c: '#F5A524', tabs: [['keuskupan', 'Per Keuskupan'], ['semua', 'Semua Program'], ['ringkasan', 'Ringkasan & Grafik'], ['acc', 'Syarat ACC'], ['tugas', 'Proyek & Tugas', 'proker/tugas', 'proker/tugas', 1]] },
   { g: 'PROGRAM', id: 'laporan', label: 'Laporan', icon: I.chart, sub: 'Ringkasan kegiatan', c: '#34C28A', tabs: [['pleno', 'Pleno & Golden Jubilee'], ['tc', 'TC SHDR'], ['kepemudaan', 'Kepemudaan']] },
   { id: 'profil', label: 'Profil Saya', icon: I.star, sub: 'Lihat dan lengkapi data diri Anda', c: '#E0661A', always: true, hide: true },
   { g: 'ORGANISASI', id: 'org', label: 'Organisasi', icon: I.team, sub: 'Tim, bagan, dan pengurus BPN', c: '#FF7A6B', tabs: [['saya', 'Tim Saya', 'tim/saya', 'tim/saya', 1], ['bagansaya', 'Bagan Tim Saya', 'tim/bagan', 'org/bagansaya', 1], ['bagan', 'Bagan Seluruh Tim', 'tim/bagan', 'tim/bagan'], ['pengurus', 'Daftar Pengurus BPN', 'pengurus', 'pengurus'], ['daftar', 'Daftar Anggota Tim', 'tim/daftar', 'tim/daftar']] },
@@ -212,6 +212,138 @@ PAGES['proker/acc'] = () => {
   <div class="grid g4" style="margin-bottom:16px">${kpi('Memenuhi syarat', ok.length, { c: '#13805A', t: 'var(--green-t)' })}${kpi('Belum memenuhi', no.length, { c: '#C2362B', t: 'var(--coral-t)' })}${kpi('Data belum lengkap', inc.length, { c: '#9A6200', t: 'var(--amber-t)', note: 'waktu / penerima / anggaran / sumber dana' })}${kpi('Anggaran siap cair', 0, { c: '#13805A', t: 'var(--green-t)' }).replace('>0<', `>${rpShort(sum(ok, (p) => p.anggaran))}<`)}</div>
   <div class="card"><h3>Program yang belum memenuhi syarat<small>${no.length}</small></h3><div class="tw"><table><thead><tr><th>Waktu</th><th>Program</th><th>Keuskupan</th><th>Yang belum terpenuhi</th><th>Kelengkapan data</th></tr></thead><tbody>${no.sort((a, b) => cmp(sortKey(a), sortKey(b))).map((p) => `<tr><td style="white-space:nowrap"><b>${esc(waktu(p))}</b></td><td><b>${esc(p.program || p.label)}</b>${p.detil ? `<div class="sub">${esc(p.detil)}</div>` : ''}</td><td>${esc(p.penerima.join(', ') || '–')}</td><td><div class="chips">${miss(p).map((m) => chip(m, 'coral')).join('')}</div></td><td><div class="chips">${extra(p).map((m) => chip(m, 'amber')).join('') || chip('Lengkap', 'green')}</div></td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">Semua program sudah memenuhi syarat 🎉</div></td></tr>'}</tbody></table></div></div>`;
 };
+
+/* --- Proyek & Tugas Seksi (tab di Program Kerja) --- */
+S.tg = { data: null, loading: false, view: 'kanban', seksi: '', projek: '', mine: false, err: '' };
+const tgApi = async (body) => { const r = await fetch('/api/proker', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Gagal menyimpan'); return j; };
+async function tgMuat(paksa) {
+  if (S.tg.loading || (S.tg.data && !paksa)) return;
+  S.tg.loading = true; S.tg.err = '';
+  try { const r = await fetch('/api/proker?tugas=1', { credentials: 'same-origin' }); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Gagal memuat'); S.tg.data = j; if (!S.tg.seksi || !j.seksi.some((x) => x.id === S.tg.seksi)) S.tg.seksi = (j.seksi[0] || {}).id || ''; }
+  catch (e) { S.tg.err = e.message; }
+  S.tg.loading = false; render();
+}
+const TG_PRIO = { 'Penting & Mendesak': ['Kerjakan sekarang', 'coral'], 'Penting & Tidak Mendesak': ['Jadwalkan', 'violet'], 'Kurang Penting & Mendesak': ['Delegasikan', 'amber'], 'Kurang Penting & Tidak Mendesak': ['Tunda', 'gray'] };
+const TG_ST = { 'Belum dimulai': 'gray', 'Dalam proses': 'amber', Selesai: 'green' };
+const tgSeksiNama = (id) => ((S.tg.data.seksi.find((x) => x.id === id) || {}).nama || '').replace(/^Tim Kerja\s*/, '');
+const tgBisaUbah = (t) => { const d = S.tg.data, sk = d.seksi.filter((x) => t.seksi.includes(x.id)); return !!(D.user.tim && D.user.tim.semua) || sk.some((x) => x.kelola) || t.pj.some((p) => p.id === d.saya) || (t.oleh && t.oleh === D.user.nama); };
+const tgAnggota = (sid) => { const nama = (S.tg.data.seksi.find((x) => x.id === sid) || {}).nama || '', m = new Map(); D.tim.filter((x) => x.orang && x.status === 'AKTIF' && x.seksi.includes(nama)).forEach((x) => m.set(x.orang.id, x.orang.nama)); return [...m].map(([id, n]) => ({ id, nama: n })).sort((a, b) => cmp(a.nama, b.nama)); };
+const tgTugasSaring = () => { const d = S.tg.data; return d.tugas.filter((t) => (!S.tg.seksi || t.seksi.includes(S.tg.seksi) || t.pj.some((p) => p.id === d.saya)) && (!S.tg.projek || (S.tg.projek === '-' ? !t.projek.length : t.projek.includes(S.tg.projek))) && (!S.tg.mine || t.pj.some((p) => p.id === d.saya))); };
+const tgKartu = (t, drag) => `<div class="kcard${t.status === 'Selesai' ? ' done' : ''}" data-tg="${esc(t.id)}"${drag && tgBisaUbah(t) ? ' draggable="true"' : ''}>
+  <div class="kt">${esc(t.nama)}</div>
+  <div class="km">${t.prio ? chip(TG_PRIO[t.prio] ? TG_PRIO[t.prio][0] : t.prio, TG_PRIO[t.prio] ? TG_PRIO[t.prio][1] : 'gray') : ''}${t.tenggat ? chip('⏰ ' + fdate(t.tenggat), t.status !== 'Selesai' && t.tenggat < D.today ? 'coral' : 'blue') : ''}${t.projek.length ? chip('📁 ' + esc(((S.tg.data.projek.find((p) => p.id === t.projek[0]) || {}).nama || '').slice(0, 24)), 'teal') : ''}</div>
+  ${t.pj.length ? `<div class="kpj">${t.pj.slice(0, 4).map((p) => `<span title="${esc(p.nama)}">${esc(initials(p.nama))}</span>`).join('')}${t.pj.length > 4 ? `<span>+${t.pj.length - 4}</span>` : ''}</div>` : ''}</div>`;
+function tgKanban(list) {
+  return `<div class="kb">${S.tg.data.status.map((st) => { const c = list.filter((t) => t.status === st); return `<div class="kcol" data-st="${esc(st)}"><h4>${chip(st, TG_ST[st] || 'gray')} <span class="sub">${c.length}</span></h4>${c.map((t) => tgKartu(t, true)).join('') || '<div class="sub" style="padding:8px">Kosong</div>'}</div>`; }).join('')}</div>`;
+}
+function tgMatriks(list) {
+  const q = Object.keys(TG_PRIO), buka = list.filter((t) => t.status !== 'Selesai');
+  const kotak = (k) => `<div class="mxq"><h4>${esc(k)} ${chip(TG_PRIO[k][0], TG_PRIO[k][1])}</h4>${buka.filter((t) => t.prio === k).map((t) => tgKartu(t, false)).join('') || '<div class="sub">–</div>'}</div>`;
+  const tanpa = buka.filter((t) => !t.prio);
+  return `<div class="mxh"><span>Mendesak</span><span>Tidak mendesak</span></div><div class="mx">${[q[0], q[1], q[2], q[3]].map(kotak).join('')}</div>${tanpa.length ? `<h4 style="margin:14px 0 6px">Belum diberi prioritas <span class="sub">${tanpa.length}</span></h4><div class="kb">${tanpa.map((t) => tgKartu(t, false)).join('')}</div>` : ''}<p class="note" style="margin-top:10px">Hanya tugas yang belum selesai. Urutan kotak: Penting&Mendesak, Penting&Tidak Mendesak, Kurang Penting&Mendesak, Kurang Penting&Tidak Mendesak.</p>`;
+}
+function tgDaftar(list) {
+  const d = S.tg.data, gr = {}; list.forEach((t) => { const k = t.projek[0] || ''; (gr[k] = gr[k] || []).push(t); });
+  const ks = Object.keys(gr).sort((a, b) => (a ? ((d.projek.find((p) => p.id === a) || {}).nama || '') : '~').localeCompare(b ? ((d.projek.find((p) => p.id === b) || {}).nama || '') : '~', 'id'));
+  return ks.map((k) => `<h4 style="margin:14px 0 6px">${k ? '📁 ' + esc((d.projek.find((p) => p.id === k) || {}).nama || 'Project') : 'Tanpa project'} <span class="sub">${gr[k].length} tugas</span></h4><div class="tw"><table><thead><tr><th>Tugas</th><th>Status</th><th>Prioritas</th><th>Tenggat</th><th>Ditugaskan</th></tr></thead><tbody>${gr[k].sort((a, b) => (a.tenggat || '9999').localeCompare(b.tenggat || '9999')).map((t) => `<tr class="clk" data-tg="${esc(t.id)}"><td><b>${esc(t.nama)}</b></td><td>${chip(t.status, TG_ST[t.status] || 'gray')}</td><td>${t.prio ? chip(TG_PRIO[t.prio] ? TG_PRIO[t.prio][0] : t.prio, TG_PRIO[t.prio] ? TG_PRIO[t.prio][1] : 'gray') : '–'}</td><td>${t.tenggat ? esc(fdate(t.tenggat)) : '–'}</td><td>${esc(t.pj.map((p) => p.nama).join(', ') || '–')}</td></tr>`).join('')}</tbody></table></div>`).join('') || '<div class="empty">Belum ada tugas.</div>';
+}
+PAGES['proker/tugas'] = () => {
+  tgMuat();
+  const d = S.tg.data;
+  if (S.tg.err) return `<div class="empty">${esc(S.tg.err)}<br><button class="btn" id="tgretry" style="width:auto;margin-top:10px">Coba lagi</button></div>${setTimeout(() => $('#tgretry')?.addEventListener('click', () => { S.tg.err = ''; tgMuat(true); })) && ''}`;
+  if (!d) return '<div class="load"><div class="sp"></div><div>Memuat proyek dan tugas…</div></div>';
+  if (!d.seksi.length) return '<div class="empty">Anda belum tergabung di seksi mana pun, jadi belum ada proyek dan tugas untuk ditampilkan.</div>';
+  const sk = d.seksi.find((x) => x.id === S.tg.seksi) || d.seksi[0], pj = d.projek.filter((p) => p.seksi.includes(sk.id)), list = tgTugasSaring();
+  const prog = (p) => { const t = d.tugas.filter((x) => x.projek.includes(p.id)), s = t.filter((x) => x.status === 'Selesai').length; return { n: t.length, s, pct: t.length ? Math.round((s / t.length) * 100) : 0 }; };
+  const stripe = pj.map((p) => { const g = prog(p); return `<div class="pcard${S.tg.projek === p.id ? ' on' : ''}" data-pj="${esc(p.id)}"><div class="pn">${esc(p.nama)}</div><div class="km">${chip(p.status, p.status === 'Selesai' ? 'green' : p.status === 'Berjalan' ? 'amber' : 'gray')}${p.target ? chip('🎯 ' + fdate(p.target), 'blue') : ''}${p.proker.length ? chip('🔗 proker', 'violet') : ''}</div><div class="pb"><i style="width:${g.pct}%"></i></div><div class="sub">${g.s}/${g.n} tugas selesai</div>${sk.kelola ? `<button type="button" class="ghost pe" data-pe="${esc(p.id)}">Ubah</button>` : ''}</div>`; }).join('');
+  const body = S.tg.view === 'daftar' ? tgDaftar(list) : S.tg.view === 'matriks' ? tgMatriks(list) : tgKanban(list);
+  setTimeout(tgPasang);
+  return `<div class="filters"><div>${d.seksi.length > 1 ? `<label>Seksi</label><select id="tgsk">${d.seksi.map((x) => `<option value="${esc(x.id)}"${x.id === sk.id ? ' selected' : ''}>${esc(x.nama)}</option>`).join('')}</select>` : `<label>Seksi</label><div style="padding:9px 0;font-weight:700">${esc(sk.nama)}</div>`}</div>
+    <div><label>Project</label><select id="tgpj"><option value="">Semua tugas</option><option value="-"${S.tg.projek === '-' ? ' selected' : ''}>Tanpa project</option>${pj.map((p) => `<option value="${esc(p.id)}"${S.tg.projek === p.id ? ' selected' : ''}>${esc(p.nama)}</option>`).join('')}</select></div>
+    <div style="flex:none"><label>Tampilan</label><div class="seg" id="tgv">${[['kanban', 'Kanban'], ['daftar', 'Daftar'], ['matriks', 'Matriks prioritas']].map(([k, l]) => `<button data-v="${k}" class="${S.tg.view === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+    <label style="display:flex;gap:8px;align-items:center;margin:0;font-size:13px;flex:none"><input type="checkbox" id="tgmine" style="width:auto"${S.tg.mine ? ' checked' : ''}> Tugas saya saja</label>
+    <div style="flex:none;display:flex;gap:8px"><button class="btn" id="tgnew" style="width:auto;margin:0">+ Tugas</button>${sk.kelola ? '<button class="ghost" id="tgnewp">+ Project</button>' : ''}</div></div>
+  <h4 style="margin:6px 0 8px">Project ${esc(sk.nama.replace(/^Tim Kerja\s*/, ''))}${sk.kelola ? '' : ' <span class="sub">(project dibuat oleh Koordinator Seksi/Bidang)</span>'}</h4>
+  <div class="pstrip">${stripe || '<div class="sub">Belum ada project. Tugas tetap bisa dibuat tanpa project.</div>'}</div>
+  <div style="margin-top:14px">${body}</div>`;
+};
+function tgPasang() {
+  const d = S.tg.data; if (!d) return;
+  $('#tgsk')?.addEventListener('change', (e) => { S.tg.seksi = e.target.value; S.tg.projek = ''; render(); });
+  $('#tgpj')?.addEventListener('change', (e) => { S.tg.projek = e.target.value; render(); });
+  $('#tgmine')?.addEventListener('change', (e) => { S.tg.mine = e.target.checked; render(); });
+  document.querySelectorAll('#tgv button').forEach((b) => b.addEventListener('click', () => { S.tg.view = b.dataset.v; render(); }));
+  document.querySelectorAll('[data-tg]').forEach((el) => el.addEventListener('click', () => tgBuka(el.dataset.tg)));
+  document.querySelectorAll('[data-pj]').forEach((el) => el.addEventListener('click', (e) => { if (e.target.closest('.pe')) return; S.tg.projek = S.tg.projek === el.dataset.pj ? '' : el.dataset.pj; render(); }));
+  document.querySelectorAll('[data-pe]').forEach((el) => el.addEventListener('click', () => tgFormProjek(el.dataset.pe)));
+  $('#tgnew')?.addEventListener('click', () => tgFormTugas());
+  $('#tgnewp')?.addEventListener('click', () => tgFormProjek());
+  let seret = null;
+  document.querySelectorAll('.kcard[draggable]').forEach((el) => { el.addEventListener('dragstart', (e) => { seret = el.dataset.tg; e.dataTransfer.setData('text/plain', seret); el.classList.add('drag'); }); el.addEventListener('dragend', () => el.classList.remove('drag')); });
+  document.querySelectorAll('.kcol').forEach((col) => {
+    col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('over'); }); col.addEventListener('dragleave', () => col.classList.remove('over'));
+    col.addEventListener('drop', async (e) => { e.preventDefault(); col.classList.remove('over'); const id = seret || e.dataTransfer.getData('text/plain'), t = d.tugas.find((x) => x.id === id); seret = null; if (!t || t.status === col.dataset.st) return; const lama = t.status; t.status = col.dataset.st; render(); try { await tgApi({ op: 'tugas_ubah', id, fields: { status: col.dataset.st } }); } catch (x) { t.status = lama; alert(x.message); render(); } });
+  });
+}
+const tgOpt = (arr, cur, kosong) => `${kosong ? `<option value="">${esc(kosong)}</option>` : ''}${arr.map((x) => `<option${x === cur ? ' selected' : ''}>${esc(x)}</option>`).join('')}`;
+function tgPilihOrang(sid, pilih) {
+  const ang = tgAnggota(sid), ada = new Set(ang.map((x) => x.id)), ekstra = [...pilih].filter((id) => !ada.has(id)).map((id) => ({ id, nama: ((S.tg.data.tugas.flatMap((t) => t.pj).find((p) => p.id === id)) || {}).nama || 'Orang lain' }));
+  return `<div class="tgpick" id="tgpick">${[...ang, ...ekstra].map((o) => `<label><input type="checkbox" value="${esc(o.id)}"${pilih.has(o.id) ? ' checked' : ''}> ${esc(o.nama)}</label>`).join('') || '<span class="sub">Belum ada anggota aktif di seksi ini.</span>'}</div>`;
+}
+const tgOrangDipilih = () => [...document.querySelectorAll('#tgpick input:checked')].map((i) => i.value);
+function tgFormTugas(t) {
+  const d = S.tg.data, edit = !!t, sid = edit ? t.seksi[0] : S.tg.seksi, pilih = new Set(edit ? t.pj.map((p) => p.id) : []);
+  const pjs = d.projek.filter((p) => p.seksi.includes(sid));
+  modal(`<h2>${edit ? 'Ubah tugas' : 'Tugas baru'}</h2><p class="sub">${esc(tgSeksiNama(sid))}</p>
+  <div class="eform" style="grid-template-columns:1fr 1fr"><div style="grid-column:1/-1"><label>Nama tugas</label><input id="tfn" maxlength="300" value="${esc(edit ? t.nama : '')}"></div>
+  <div><label>Status</label><select id="tfs">${tgOpt(d.status, edit ? t.status : 'Belum dimulai')}</select></div>
+  <div><label>Prioritas</label><select id="tfp">${tgOpt(d.prio, edit ? t.prio : '', '— belum diisi —')}</select></div>
+  <div><label>Mulai</label><input type="date" id="tfm" value="${esc(edit ? t.mulai : '')}"></div><div><label>Tenggat</label><input type="date" id="tft" value="${esc(edit ? t.tenggat : '')}"></div>
+  <div style="grid-column:1/-1"><label>Project</label><select id="tfj"><option value="">— tanpa project —</option>${pjs.map((p) => `<option value="${esc(p.id)}"${edit && t.projek[0] === p.id ? ' selected' : (!edit && S.tg.projek === p.id ? ' selected' : '')}>${esc(p.nama)}</option>`).join('')}</select></div>
+  <div style="grid-column:1/-1"><label>Tag / ditugaskan ke</label>${tgPilihOrang(sid, pilih)}</div></div><div class="err" id="tfe"></div>
+  <div class="acts"><button class="btn" id="tfok" style="width:auto">${edit ? 'Simpan' : 'Buat tugas'}</button>${edit ? '<button class="ghost" id="tfdel" style="color:#C0392B">Hapus tugas</button>' : ''}</div>`, true);
+  $('#tfok').onclick = async (e) => {
+    const f = { nama: $('#tfn').value, status: $('#tfs').value, prio: $('#tfp').value, mulai: $('#tfm').value, tenggat: $('#tft').value, pj: tgOrangDipilih() }; e.target.disabled = true;
+    try { if (edit) await tgApi({ op: 'tugas_ubah', id: t.id, fields: { ...f, projekId: $('#tfj').value } }); else await tgApi({ op: 'tugas_baru', seksiId: sid, projekId: $('#tfj').value, ...f }); closeModal(); await tgMuat(true); }
+    catch (x) { $('#tfe').textContent = x.message; e.target.disabled = false; }
+  };
+  $('#tfdel')?.addEventListener('click', async () => { if (!confirm('Hapus tugas ini beserta komentarnya? Tidak bisa dibatalkan.')) return; try { await tgApi({ op: 'tugas_hapus', id: t.id }); closeModal(); await tgMuat(true); } catch (x) { $('#tfe').textContent = x.message; } });
+}
+async function tgBuka(id) {
+  const d = S.tg.data, t = d.tugas.find((x) => x.id === id); if (!t) return;
+  const boleh = tgBisaUbah(t);
+  modal(`<h2>${esc(t.nama)}</h2><div class="km" style="margin-bottom:8px">${chip(t.status, TG_ST[t.status] || 'gray')}${t.prio ? chip(TG_PRIO[t.prio] ? TG_PRIO[t.prio][0] : t.prio, TG_PRIO[t.prio] ? TG_PRIO[t.prio][1] : 'gray') : ''}${t.tenggat ? chip('⏰ ' + fdate(t.tenggat), 'blue') : ''}${t.projek.length ? chip('📁 ' + esc((d.projek.find((p) => p.id === t.projek[0]) || {}).nama || ''), 'teal') : ''}</div>
+  <div class="note">Seksi ${esc(t.seksi.map(tgSeksiNama).join(', ') || '–')} · Ditugaskan ke: ${esc(t.pj.map((p) => p.nama).join(', ') || 'belum ada')}${t.oleh ? ' · Dibuat oleh ' + esc(t.oleh) : ''}</div>
+  ${boleh ? '<div class="acts" style="margin:10px 0"><button class="ghost" id="tbe">✏️ Ubah tugas</button></div>' : '<p class="note">Anda bisa melihat dan berkomentar. Hanya yang ditugaskan, pembuat, atau Koordinator yang bisa mengubah.</p>'}
+  <h3 style="margin:14px 0 6px">Komentar</h3><div id="kml" class="kml"><div class="sub">Memuat…</div></div>
+  <div class="kmf"><textarea id="kmi" rows="2" maxlength="2000" placeholder="Tulis komentar…"></textarea><button class="btn" id="kmk" style="width:auto;margin:0">Kirim</button></div><div class="err" id="kme"></div>`, true);
+  $('#tbe')?.addEventListener('click', () => tgFormTugas(t));
+  const muat = async () => {
+    try { const j = await fetch('/api/proker?komentar=' + encodeURIComponent(id), { credentials: 'same-origin' }).then((r) => r.json()); if (j.error) throw new Error(j.error);
+      $('#kml').innerHTML = j.komentar.map((c) => `<div class="kmi"><div class="kmh"><b>${esc(c.penulis || '–')}</b><span class="sub">${c.waktu ? esc(new Date(c.waktu).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) : ''}</span>${c.milik || j.hapusSemua ? `<a href="#" data-kd="${esc(c.id)}" class="sub">hapus</a>` : ''}</div><div>${esc(c.isi).replace(/\n/g, '<br>')}</div></div>`).join('') || '<div class="sub">Belum ada komentar.</div>';
+      document.querySelectorAll('[data-kd]').forEach((a) => a.addEventListener('click', async (e) => { e.preventDefault(); if (!confirm('Hapus komentar ini?')) return; try { await tgApi({ op: 'komentar_hapus', id: a.dataset.kd }); muat(); } catch (x) { $('#kme').textContent = x.message; } }));
+    } catch (x) { $('#kml').innerHTML = `<div class="sub">${esc(x.message)}</div>`; }
+  };
+  muat();
+  $('#kmk').onclick = async (e) => { const isi = $('#kmi').value.trim(); if (!isi) return; e.target.disabled = true; try { await tgApi({ op: 'komentar_tambah', tugasId: id, isi }); $('#kmi').value = ''; $('#kme').textContent = ''; await muat(); } catch (x) { $('#kme').textContent = x.message; } e.target.disabled = false; };
+}
+function tgFormProjek(id) {
+  const d = S.tg.data, p = id ? d.projek.find((x) => x.id === id) : null, sid = p ? p.seksi[0] : S.tg.seksi, edit = !!p;
+  const prl = [...D.proker].sort((a, b) => cmp(a.label, b.label)), lbl = (x) => `${x.label}${x.detil ? ' · ' + x.detil : ''}`.slice(0, 140);
+  const cur = p && p.proker[0] ? D.proker.find((x) => x.id === p.proker[0]) : null;
+  modal(`<h2>${edit ? 'Ubah project' : 'Project baru'}</h2><p class="sub">${esc(tgSeksiNama(sid))}</p>
+  <div class="eform" style="grid-template-columns:1fr 1fr"><div style="grid-column:1/-1"><label>Nama project</label><input id="pfn" maxlength="300" value="${esc(edit ? p.nama : '')}"></div>
+  <div style="grid-column:1/-1"><label>Deskripsi</label><textarea id="pfd" rows="2" maxlength="2000">${esc(edit ? p.desk : '')}</textarea></div>
+  <div><label>Status</label><select id="pfs">${tgOpt(d.pstatus, edit ? p.status : 'Direncanakan')}</select></div><div><label>Target selesai</label><input type="date" id="pft" value="${esc(edit ? p.target : '')}"></div>
+  <div style="grid-column:1/-1"><label>Dikaitkan ke program kerja BPN (opsional)</label><input id="pfk" list="pfkl" placeholder="Ketik untuk mencari program…" value="${esc(cur ? lbl(cur) : '')}"><datalist id="pfkl">${prl.map((x) => `<option value="${esc(lbl(x))}"></option>`).join('')}</datalist><div class="sub">Kosongkan bila project tidak terkait program kerja.</div></div>
+  ${edit ? `<div style="grid-column:1/-1"><label>Catatan</label><textarea id="pfc" rows="3" maxlength="4000">${esc(p.catatan)}</textarea></div>` : ''}</div><div class="err" id="pfe"></div>
+  <div class="acts"><button class="btn" id="pfok" style="width:auto">${edit ? 'Simpan' : 'Buat project'}</button></div>`, true);
+  $('#pfok').onclick = async (e) => {
+    const k = prl.find((x) => lbl(x) === $('#pfk').value), f = { nama: $('#pfn').value, desk: $('#pfd').value, status: $('#pfs').value, target: $('#pft').value, proker: k ? [k.id] : [] }; e.target.disabled = true;
+    try { if (edit) await tgApi({ op: 'projek_ubah', id: p.id, fields: { ...f, catatan: $('#pfc').value } }); else await tgApi({ op: 'projek_baru', seksiId: sid, ...f }); closeModal(); await tgMuat(true); }
+    catch (x) { $('#pfe').textContent = x.message; e.target.disabled = false; }
+  };
+}
 
 /* --- Pengurus --- */
 PAGES.pengurus = () => {

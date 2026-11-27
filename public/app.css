@@ -220,3 +220,28 @@ tr.clk{cursor:pointer}tr.clk:hover{background:#F3F7FF}
 .memenu button:hover{background:#EEF2FA}.memenu button.out{color:#C0392B}.memenu hr{border:0;border-top:1px solid #EEF2FA;margin:4px 0}
 
 .nav .ngrp{font-size:10.5px;font-weight:700;letter-spacing:.09em;color:var(--mute);margin:16px 14px 4px}
+
+/* Proyek & Tugas Seksi */
+.kb{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:start}
+.kcol{background:var(--gray-t);border-radius:14px;padding:10px;min-height:120px}
+.kcol.over{outline:2px dashed var(--navy)}
+.kcol h4{margin:2px 4px 10px;display:flex;gap:8px;align-items:center}
+.kcard{background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(23,32,64,.1);cursor:pointer}
+.kcard.done{opacity:.65}.kcard.drag{opacity:.4}
+.kcard .kt{font-weight:700;font-size:13.5px;margin-bottom:6px}
+.km{display:flex;gap:6px;flex-wrap:wrap}
+.kpj{display:flex;gap:4px;margin-top:8px}
+.kpj span{background:var(--navy);color:#fff;border-radius:50%;min-width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;padding:0 4px}
+.pstrip{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.pcard{background:#fff;border:1px solid var(--gray-t);border-radius:12px;padding:10px 12px;cursor:pointer}
+.pcard.on{border-color:var(--navy);box-shadow:0 0 0 2px rgba(23,32,64,.15)}
+.pcard .pn{font-weight:700;margin-bottom:6px}
+.pb{height:6px;background:var(--gray-t);border-radius:4px;margin:8px 0 4px;overflow:hidden}.pb i{display:block;height:100%;background:#2E9E6B}
+.mx{display:grid;grid-template-columns:1fr 1fr;gap:12px}.mxq{background:var(--gray-t);border-radius:14px;padding:10px}.mxq h4{margin:0 0 8px;font-size:12.5px}
+.mxh{display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--mute);text-transform:uppercase;margin-bottom:4px}
+.tgpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:4px 10px;max-height:170px;overflow:auto;border:1px solid var(--gray-t);border-radius:10px;padding:8px}
+.tgpick label{display:flex;gap:6px;align-items:center;font-weight:500;margin:0}.tgpick input{width:auto}
+.kml{max-height:240px;overflow:auto}.kmi{background:var(--gray-t);border-radius:10px;padding:8px 10px;margin-bottom:6px}
+.kmh{display:flex;gap:10px;align-items:center;margin-bottom:2px}.kmh a{margin-left:auto}
+.kmf{display:flex;gap:8px;align-items:flex-end;margin-top:8px}.kmf textarea{flex:1}
+@media(max-width:640px){.mx,.mxh{grid-template-columns:1fr}}

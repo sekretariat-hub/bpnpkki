@@ -258,5 +258,7 @@ module.exports = async (req, res) => {
     res.status(502).json({ error: 'Gagal mengambil data dari Airtable' });
   }
 };
+module.exports.timScope = timScope;
+module.exports.fresh = fresh;
 module.exports.getCache = () => cache;
 module.exports.invalidate = () => { cache = { at: 0, data: null }; };
