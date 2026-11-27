@@ -41,7 +41,7 @@ const I = {
 };
 const MENU = [
   { id: 'dashboard', label: 'Dashboard', icon: I.home, sub: 'Ringkasan tugas, program, dan agenda untuk Anda', c: '#3B82F6' },
-  { g: 'PROGRAM', id: 'proker', label: 'Program Kerja', icon: I.clip, sub: 'Program kerja BPN untuk Keuskupan', c: '#F5A524', tabs: [['keuskupan', 'Per Keuskupan'], ['semua', 'Semua Program'], ['ringkasan', 'Ringkasan & Grafik'], ['acc', 'Syarat ACC'], ['tugas', 'Proyek & Tugas', 'proker/tugas', 'proker/tugas', 1]] },
+  { g: 'PROGRAM', id: 'proker', label: 'Program Kerja', icon: I.clip, sub: 'Program kerja BPN untuk Keuskupan', c: '#F5A524', tabs: [['keuskupan', 'Per Keuskupan', 'proker/keuskupan', 'proker/keuskupan', 0, 1], ['semua', 'Semua Program'], ['ringkasan', 'Ringkasan & Grafik'], ['acc', 'Syarat ACC'], ['tugas', 'Proyek & Tugas', 'proker/tugas', 'proker/tugas', 1]] },
   { g: 'PROGRAM', id: 'laporan', label: 'Laporan', icon: I.chart, sub: 'Ringkasan kegiatan', c: '#34C28A', tabs: [['pleno', 'Pleno & Golden Jubilee'], ['tc', 'TC SHDR'], ['kepemudaan', 'Kepemudaan']] },
   { id: 'profil', label: 'Profil Saya', icon: I.star, sub: 'Lihat dan lengkapi data diri Anda', c: '#E0661A', always: true, hide: true },
   { g: 'ORGANISASI', id: 'org', label: 'Organisasi', icon: I.team, sub: 'Tim, bagan, dan pengurus BPN', c: '#FF7A6B', tabs: [['saya', 'Tim Saya', 'tim/saya', 'tim/saya', 1], ['bagansaya', 'Bagan Tim Saya', 'tim/bagan', 'org/bagansaya', 1], ['bagan', 'Bagan Seluruh Tim', 'tim/bagan', 'tim/bagan'], ['pengurus', 'Daftar Pengurus BPN', 'pengurus', 'pengurus'], ['daftar', 'Daftar Anggota Tim', 'tim/daftar', 'tim/daftar']] },
@@ -228,7 +228,7 @@ const TG_ST = { 'Belum dimulai': 'gray', 'Dalam proses': 'amber', Selesai: 'gree
 const tgSeksiNama = (id) => ((S.tg.data.seksi.find((x) => x.id === id) || {}).nama || '').replace(/^Tim Kerja\s*/, '');
 const tgBisaUbah = (t) => { const d = S.tg.data, sk = d.seksi.filter((x) => t.seksi.includes(x.id)); return !!(D.user.tim && D.user.tim.semua) || sk.some((x) => x.kelola) || t.pj.some((p) => p.id === d.saya) || (t.oleh && t.oleh === D.user.nama); };
 const tgAnggota = (sid) => { const nama = (S.tg.data.seksi.find((x) => x.id === sid) || {}).nama || '', m = new Map(); D.tim.filter((x) => x.orang && x.status === 'AKTIF' && x.seksi.includes(nama)).forEach((x) => m.set(x.orang.id, x.orang.nama)); return [...m].map(([id, n]) => ({ id, nama: n })).sort((a, b) => cmp(a.nama, b.nama)); };
-const tgTugasSaring = () => { const d = S.tg.data; return d.tugas.filter((t) => (!S.tg.seksi || t.seksi.includes(S.tg.seksi) || t.pj.some((p) => p.id === d.saya)) && (!S.tg.projek || (S.tg.projek === '-' ? !t.projek.length : t.projek.includes(S.tg.projek))) && (!S.tg.mine || t.pj.some((p) => p.id === d.saya))); };
+const tgTugasSaring = () => { const d = S.tg.data; return d.tugas.filter((t) => (!S.tg.seksi || t.seksi.includes(S.tg.seksi)) && (!S.tg.projek || (S.tg.projek === '-' ? !t.projek.length : t.projek.includes(S.tg.projek))) && (!S.tg.mine || t.pj.some((p) => p.id === d.saya))); };
 const tgKartu = (t, drag) => `<div class="kcard${t.status === 'Selesai' ? ' done' : ''}" data-tg="${esc(t.id)}"${drag && tgBisaUbah(t) ? ' draggable="true"' : ''}>
   <div class="kt">${esc(t.nama)}</div>
   <div class="km">${t.prio ? chip(TG_PRIO[t.prio] ? TG_PRIO[t.prio][0] : t.prio, TG_PRIO[t.prio] ? TG_PRIO[t.prio][1] : 'gray') : ''}${t.tenggat ? chip('⏰ ' + fdate(t.tenggat), t.status !== 'Selesai' && t.tenggat < D.today ? 'coral' : 'blue') : ''}${t.projek.length ? chip('📁 ' + esc(((S.tg.data.projek.find((p) => p.id === t.projek[0]) || {}).nama || '').slice(0, 24)), 'teal') : ''}</div>
@@ -263,7 +263,7 @@ PAGES['proker/tugas'] = () => {
     <div style="flex:none"><label>Tampilan</label><div class="seg" id="tgv">${[['kanban', 'Kanban'], ['daftar', 'Daftar'], ['matriks', 'Matriks prioritas']].map(([k, l]) => `<button data-v="${k}" class="${S.tg.view === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
     <label style="display:flex;gap:8px;align-items:center;margin:0;font-size:13px;flex:none"><input type="checkbox" id="tgmine" style="width:auto"${S.tg.mine ? ' checked' : ''}> Tugas saya saja</label>
     <div style="flex:none;display:flex;gap:8px"><button class="btn" id="tgnew" style="width:auto;margin:0">+ Tugas</button>${sk.kelola ? '<button class="ghost" id="tgnewp">+ Project</button>' : ''}</div></div>
-  <h4 style="margin:6px 0 8px">Project ${esc(sk.nama.replace(/^Tim Kerja\s*/, ''))}${sk.kelola ? '' : ' <span class="sub">(project dibuat oleh Koordinator Seksi/Bidang)</span>'}</h4>
+  <h4 style="margin:6px 0 8px">Project seksi ${esc(sk.nama.replace(/^Tim Kerja\s*/, ''))}${sk.kelola ? '' : ' <span class="sub">(project dibuat oleh Koordinator Seksi/Bidang)</span>'}</h4>
   <div class="pstrip">${stripe || '<div class="sub">Belum ada project. Tugas tetap bisa dibuat tanpa project.</div>'}</div>
   <div style="margin-top:14px">${body}</div>`;
 };
@@ -1427,7 +1427,7 @@ async function lsIngatkan(btn) {
   btn.disabled = false;
 }
 
-const tabsOf = (m) => (m.tabs ? m.tabs.filter((s) => (D.perm[s[2] || `${m.id}/${s[0]}`] || 0) >= 1 && !(s[4] && !(D.user.tim && D.user.tim.ada))) : []);
+const tabsOf = (m) => (m.tabs ? m.tabs.filter((s) => (D.perm[s[2] || `${m.id}/${s[0]}`] || 0) >= 1 && !(s[4] && !(D.user.tim && D.user.tim.ada)) && !(s[5] && !(D.user.bpk || D.user.superAdmin || (D.perm.admin || 0) >= 1))) : []);
 const visible = () => MENU.filter((m) => m.always || (m.tabs ? tabsOf(m).length : (D.perm[m.id] || 0) >= 1));
 // Alamat lama (sebelum menu digabung) dialihkan ke alamat baru supaya tautan dan bookmark tetap jalan.
 const ALIAS = { pengurus: 'org/pengurus', tim: 'org/saya', 'tim/saya': 'org/saya', 'tim/bagan': 'org/bagan', 'tim/daftar': 'org/daftar', modul: 'ls/m-ringkasan', 'modul/ringkasan': 'ls/m-ringkasan', 'modul/permodul': 'ls/m-permodul', 'modul/peserta': 'ls/m-peserta', 'modul/pengajar': 'ls/m-pengajar' };
