@@ -235,12 +235,14 @@ module.exports = async (req, res) => {
     let scopeNames = null;
     if (acc.bpkIds) scopeNames = new Set(d.bpkList.filter((b) => acc.bpkIds.includes(b.id)).map((b) => b.nama));
     const inScope = (arr) => !scopeNames || arr.some((n) => scopeNames.has(n));
+    const sksSaya = acc.seksiSaja ? timScope(acc, d).seksi.map((x) => x.toLowerCase()) : null; // anggota seksi biasa: hanya program seksinya
+    const seksiOk = (p) => !sksSaya || (p.seksi || []).some((n) => sksSaya.includes(String(n).toLowerCase()));
     const body = {
       user: { nama: acc.tampil || acc.nama, pid: acc.pid || '', bpk: !!acc.pid && Object.values(d.bpkProfil || {}).some((b) => b.pejabat.some((x) => x.orang && x.orang.id === acc.pid)), email: acc.email, superAdmin: !!acc.superAdmin, imp: acc.imp || null, tim: timScope(acc, d), level: acc.peran, peran: acc.peran, scope: scopeNames ? [...scopeNames] : null, seksiEdit: acc.seksiEdit },
       perm: P, opsi: OPSI(d.proker), generatedAt: d.generatedAt, today: d.today,
       pewartaList: ok('dashboard') && !scopeNames ? d.pewartaList : [],
       kpis: ok('dashboard') ? d.kpis : { bpk: { now: 0, prev: 0, total: 0 }, pdpkk: { now: 0, prev: 0 }, pewarta: null },
-      proker: anyOf('proker') || ok('dashboard') ? d.proker.filter((p) => inScope([...p.penerima, ...p.pelaksana])) : [],
+      proker: anyOf('proker') || ok('dashboard') ? d.proker.filter((p) => inScope([...p.penerima, ...p.pelaksana]) && seksiOk(p)) : [],
       pengurus: anyOf('pengurus') ? d.pengurus : [],
       tim: anyOf('tim') ? d.tim : [],
       kelompok: anyOf('pengurus') ? { inti: d.kelompok.inti, tim: d.tim.filter((t) => t.orang && /^aktif$/i.test(t.status || '')).map((t) => ({ orang: t.orang, jabatan: [...t.jabatanBpn, ...t.seksi].filter(Boolean).join(' · '), seksi: t.seksi })) } : { inti: [], tim: [] },
