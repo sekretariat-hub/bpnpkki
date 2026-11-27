@@ -26,7 +26,7 @@ const dat = (id, l) => (id === null ? '' : ` data-dr="${id}" data-l="${esc(l)}"`
 /* ===== state ===== */
 let D = null, R = null, ADM = null; // data, laporan, admin
 const S = { pf: { tahun: '', bulan: '', status: '', acc: '', metode: '', q: '', role: 'penerima', scope: 'resmi' }, sort: { k: 'waktu', d: 1 },
-  pdf: { kus: '', jenis: '', q: '' }, pg: { g: 'harian', kus: '', jab: '', q: '' }, tf: { status: 'AKTIF', kat: '', bidang: '', q: '' }, showDone: false };
+  pdf: { kus: '', jenis: '', q: '' }, pg: { g: 'harian', kus: '', jab: '', q: '' }, tf: { status: 'AKTIF', kat: '', bidang: '', kus: '', q: '' }, showDone: false };
 
 /* ===== menu ===== */
 const I = {
@@ -636,7 +636,7 @@ PAGES['pd/ringkasan'] = () => {
 };
 
 /* --- Tim Kerja --- */
-const timRows = () => { const f = S.tf, q = f.q.toLowerCase(); return D.tim.filter((x) => (!f.status || x.status === f.status) && (!f.kat || x.kategori === f.kat) && (!f.bidang || x.bidang.includes(f.bidang)) && (!q || ((x.orang?.nama || '') + ' ' + x.seksi.join(' ')).toLowerCase().includes(q))); };
+const timRows = () => { const f = S.tf, q = f.q.toLowerCase(); return D.tim.filter((x) => (!f.status || x.status === f.status) && (!f.kat || x.kategori === f.kat) && (!f.bidang || x.bidang.includes(f.bidang)) && (!f.kus || x.orang?.keuskupan === f.kus) && (!q || ((x.orang?.nama || '') + ' ' + x.seksi.join(' ')).toLowerCase().includes(q))); };
 const katTone = { 'BPN INTI': 'violet', 'BPN HARIAN': 'blue', 'TIM KERJA': 'teal' };
 
 /* --- Tim Saya (tab di Tim Kerja BPN): tim bidang, tim kerja (seksi), dan program kerja terkait --- */
@@ -704,7 +704,7 @@ PAGES['tim/daftar'] = () => {
     document.querySelectorAll('[data-riw]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); riwayatPengurus(a.dataset.riw); }));
   });
   const panelP = pgl.length ? `<details class="cl" style="margin-bottom:12px"><summary><span>Pengurus BPN (jabatan, ganti, riwayat)</span></summary><div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button class="ghost" id="pgrw">Riwayat jabatan</button><button class="ghost" id="pgpv">Lihat form profil pendaftaran</button></div><div class="tw"><table><thead><tr><th>Jabatan</th><th>Pemegang</th><th>Keuskupan</th><th></th></tr></thead><tbody>${pgl.sort((a, b) => b.rank - a.rank).flatMap((x) => x.orang.map((o) => `<tr><td>${esc(x.jabatan)}</td><td><b>${esc(o.nama)}</b></td><td>${esc(o.keuskupan || '')}</td><td>${(D.riwayatPengurus || []).some((r) => r.jabatan === x.jabatan) ? `<a href="#" data-riw="${esc(x.jabatan)}">Riwayat</a> ` : ''}${ed ? `<a href="#" data-gnt="${esc(x.id)}|${esc(o.id)}">Ganti</a>` : ''}</td></tr>`)).join('')}</tbody></table></div></details>` : '';
-  return `${panelP}<div class="filters"><div><label>Status</label><select data-tf="status"><option value="">Semua</option>${o(uniq(D.tim.map((x) => x.status)))}</select></div><div><label>Kategori</label><select data-tf="kat"><option value="">Semua</option>${o(uniq(D.tim.map((x) => x.kategori)))}</select></div><div><label>Bidang</label><select data-tf="bidang"><option value="">Semua</option>${o(uniq(D.tim.flatMap((x) => x.bidang)))}</select></div><div class="q"><label>Cari</label><input data-tf="q" placeholder="Nama / seksi…"></div></div><div id="res"></div>`;
+  return `${panelP}<div class="filters"><div><label>Status</label><select data-tf="status"><option value="">Semua</option>${o(uniq(D.tim.map((x) => x.status)))}</select></div><div><label>Kategori</label><select data-tf="kat"><option value="">Semua</option>${o(uniq(D.tim.map((x) => x.kategori)))}</select></div><div><label>Bidang</label><select data-tf="bidang"><option value="">Semua</option>${o(uniq(D.tim.flatMap((x) => x.bidang)))}</select></div><div><label>Keuskupan</label><select data-tf="kus"><option value="">Semua</option>${o(uniq(D.tim.map((x) => x.orang?.keuskupan)))}</select></div><div class="q"><label>Cari</label><input data-tf="q" placeholder="Nama / seksi…"></div></div><div id="res"></div>`;
 };
 const baganView = (saya) => {
   const T0 = D.user.tim || { seksi: [] };
@@ -1563,7 +1563,10 @@ function stepPending(nama) {
 async function afterAuth(j) { if (j && j.pending) return stepPending(); await load(); }
 $('#rf').onclick = async () => { $('#rf').disabled = true; $('#rf').textContent = 'Memuat…'; await load(true); $('#rf').disabled = false; $('#rf').textContent = 'Muat ulang'; };
 $('#pwbtn')?.addEventListener('click', () => showChangePw(false));
-$('#burger').onclick = () => $('#side').classList.toggle('open');
+const sideHide = (v) => { $('.shell').classList.toggle('hidside', v); try { localStorage.setItem('sidehide', v ? '1' : ''); } catch { /* abaikan */ } };
+try { if (localStorage.getItem('sidehide') && innerWidth > 900) $('.shell').classList.add('hidside'); } catch { /* abaikan */ }
+$('#burger').onclick = () => { if (innerWidth > 900) sideHide(!$('.shell').classList.contains('hidside')); else $('#side').classList.toggle('open'); };
+$('#sidehide').onclick = () => { if (innerWidth > 900) sideHide(true); else $('#side').classList.remove('open'); };
 (async () => {
   const inv = new URLSearchParams(location.search).get('invite');
   const hp = (new URLSearchParams(location.search).get('hp') || '').replace(/\D/g, '');
