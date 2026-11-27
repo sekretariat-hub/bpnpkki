@@ -394,6 +394,18 @@ PAGES.pendataan = () => {
       document.querySelectorAll('#pdm button').forEach((b) => b.addEventListener('click', () => { S.pdt.mode = b.dataset.m; render(); }));
       document.querySelectorAll('[data-pjt]').forEach((b) => b.addEventListener('click', () => { S.pdt.jab = b.dataset.pjt; render(); }));
       $('#pdk')?.addEventListener('change', (e) => { S.pdt.kosong = e.target.checked; render(); });
+      document.querySelectorAll('[data-pk],[data-pl]').forEach((btn) => btn.addEventListener('click', async (e) => {
+        e.stopPropagation(); const salin = !!btn.dataset.pl, [bpkId, jabatanId] = (btn.dataset.pk || btn.dataset.pl).split('|'); const lama = btn.textContent;
+        if (!salin && !confirm('Kirim WhatsApp berisi link formulir ke koordinator BPK ini?')) return;
+        btn.disabled = true; btn.textContent = 'Memproses…';
+        try {
+          const j = await post('/api/pejabat', { action: 'pic_kirim', bpkId, jabatanId, tanpaKirim: salin });
+          if (salin) { try { await navigator.clipboard.writeText(j.link); alert('Link formulir disalin. Berlaku 14 hari.'); } catch { prompt('Salin link formulir (berlaku 14 hari):', j.link); } }
+          else if (j.terkirim) alert(j.uji ? 'MODE UJI: WA terkirim ke nomor uji Anda (bukan ke koordinator BPK).' : `WA terkirim ke ${j.penerima}.`);
+          else { prompt(`${j.galat || 'WA belum terkirim.'} Salin link formulir:`, j.link); }
+        } catch (x) { alert(x.message); }
+        btn.disabled = false; btn.textContent = lama;
+      }));
     });
     if (mode === 'jab') {
       // Urutan tombol: Moderator, Koordinator BPK, Kepemudaan, lalu jabatan lain menurut urutan data.
@@ -407,7 +419,7 @@ PAGES.pendataan = () => {
       const pill = jl.map((j) => { const n = list.filter((b) => prof(b.id).pejabat.some((x) => x.jabatanId === j.id)).length; return `<button type="button" class="pill${j.id === cur.id ? ' on' : ''}" data-pjt="${esc(j.id)}">${esc(j.nama)} <b>${n}/${list.length}</b></button>`; }).join('');
       return `${head}${seg}<div class="pills">${pill}</div>
         <div class="filters" style="justify-content:space-between"><div class="note"><b>${esc(cur.nama)}</b>: ${isi} dari ${list.length} BPK sudah terisi, ${list.length - isi} belum.</div><label style="display:flex;gap:8px;align-items:center;margin:0;font-size:13px"><input type="checkbox" id="pdk" style="width:auto"${S.pdt.kosong ? ' checked' : ''}> Hanya yang belum terisi</label></div>
-        <div class="tw"><table><thead><tr><th>BPK</th><th>Pemegang jabatan</th><th>Kontak</th><th>Status</th></tr></thead><tbody>${tampil.map((r) => `<tr class="clk" data-pbk="${esc(r.b.id)}"><td><b>${esc(r.b.nama)}</b></td><td>${r.pj.map((x) => `<div>${esc(x.orang.nama)}</div>`).join('') || '<span class="sub">–</span>'}</td><td>${r.pj.map((x) => `<div class="acts">${x.orang.adaWa ? `<a class="wa" target="_blank" rel="noopener" href="/api/wa?p=${esc(x.orang.id)}" onclick="event.stopPropagation()">WhatsApp</a>` : ''}${x.orang.email ? `<a class="wa em" href="mailto:${esc(x.orang.email)}" onclick="event.stopPropagation()">Email</a>` : ''}</div>`).join('')}</td><td>${r.pj.length ? chip('Terisi', 'green') : chip('Belum terisi', 'coral')}</td></tr>`).join('') || '<tr><td colspan="4" class="sub">Tidak ada yang sesuai.</td></tr>'}</tbody></table></div>
+        <div class="tw"><table><thead><tr><th>BPK</th><th>Pemegang jabatan</th><th>Kontak</th><th>Status</th>${edit ? '<th></th>' : ''}</tr></thead><tbody>${tampil.map((r) => `<tr class="clk" data-pbk="${esc(r.b.id)}"><td><b>${esc(r.b.nama)}</b></td><td>${r.pj.map((x) => `<div>${esc(x.orang.nama)}</div>`).join('') || '<span class="sub">–</span>'}</td><td>${r.pj.map((x) => `<div class="acts">${x.orang.adaWa ? `<a class="wa" target="_blank" rel="noopener" href="/api/wa?p=${esc(x.orang.id)}" onclick="event.stopPropagation()">WhatsApp</a>` : ''}${x.orang.email ? `<a class="wa em" href="mailto:${esc(x.orang.email)}" onclick="event.stopPropagation()">Email</a>` : ''}</div>`).join('')}</td><td>${r.pj.length ? chip('Terisi', 'green') : chip('Belum terisi', 'coral')}</td>${edit ? `<td style="white-space:nowrap">${r.pj.length ? '' : `<button type="button" class="ghost" data-pk="${esc(r.b.id)}|${esc(cur.id)}" onclick="event.stopPropagation()">Kirim WA</button> <button type="button" class="ghost" data-pl="${esc(r.b.id)}|${esc(cur.id)}" onclick="event.stopPropagation()">Salin link</button>`}</td>` : ''}</tr>`).join('') || '<tr><td colspan="5" class="sub">Tidak ada yang sesuai.</td></tr>'}</tbody></table></div>
         <p class="note" style="margin-top:8px">Klik baris untuk membuka BPK tersebut${edit ? ' dan menambah atau mengganti pemegang jabatan' : ''}.</p>`;
     }
     const q = S.pdt.q.toLowerCase();
@@ -1623,7 +1635,27 @@ const sideHide = (v) => { $('.shell').classList.toggle('hidside', v); try { loca
 try { if (localStorage.getItem('sidehide') && innerWidth > 900) $('.shell').classList.add('hidside'); } catch { /* abaikan */ }
 $('#burger').onclick = () => { if (innerWidth > 900) sideHide(!$('.shell').classList.contains('hidside')); else $('#side').classList.toggle('open'); };
 $('#sidehide').onclick = () => { if (innerWidth > 900) sideHide(true); else $('#side').classList.remove('open'); };
+// Halaman formulir publik (tanpa login): koordinator BPK mengisi nama dan WA PIC lewat tautan ?pic=
+async function tampilFormPic(token) {
+  $('#app').classList.add('hide'); $('#login').classList.remove('hide');
+  const lf = $('#lf'); lf.onsubmit = (e) => e.preventDefault();
+  lf.innerHTML = '<div class="sub">Memuat…</div>';
+  let inf; try { const r = await fetch('/api/pejabat?pic=' + encodeURIComponent(token)); inf = await r.json(); if (!r.ok) throw new Error(inf.error || 'Tautan tidak valid'); } catch (e) { lf.innerHTML = `<img src="/logo.png" alt=""><h1>Tautan tidak berlaku</h1><p>${esc(e.message)}</p>`; return; }
+  lf.innerHTML = `<img src="/logo.png" alt=""><h1>Data ${esc(inf.jabatan)} BPK ${esc(inf.bpk)}</h1><p>Isi nama dan nomor WhatsApp ${esc(inf.jabatan)} BPK ${esc(inf.bpk)}. Orang tersebut akan menerima WhatsApp berisi tautan untuk melengkapi profil dan membuat password.</p>${inf.uji ? '<p style="background:#FFF4D6;border-radius:10px;padding:8px 10px"><b>MODE UJI:</b> data tidak disimpan, WA hanya dikirim ke nomor uji.</p>' : ''}
+    <div style="text-align:left"><label>Nama lengkap</label><input id="pfn" autocomplete="off" required><label style="margin-top:10px">Nomor WhatsApp</label><input id="pfw" type="tel" inputmode="tel" placeholder="0812 3456 7890" required><label style="margin-top:10px">Jenis kelamin</label><select id="pfj"><option value="">Pilih…</option><option>Pria</option><option>Wanita</option></select></div>
+    <div class="err" id="pfe" role="alert"></div><button class="btn" id="pfs" type="button" style="margin-top:12px">Simpan dan kirim undangan WA</button>`;
+  $('#pfs').onclick = async () => {
+    $('#pfe').textContent = ''; $('#pfs').disabled = true;
+    try {
+      const r = await fetch('/api/pejabat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'pic_form', token, nama: $('#pfn').value, wa: $('#pfw').value, jk: $('#pfj').value }) });
+      const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Gagal menyimpan');
+      lf.innerHTML = `<img src="/logo.png" alt=""><h1>Terima kasih ✓</h1><p>${j.uji ? 'MODE UJI: tidak ada yang disimpan; WA contoh dikirim ke nomor uji.' : j.terkirim ? 'Data tersimpan dan WhatsApp undangan sudah dikirim.' : 'Data tersimpan, tetapi WhatsApp belum terkirim. Hubungi admin BPN.'}</p>`;
+    } catch (e) { $('#pfe').textContent = e.message; $('#pfs').disabled = false; }
+  };
+}
 (async () => {
+  const picTok = new URLSearchParams(location.search).get('pic');
+  if (picTok) { await tampilFormPic(picTok); return; }
   const inv = new URLSearchParams(location.search).get('invite');
   const hp = (new URLSearchParams(location.search).get('hp') || '').replace(/\D/g, '');
   if (hp) { LG.phone = hp; history.replaceState(null, '', location.pathname + location.hash); }

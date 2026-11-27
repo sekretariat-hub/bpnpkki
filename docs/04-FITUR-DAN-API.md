@@ -37,3 +37,6 @@ Hak: lihat = anggota seksi; buat tugas = anggota seksi; ubah tugas = koordinator
 
 ## Bagan Seluruh Tim (Organisasi)
 Tab Daftar Pengurus BPN dihapus (`#/pengurus` dialihkan ke bagan). Bagan: BPN PKKI > Penasihat Episkopal > Pastor Moderator > Koordinator BPN > Tim BPN Harian > Bidang > Seksi, semua bisa dilipat (details). Tiap seksi memisahkan Anggota seksi (BPN Inti/Harian) dan Anggota tim kerja dengan badge jumlah. Klik nama: foto besar, WhatsApp (wa.me), Email (mailto), Profil lengkap (Admin atau diri sendiri), Ganti/akhiri jabatan (hak edit pengurus). Riwayat jabatan, form profil pendaftaran, dan Ganti ada di tab Daftar Anggota Tim.
+
+## Isi data PIC lewat link (Pendataan PIC > Per Jabatan)
+Jabatan kosong punya tombol Kirim WA (kirim link formulir ke koordinator BPK; bila tidak ada, ke pejabat aktif lain) dan Salin link. Link `/?pic=<token>` ditandatangani (SESSION_SECRET), berlaku 14 hari, tanpa login. Formulir (nama, WA, jenis kelamin) menyimpan orang dan pejabat ke Airtable lalu mengirim WA undangan ke PIC baru (didaftarkan oleh siapa, sebagai apa, link lengkapi profil + buat password). Logika di `lib/h-pic.js`, dipanggil dari `api/pejabat.js` (action pic_kirim, pic_form; GET ?pic=). MODE UJI aktif secara default: semua WA dialihkan ke UJI_WA (default 628157005842) dan formulir tidak menyimpan. Set env UJI_PIC=0 di Vercel untuk produksi.

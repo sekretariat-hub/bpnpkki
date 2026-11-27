@@ -82,10 +82,12 @@ const pejabat = async (req, res) => {
 };
 
 // Satu fungsi untuk tiga urusan (batas 12 fungsi paket Hobby): GET cari orang, POST action=pengurus ganti pengurus, selain itu pendataan pejabat BPK.
-const hOrang = require('../lib/h-orang'), hPengurus = require('../lib/h-pengurus');
+const hOrang = require('../lib/h-orang'), hPengurus = require('../lib/h-pengurus'), hPic = require('../lib/h-pic');
 module.exports = async (req, res) => {
-  if (req.method === 'GET') return hOrang(req, res);
+  if (req.method === 'GET') return req.query && req.query.pic ? hPic.info(req, res).catch(() => res.status(502).json({ error: 'Gagal memuat' })) : hOrang(req, res);
   const b = typeof req.body === 'string' ? (() => { try { return JSON.parse(req.body || '{}'); } catch { return {}; } })() : req.body || {};
   if (b.action === 'pengurus') return hPengurus(req, res);
+  if (b.action === 'pic_kirim') return hPic.kirimLink(req, res).catch((e) => { console.error('pic_kirim', e.message); res.status(502).json({ error: 'Gagal memproses' }); });
+  if (b.action === 'pic_form') return hPic.form(req, res);
   return pejabat(req, res);
 };
