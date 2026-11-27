@@ -44,7 +44,7 @@ const MENU = [
   { g: 'PROGRAM', id: 'proker', label: 'Program Kerja', icon: I.clip, sub: 'Program kerja BPN untuk Keuskupan', c: '#F5A524', tabs: [['keuskupan', 'Per Keuskupan', 'proker/keuskupan', 'proker/keuskupan', 0, 1], ['semua', 'Semua Program'], ['ringkasan', 'Ringkasan & Grafik'], ['acc', 'Syarat ACC'], ['tugas', 'Proyek & Tugas', 'proker/tugas', 'proker/tugas', 1]] },
   { g: 'PROGRAM', id: 'laporan', label: 'Laporan', icon: I.chart, sub: 'Ringkasan kegiatan', c: '#34C28A', tabs: [['pleno', 'Pleno & Golden Jubilee'], ['tc', 'TC SHDR'], ['kepemudaan', 'Kepemudaan']] },
   { id: 'profil', label: 'Profil Saya', icon: I.star, sub: 'Lihat dan lengkapi data diri Anda', c: '#E0661A', always: true, hide: true },
-  { g: 'ORGANISASI', id: 'org', label: 'Organisasi', icon: I.team, sub: 'Tim, bagan, dan pengurus BPN', c: '#FF7A6B', tabs: [['saya', 'Tim Saya', 'tim/saya', 'tim/saya', 1], ['bagansaya', 'Bagan Tim Saya', 'tim/bagan', 'org/bagansaya', 1], ['bagan', 'Bagan Seluruh Tim', 'tim/bagan', 'tim/bagan'], ['pengurus', 'Daftar Pengurus BPN', 'pengurus', 'pengurus'], ['daftar', 'Daftar Anggota Tim', 'tim/daftar', 'tim/daftar']] },
+  { g: 'ORGANISASI', id: 'org', label: 'Organisasi', icon: I.team, sub: 'Tim, bagan, dan pengurus BPN', c: '#FF7A6B', tabs: [['saya', 'Tim Saya', 'tim/saya', 'tim/saya', 1], ['bagansaya', 'Bagan Tim Saya', 'tim/bagan', 'org/bagansaya', 1], ['bagan', 'Bagan Seluruh Tim', 'tim/bagan', 'tim/bagan'], ['daftar', 'Daftar Anggota Tim', 'tim/daftar', 'tim/daftar']] },
   { g: 'DATA', id: 'umat', label: 'Data Umat', icon: I.pd, sub: 'Profil umat yang terdaftar di sistem BPN', c: '#0EA5A4', tabs: [['ringkasan', 'Infografis'], ['daftar', 'Daftar Umat']] },
   { g: 'DATA', id: 'pd', label: 'Koordinator PD', icon: I.pd, sub: 'Persekutuan Doa dan koordinatornya', c: '#14B8A6', tabs: [['daftar', 'Daftar PD'], ['ringkasan', 'Ringkasan']] },
   { g: 'DATA', id: 'pendataan', label: 'Pendataan PIC', icon: I.pd, sub: 'Pejabat dan PIC di setiap BPK, lengkap dengan riwayatnya', c: '#E0661A' },
@@ -345,52 +345,7 @@ function tgFormProjek(id) {
   };
 }
 
-/* --- Pengurus --- */
-PAGES.pengurus = () => {
-  // Satu orang bisa ada di beberapa kelompok (tumpang tindih diperbolehkan).
-  const K = D.kelompok || { inti: [], tim: [] };
-  const grp = {
-    harian: D.pengurus.filter((x) => x.orang.length).flatMap((x) => x.orang.map((o) => ({ o, jab: x.jabatan, rank: x.rank, pid: x.id }))),
-    inti: K.inti.map((x) => ({ o: x.orang, jab: x.jabatan.join(', '), rank: 0 })),
-    tim: K.tim.map((x) => ({ o: x.orang, jab: x.jabatan, rank: 0 })),
-  };
-  const LBL = { harian: 'BPN Harian', inti: 'BPN Inti', tim: 'Tim Kerja' };
-  const edit = (D.perm.pengurus || 0) >= 2;
-  const uniqN = (g) => new Set(grp[g].map((x) => x.o.id)).size;
-  const draw = () => {
-    const f = S.pg, q = f.q.toLowerCase();
-    const list = grp[f.g].filter((x) => (!f.kus || x.o.keuskupan === f.kus) && (!f.jab || x.jab.split(/, | · /).includes(f.jab)) && (!q || `${x.o.nama} ${x.o.panggilan || ''} ${x.jab} ${x.o.keuskupan}`.toLowerCase().includes(q)));
-    const seen = new Set(), rows = list.filter((x) => (seen.has(x.o.id) ? false : seen.add(x.o.id)));
-    $('#pgn').textContent = `${nf.format(rows.length)} orang${rows.length !== uniqN(f.g) ? ` dari ${nf.format(uniqN(f.g))}` : ''} · ${LBL[f.g]}`;
-    const items = (x) => grp[f.g].filter((y) => y.o.id === x.o.id);
-    const extra = (x) => (f.g !== 'harian' ? '' : items(x).map((y) => `${(D.riwayatPengurus || []).some((r) => r.jabatan === y.jab) ? `<a href="#" class="wa em" data-riw="${esc(y.jab)}">Riwayat</a>` : ''}${edit ? `<a href="#" class="wa em" data-gnt="${y.pid}|${y.o.id}">Ganti</a>` : ''}`).join(''));
-    $('#pgr').innerHTML = rows.map((x) => person(x.o, items(x).map((y) => y.jab).filter(Boolean).join(' · '), extra(x))).join('') || '<div class="empty">Tidak ada yang sesuai filter.</div>';
-    document.querySelectorAll('[data-g]').forEach((el) => el.classList.toggle('sel', el.dataset.g === f.g));
-    const opts = (arr, cur) => `<option value="">Semua</option>${arr.map((v) => `<option${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join('')}`;
-    $('#pgk').innerHTML = opts(uniq(grp[f.g].map((x) => x.o.keuskupan).filter(Boolean)).sort(cmp), f.kus);
-    $('#pgj').innerHTML = opts(uniq(grp[f.g].flatMap((x) => x.jab.split(/, | · /)).filter(Boolean)).sort(cmp), f.jab);
-  };
-  setTimeout(() => {
-    document.querySelectorAll('[data-g]').forEach((el) => el.addEventListener('click', () => { S.pg = { g: el.dataset.g, kus: '', jab: '', q: S.pg.q }; $('#pgq').value = S.pg.q; draw(); }));
-    $('#pgk').addEventListener('change', (e) => { S.pg.kus = e.target.value; draw(); });
-    $('#pgj').addEventListener('change', (e) => { S.pg.jab = e.target.value; draw(); });
-    $('#pgq').value = S.pg.q; $('#pgq').addEventListener('input', (e) => { S.pg.q = e.target.value; draw(); });
-    $('#pgr').addEventListener('click', (e) => {
-      const r = e.target.closest('[data-riw]'), g = e.target.closest('[data-gnt]');
-      if (r) { e.preventDefault(); riwayatPengurus(r.dataset.riw); }
-      if (g) { e.preventDefault(); const [pid, oid] = g.dataset.gnt.split('|'); gantiPengurus(pid, oid); }
-    });
-    $('#pgrw')?.addEventListener('click', () => riwayatPengurus(''));
-    $('#pgpv')?.addEventListener('click', previewProfil);
-    draw();
-  });
-  const card = (g, c, t) => `<div class="card kpi clk" data-g="${g}" style="--c:${c};--t:${t}"><div class="l">${LBL[g]}</div><div class="n">${nf.format(uniqN(g))}</div><div class="note">${g === 'harian' ? 'Susunan pengurus BPN' : g === 'inti' ? 'Koordinator BPK yang menjabat aktif' : 'Anggota tim kerja di bawah koordinator seksi'}</div></div>`;
-  return `<div class="grid g3" style="margin-bottom:14px">${card('harian', '#5B4CD1', 'var(--violet-t)')}${card('inti', '#1F56C4', 'var(--blue-t)')}${card('tim', '#0B8277', 'var(--teal-t)')}</div>
-  <div class="filters"><div class="q"><label>Cari</label><input id="pgq" placeholder="Nama / jabatan / keuskupan…"></div><div><label>Keuskupan</label><select id="pgk"></select></div><div><label>Jabatan</label><select id="pgj"></select></div></div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 8px"><button class="ghost" id="pgrw">Riwayat jabatan</button><button class="ghost" id="pgpv">Lihat form profil pendaftaran</button></div>
-  <div class="note" id="pgn" style="margin:2px 0 10px"></div><div class="people" id="pgr"></div>`;
-};
-
+/* --- Pengurus: ganti/riwayat/form dipakai dari bagan dan Daftar Anggota --- */
 function riwayatPengurus(jab) {
   const l = (D.riwayatPengurus || []).filter((r) => !jab || r.jabatan === jab);
   modal(`<h2>Riwayat jabatan${jab ? ': ' + esc(jab) : ' Pengurus BPN'}</h2>${l.length ? `<div class="tw"><table><thead><tr><th>Jabatan</th><th>Nama</th><th>Berakhir</th><th>Digantikan oleh</th></tr></thead><tbody>${l.map((r) => `<tr><td>${esc(r.jabatan)}</td><td><b>${esc(r.orang.nama)}</b></td><td>${esc(fmtTgl(r.selesai) || '–')}</td><td>${esc(r.pengganti || '–')}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Belum ada riwayat. Riwayat tercatat otomatis setiap kali pemegang jabatan diganti.</div>'}`, true);
@@ -742,7 +697,14 @@ PAGES['tim/daftar'] = () => {
     draw();
   });
   const o = (a) => a.filter(Boolean).sort(cmp).map((x) => `<option>${esc(x)}</option>`).join('');
-  return `<div class="filters"><div><label>Status</label><select data-tf="status"><option value="">Semua</option>${o(uniq(D.tim.map((x) => x.status)))}</select></div><div><label>Kategori</label><select data-tf="kat"><option value="">Semua</option>${o(uniq(D.tim.map((x) => x.kategori)))}</select></div><div><label>Bidang</label><select data-tf="bidang"><option value="">Semua</option>${o(uniq(D.tim.flatMap((x) => x.bidang)))}</select></div><div class="q"><label>Cari</label><input data-tf="q" placeholder="Nama / seksi…"></div></div><div id="res"></div>`;
+  const ed = (D.perm.pengurus || 0) >= 2, pgl = D.pengurus.filter((x) => x.orang.length);
+  setTimeout(() => {
+    $('#pgrw')?.addEventListener('click', () => riwayatPengurus('')); $('#pgpv')?.addEventListener('click', previewProfil);
+    document.querySelectorAll('[data-gnt]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); const [pid, oid] = a.dataset.gnt.split('|'); gantiPengurus(pid, oid); }));
+    document.querySelectorAll('[data-riw]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); riwayatPengurus(a.dataset.riw); }));
+  });
+  const panelP = pgl.length ? `<details class="cl" style="margin-bottom:12px"><summary><span>Pengurus BPN (jabatan, ganti, riwayat)</span></summary><div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button class="ghost" id="pgrw">Riwayat jabatan</button><button class="ghost" id="pgpv">Lihat form profil pendaftaran</button></div><div class="tw"><table><thead><tr><th>Jabatan</th><th>Pemegang</th><th>Keuskupan</th><th></th></tr></thead><tbody>${pgl.sort((a, b) => b.rank - a.rank).flatMap((x) => x.orang.map((o) => `<tr><td>${esc(x.jabatan)}</td><td><b>${esc(o.nama)}</b></td><td>${esc(o.keuskupan || '')}</td><td>${(D.riwayatPengurus || []).some((r) => r.jabatan === x.jabatan) ? `<a href="#" data-riw="${esc(x.jabatan)}">Riwayat</a> ` : ''}${ed ? `<a href="#" data-gnt="${esc(x.id)}|${esc(o.id)}">Ganti</a>` : ''}</td></tr>`)).join('')}</tbody></table></div></details>` : '';
+  return `${panelP}<div class="filters"><div><label>Status</label><select data-tf="status"><option value="">Semua</option>${o(uniq(D.tim.map((x) => x.status)))}</select></div><div><label>Kategori</label><select data-tf="kat"><option value="">Semua</option>${o(uniq(D.tim.map((x) => x.kategori)))}</select></div><div><label>Bidang</label><select data-tf="bidang"><option value="">Semua</option>${o(uniq(D.tim.flatMap((x) => x.bidang)))}</select></div><div class="q"><label>Cari</label><input data-tf="q" placeholder="Nama / seksi…"></div></div><div id="res"></div>`;
 };
 const baganView = (saya) => {
   const T0 = D.user.tim || { seksi: [] };
@@ -756,7 +718,60 @@ const baganView = (saya) => {
     <div class="rail">${top.flatMap((x) => x.orang.map((o) => `<div class="lead" data-go="#/org/pengurus" title="Lihat daftar pengurus" style="cursor:pointer">${av(o.nama)}<div><small>${esc(x.jabatan)}</small><b>${esc(o.nama)}</b><small>${esc(o.keuskupan)}</small></div></div>`)).join('')}</div><div class="vl"></div>
     <div class="bidangs">${keys.map((b, i) => { const sk = by(bd[b], (x) => x.seksi[0] || 'Anggota'); return `<div class="bd"><header style="background:${colours[i % colours.length]}">${esc(b)}<small>${bd[b].length} orang</small></header>${Object.keys(sk).sort(cmp).map((s) => `<div class="sk"><h4>${esc(s)}</h4>${sk[s].sort((a, b) => cmp(a.orang.nama, b.orang.nama)).map((x) => `<div class="mem">${av(x.orang.nama)}<div style="min-width:0"><b>${esc(x.orang.nama)}</b><small>${esc(uniq([...x.jabatanBpn, ...x.jabatanBpk]).filter(Boolean).join(' · ') || x.kategori)} · ${esc(x.orang.keuskupan)}</small></div><span style="margin-left:auto">${chip(x.kategori, katTone[x.kategori] || 'gray')}</span></div>`).join('')}</div>`).join('')}</div>`; }).join('')}</div></div>`;
 };
-PAGES['tim/bagan'] = () => baganView(false);
+/* --- Bagan Seluruh Tim: rantai pimpinan, Tim BPN Harian, Bidang > Seksi (anggota seksi / anggota tim kerja), bisa dilipat --- */
+const bgOrang = {};
+const bgAdd = (o, peran) => { if (!o) return; const e = (bgOrang[o.id] = bgOrang[o.id] || { o, peran: [] }); if (peran && !e.peran.includes(peran)) e.peran.push(peran); };
+const avf = (o) => (o.foto ? `<img class="avf" src="${esc(o.foto)}" alt="">` : av(o.nama));
+const bgKartu = (o, sub, peran) => { bgAdd(o, peran || sub); return `<div class="oc" data-orang="${esc(o.id)}" tabindex="0">${avf(o)}<div><b>${esc(o.nama)}</b><small>${esc(sub || '')}</small>${o.keuskupan ? `<small>${esc(o.keuskupan)}</small>` : ''}</div></div>`; };
+const baganFull = () => {
+  Object.keys(bgOrang).forEach((k) => delete bgOrang[k]);
+  const pg = D.pengurus.filter((x) => x.orang.length), jab = (re) => pg.filter((x) => re.test(x.jabatan));
+  const rantai = [['Penasihat Episkopal', jab(/penasihat/i)], ['Pastor Moderator', jab(/pastor moderator/i)], ['Koordinator BPN', jab(/^koordinator bpn$/i)]];
+  const used = new Set(rantai.flatMap(([, l]) => l.map((x) => x.id)));
+  const harian = pg.filter((x) => !used.has(x.id)).sort((a, b) => b.rank - a.rank);
+  const nH = new Set(pg.flatMap((x) => x.orang.map((o) => o.id))).size;
+  const aktif = D.tim.filter((x) => (S.showDone || x.status === 'AKTIF') && x.orang);
+  const nT = new Set(D.tim.filter((x) => x.status === 'AKTIF' && x.orang && x.kategori === 'TIM KERJA').map((x) => x.orang.id)).size;
+  const nI = (D.kelompok && D.kelompok.inti.length) || new Set(D.tim.filter((x) => x.status === 'AKTIF' && x.orang && x.kategori === 'BPN INTI').map((x) => x.orang.id)).size;
+  const uq = (l) => [...new Map(l.map((x) => [x.orang.id, x])).values()];
+  const jb = (x) => [...(x.jabatanBpn || []), ...(x.jabatanBpk || [])].filter(Boolean).join(' · ');
+  const bd = by(aktif, (x) => x.bidang[0] || 'Seksi / Tim lain'), keys = Object.keys(bd).sort(cmp);
+  const colours = ['#3B82F6', '#14B8A6', '#8B7CF6', '#F59E0B', '#EC6F8E', '#34C28A', '#38BDF8'];
+  const bdg = (t, n, c) => `<span class="bdg" style="${c ? 'background:' + c : ''}">${esc(t)} <b>${nf.format(n)}</b></span>`;
+  const seksiHtml = (rows) => { const sk = by(rows, (x) => x.seksi[0] || 'Tanpa seksi'); return Object.keys(sk).sort(cmp).map((s) => {
+    const a = uq(sk[s].filter((x) => x.kategori !== 'TIM KERJA')), t = uq(sk[s].filter((x) => x.kategori === 'TIM KERJA'));
+    return `<details class="cl sk2"><summary><span>${esc(s)}</span>${bdg('Anggota seksi', a.length)}${bdg('Tim kerja', t.length)}</summary>
+      <h5>Anggota seksi <small>${a.length}</small></h5><div class="ocs">${a.map((x) => bgKartu(x.orang, jb(x) || x.kategori)).join('') || '<div class="sub">Belum ada.</div>'}</div>
+      <h5>Anggota tim kerja <small>${t.length}</small></h5><div class="ocs">${t.map((x) => bgKartu(x.orang, jb(x) || 'Anggota tim kerja')).join('') || '<div class="sub">Belum ada.</div>'}</div></details>`; }).join(''); };
+  setTimeout(() => {
+    const r = document.querySelector('.bgx'); if (!r) return;
+    $('#done')?.addEventListener('change', (e) => { S.showDone = e.target.checked; render(); });
+    $('#bgo')?.addEventListener('click', () => r.querySelectorAll('details').forEach((d) => (d.open = true)));
+    $('#bgc')?.addEventListener('click', () => r.querySelectorAll('details.cl').forEach((d) => (d.open = false)));
+    r.addEventListener('click', (e) => { const c = e.target.closest('[data-orang]'); if (c) bgModal(c.dataset.orang); });
+    r.addEventListener('keydown', (e) => { if (e.key === 'Enter') { const c = e.target.closest('[data-orang]'); if (c) bgModal(c.dataset.orang); } });
+  });
+  return `<div class="bgx"><div class="filters" style="justify-content:space-between"><div class="note">${bdg('BPN Harian', nH, 'var(--violet-t)')} ${bdg('BPN Inti', nI, 'var(--blue-t)')} ${bdg('Tim Kerja', nT, 'var(--teal-t)')}</div>
+  <div style="display:flex;gap:8px;align-items:center"><label style="display:flex;gap:8px;align-items:center;margin:0;font-size:13px"><input type="checkbox" id="done" style="width:auto"${S.showDone ? ' checked' : ''}> Tampilkan yang sudah selesai</label><button class="ghost" id="bgo">Buka semua</button><button class="ghost" id="bgc">Tutup semua</button></div></div>
+  <div class="org"><div class="node"><img src="/logo.png" alt="">BPN PKKI</div>
+  ${rantai.map(([t, l]) => `<div class="vl"></div><div class="rail">${l.flatMap((x) => x.orang.map((o) => bgKartu(o, t, x.jabatan))).join('') || `<div class="oc empty0"><div><b>${esc(t)}</b><small>Belum terisi</small></div></div>`}</div>`).join('')}
+  <div class="vl"></div>
+  <details class="cl hr" open><summary><span>Tim BPN Harian</span>${bdg('Pengurus', new Set(harian.flatMap((x) => x.orang.map((o) => o.id))).size)}</summary><div class="ocs">${harian.flatMap((x) => x.orang.map((o) => bgKartu(o, x.jabatan))).join('') || '<div class="sub">Belum ada.</div>'}</div></details>
+  <div class="vl"></div>
+  <div class="bidangs">${keys.map((b, i) => { const rows = bd[b], a = uq(rows.filter((x) => x.kategori !== 'TIM KERJA')).length, t = uq(rows.filter((x) => x.kategori === 'TIM KERJA')).length; return `<details class="cl bd2" style="--bc:${colours[i % colours.length]}"><summary><span>${esc(b)}</span>${bdg('Anggota seksi', a)}${bdg('Tim kerja', t)}</summary>${seksiHtml(rows)}</details>`; }).join('')}</div></div></div>`;
+};
+function bgModal(id) {
+  const e = bgOrang[id]; if (!e) return; const o = e.o, wa = String(o.wa || '').replace(/\D/g, '').replace(/^0/, '62');
+  const lihat = id === D.user.pid || D.user.superAdmin || (D.perm.admin || 0) >= 1, ganti = (D.perm.pengurus || 0) >= 2 ? D.pengurus.filter((x) => x.orang.some((q) => q.id === id)) : [];
+  modal(`<div class="bgm"><div class="bgp">${o.foto ? `<img src="${esc(o.foto)}" alt="${esc(o.nama)}">` : `<div class="av" style="background:${hue(o.nama)};width:160px;height:160px;font-size:54px">${esc(initials(o.nama))}</div>`}</div>
+    <h2>${esc(o.nama)}</h2>${o.panggilan ? `<div class="sub">Dipanggil: ${esc(o.panggilan)}</div>` : ''}<div class="sub">${esc(o.keuskupan || '')}</div>
+    <div class="kvs" style="text-align:left;margin:12px 0">${e.peran.map((p) => `<div class="kv"><span>Peran</span><b>${esc(p)}</b></div>`).join('')}</div>
+    <div class="acts" style="justify-content:center">${wa ? `<a class="btn" style="width:auto" target="_blank" rel="noopener" href="https://wa.me/${wa}">WhatsApp</a>` : ''}${o.email ? `<a class="btn" style="width:auto" href="mailto:${esc(o.email)}">Email</a>` : ''}${lihat ? '<button class="ghost" id="bgpf">Profil lengkap</button>' : ''}${ganti.map((x) => `<button class="ghost" data-gnt="${esc(x.id)}">Ganti/akhiri: ${esc(x.jabatan)}</button>`).join('')}</div>
+    ${!wa && !o.email ? '<p class="note">Kontak belum tersedia di data.</p>' : ''}</div>`);
+  $('#bgpf')?.addEventListener('click', () => { closeModal(); location.hash = '#/profil/' + id; });
+  document.querySelectorAll('.bgm [data-gnt]').forEach((b) => b.addEventListener('click', () => { closeModal(); gantiPengurus(b.dataset.gnt, id); }));
+}
+PAGES['tim/bagan'] = () => baganFull();
 PAGES['org/bagansaya'] = () => baganView(true);
 
 /* --- Laporan (agregat) --- */
@@ -1430,7 +1445,7 @@ async function lsIngatkan(btn) {
 const tabsOf = (m) => (m.tabs ? m.tabs.filter((s) => (D.perm[s[2] || `${m.id}/${s[0]}`] || 0) >= 1 && !(s[4] && !(D.user.tim && D.user.tim.ada)) && !(s[5] && !(D.user.bpk || D.user.superAdmin || (D.perm.admin || 0) >= 1))) : []);
 const visible = () => MENU.filter((m) => m.always || (m.tabs ? tabsOf(m).length : (D.perm[m.id] || 0) >= 1));
 // Alamat lama (sebelum menu digabung) dialihkan ke alamat baru supaya tautan dan bookmark tetap jalan.
-const ALIAS = { pengurus: 'org/pengurus', tim: 'org/saya', 'tim/saya': 'org/saya', 'tim/bagan': 'org/bagan', 'tim/daftar': 'org/daftar', modul: 'ls/m-ringkasan', 'modul/ringkasan': 'ls/m-ringkasan', 'modul/permodul': 'ls/m-permodul', 'modul/peserta': 'ls/m-peserta', 'modul/pengajar': 'ls/m-pengajar' };
+const ALIAS = { pengurus: 'org/bagan', 'org/pengurus': 'org/bagan', tim: 'org/saya', 'tim/saya': 'org/saya', 'tim/bagan': 'org/bagan', 'tim/daftar': 'org/daftar', modul: 'ls/m-ringkasan', 'modul/ringkasan': 'ls/m-ringkasan', 'modul/permodul': 'ls/m-permodul', 'modul/peserta': 'ls/m-peserta', 'modul/pengajar': 'ls/m-pengajar' };
 function migrasiHash() {
   const seg = location.hash.replace(/^#\/?/, '').split('/'), k2 = seg.slice(0, 2).join('/'), to = ALIAS[k2] || ALIAS[seg[0]];
   if (to && (ALIAS[k2] || seg.length === 1)) history.replaceState(null, '', location.pathname + location.search + '#/' + to + (seg.length > 2 ? '/' + seg.slice(2).join('/') : ''));

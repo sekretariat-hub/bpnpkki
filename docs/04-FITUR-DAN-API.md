@@ -34,3 +34,6 @@ Hak akses tetap memakai kunci lama (`pengurus`, `tim/*`, `modul/*`, `ls/*`, `adm
 ## Proyek & Tugas Seksi (Program Kerja > Proyek & Tugas)
 Logika di `lib/h-tugas.js`, dipanggil dari `api/proker.js` (GET `?tugas=1`, GET `?komentar=<id>`, POST dengan `op`): projek_baru, projek_ubah, tugas_baru, tugas_ubah, tugas_hapus, komentar_tambah, komentar_hapus.
 Hak: lihat = anggota seksi; buat tugas = anggota seksi; ubah tugas = koordinator seksi/Admin, pembuat, atau yang di-tag; buat/ubah project = koordinator seksi/bidang atau Admin; komentar = siapa pun yang bisa melihat tugas (hapus: penulis/Admin). Mode Login sebagai wajib "Boleh edit". Tampilan: Kanban (seret kartu untuk ganti status), Daftar per project, Matriks prioritas 2x2.
+
+## Bagan Seluruh Tim (Organisasi)
+Tab Daftar Pengurus BPN dihapus (`#/pengurus` dialihkan ke bagan). Bagan: BPN PKKI > Penasihat Episkopal > Pastor Moderator > Koordinator BPN > Tim BPN Harian > Bidang > Seksi, semua bisa dilipat (details). Tiap seksi memisahkan Anggota seksi (BPN Inti/Harian) dan Anggota tim kerja dengan badge jumlah. Klik nama: foto besar, WhatsApp (wa.me), Email (mailto), Profil lengkap (Admin atau diri sendiri), Ganti/akhiri jabatan (hak edit pengurus). Riwayat jabatan, form profil pendaftaran, dan Ganti ada di tab Daftar Anggota Tim.
