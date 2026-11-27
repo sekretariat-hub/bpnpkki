@@ -268,3 +268,4 @@ details.bd2{border-left:6px solid var(--bc)}details.sk2{box-shadow:none;backgrou
 .shell.hidside{grid-template-columns:1fr}.shell.hidside .side{display:none}.shell.hidside .burger{display:inline-block}
 @media (max-width:900px){.side{height:100vh;height:100dvh;bottom:auto}}
 .sr:hover{background:var(--gray-t)}.sr.on{background:#E8EEFB}
+.pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.pill{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 14px;font-weight:600;font-size:13px;cursor:pointer;color:var(--navy)}.pill b{color:var(--mute);margin-left:4px}.pill.on{background:var(--navy);color:#fff;border-color:var(--navy)}.pill.on b{color:#fff}

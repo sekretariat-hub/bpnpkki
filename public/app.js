@@ -388,8 +388,30 @@ PAGES.pendataan = () => {
   const head = `<div class="filters"><div><label>BPK</label><select id="pdb">${list.length > 1 ? '<option value="">Semua BPK</option>' : ''}${list.map((b) => `<option value="${b.id}"${b.id === S.pdt.bpk ? ' selected' : ''}>${esc(b.nama)}</option>`).join('')}</select></div></div>`;
   const prof = (id) => D.bpkProfil[id] || { pejabat: [], riwayat: [] };
   if (!S.pdt.bpk) {
+    const mode = S.pdt.mode || 'bpk';
+    const seg = `<div class="seg" id="pdm" style="margin:0 0 12px"><button data-m="bpk" class="${mode === 'bpk' ? 'on' : ''}">Per BPK</button><button data-m="jab" class="${mode === 'jab' ? 'on' : ''}">Per Jabatan</button></div>`;
+    setTimeout(() => {
+      document.querySelectorAll('#pdm button').forEach((b) => b.addEventListener('click', () => { S.pdt.mode = b.dataset.m; render(); }));
+      document.querySelectorAll('[data-pjt]').forEach((b) => b.addEventListener('click', () => { S.pdt.jab = b.dataset.pjt; render(); }));
+      $('#pdk')?.addEventListener('change', (e) => { S.pdt.kosong = e.target.checked; render(); });
+    });
+    if (mode === 'jab') {
+      // Urutan tombol: Moderator, Koordinator BPK, Kepemudaan, lalu jabatan lain menurut urutan data.
+      const urut = (n) => (/moderator/i.test(n) ? 0 : /^koordinator bpk/i.test(n) ? 1 : /kepemudaan/i.test(n) ? 2 : 3);
+      const jl = (D.jabatanBpk || []).map((j, i) => ({ ...j, i })).sort((a, b) => urut(a.nama) - urut(b.nama) || a.i - b.i);
+      const cur = jl.find((j) => j.id === S.pdt.jab) || jl[0];
+      if (!cur) return `${head}${seg}<div class="empty">Belum ada daftar jabatan.</div>`;
+      const rows = list.map((b) => ({ b, pj: prof(b.id).pejabat.filter((x) => x.jabatanId === cur.id) }));
+      const isi = rows.filter((r) => r.pj.length).length, q = S.pdt.q.toLowerCase();
+      const tampil = rows.filter((r) => (!S.pdt.kosong || !r.pj.length) && (!q || r.b.nama.toLowerCase().includes(q)));
+      const pill = jl.map((j) => { const n = list.filter((b) => prof(b.id).pejabat.some((x) => x.jabatanId === j.id)).length; return `<button type="button" class="pill${j.id === cur.id ? ' on' : ''}" data-pjt="${esc(j.id)}">${esc(j.nama)} <b>${n}/${list.length}</b></button>`; }).join('');
+      return `${head}${seg}<div class="pills">${pill}</div>
+        <div class="filters" style="justify-content:space-between"><div class="note"><b>${esc(cur.nama)}</b>: ${isi} dari ${list.length} BPK sudah terisi, ${list.length - isi} belum.</div><label style="display:flex;gap:8px;align-items:center;margin:0;font-size:13px"><input type="checkbox" id="pdk" style="width:auto"${S.pdt.kosong ? ' checked' : ''}> Hanya yang belum terisi</label></div>
+        <div class="tw"><table><thead><tr><th>BPK</th><th>Pemegang jabatan</th><th>Kontak</th><th>Status</th></tr></thead><tbody>${tampil.map((r) => `<tr class="clk" data-pbk="${esc(r.b.id)}"><td><b>${esc(r.b.nama)}</b></td><td>${r.pj.map((x) => `<div>${esc(x.orang.nama)}</div>`).join('') || '<span class="sub">–</span>'}</td><td>${r.pj.map((x) => `<div class="acts">${x.orang.adaWa ? `<a class="wa" target="_blank" rel="noopener" href="/api/wa?p=${esc(x.orang.id)}" onclick="event.stopPropagation()">WhatsApp</a>` : ''}${x.orang.email ? `<a class="wa em" href="mailto:${esc(x.orang.email)}" onclick="event.stopPropagation()">Email</a>` : ''}</div>`).join('')}</td><td>${r.pj.length ? chip('Terisi', 'green') : chip('Belum terisi', 'coral')}</td></tr>`).join('') || '<tr><td colspan="4" class="sub">Tidak ada yang sesuai.</td></tr>'}</tbody></table></div>
+        <p class="note" style="margin-top:8px">Klik baris untuk membuka BPK tersebut${edit ? ' dan menambah atau mengganti pemegang jabatan' : ''}.</p>`;
+    }
     const q = S.pdt.q.toLowerCase();
-    return `${head}<div class="tw"><table><thead><tr><th>BPK</th><th>Koordinator</th><th>Jabatan aktif</th></tr></thead><tbody>${list.filter((b) => !q || b.nama.toLowerCase().includes(q)).map((b) => { const pj = prof(b.id).pejabat; const k = pj.find((x) => x.koordinator && !/wakil/i.test(x.jabatan)); const c = {}; pj.forEach((x) => { c[x.jabatan] = (c[x.jabatan] || 0) + 1; }); return `<tr class="clk" data-pbk="${b.id}"><td><b>${esc(b.nama)}</b></td><td>${k ? esc(k.orang.nama) : '<span class="sub">belum ada</span>'}</td><td>${Object.entries(c).map(([j, n]) => chip(`${j} ${n}`, 'blue')).join(' ') || '<span class="sub">–</span>'}</td></tr>`; }).join('')}</tbody></table></div>`;
+    return `${head}${seg}<div class="tw"><table><thead><tr><th>BPK</th><th>Koordinator</th><th>Jabatan aktif</th></tr></thead><tbody>${list.filter((b) => !q || b.nama.toLowerCase().includes(q)).map((b) => { const pj = prof(b.id).pejabat; const k = pj.find((x) => x.koordinator && !/wakil/i.test(x.jabatan)); const c = {}; pj.forEach((x) => { c[x.jabatan] = (c[x.jabatan] || 0) + 1; }); return `<tr class="clk" data-pbk="${b.id}"><td><b>${esc(b.nama)}</b></td><td>${k ? esc(k.orang.nama) : '<span class="sub">belum ada</span>'}</td><td>${Object.entries(c).map(([j, n]) => chip(`${j} ${n}`, 'blue')).join(' ') || '<span class="sub">–</span>'}</td></tr>`; }).join('')}</tbody></table></div>`;
   }
   const b = list.find((x) => x.id === S.pdt.bpk) || { nama: '', id: S.pdt.bpk }, pr = prof(b.id);
   const g = {}; pr.pejabat.forEach((x) => { (g[x.jabatan] = g[x.jabatan] || []).push(x); });
