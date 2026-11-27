@@ -445,15 +445,25 @@ PAGES.profil = () => {
 
 // "Login sebagai" (khusus Super Admin): dibuka dari menu nama di sidebar. Daftar pengguna dimuat sekali.
 function bukaImp() {
-  modal(`<h2 style="margin:0 0 6px">Login sebagai</h2><p class="note" style="margin:0 0 14px">Lihat sistem seperti pengguna lain. Perubahan yang Anda buat tersimpan atas nama Anda, bukan nama mereka.</p><div class="q"><label>Pilih pengguna</label><select id="impsel"><option>Memuat…</option></select></div><button class="btn" id="impgo" type="button" style="margin-top:14px" disabled>Lihat sebagai</button>`);
+  modal(`<h2 style="margin:0 0 6px">Login sebagai</h2><p class="note" style="margin:0 0 14px">Lihat sistem seperti pengguna lain. Perubahan yang Anda buat tersimpan atas nama Anda, bukan nama mereka.</p><div class="q"><label>Cari pengguna</label><input id="impq" autocomplete="off" placeholder="Ketik nama atau email…" disabled></div><div id="impl" class="sres" style="max-height:240px;overflow:auto;position:static;margin-top:6px"><div class="sub" style="padding:8px">Memuat…</div></div><div id="imps" class="card" style="margin-top:12px;display:none"></div><button class="btn" id="impgo" type="button" style="margin-top:14px" disabled>Lihat sebagai</button>`);
   (async () => {
-    const sel = $('#impsel');
+    let pilih = '';
     try {
       if (!ADM) { const j = await fetch('/api/admin', { credentials: 'same-origin' }).then((r) => r.json()); if (j.error) throw new Error(j.error); ADM = j; }
-      sel.innerHTML = '<option value="">— pilih pengguna —</option>' + ADM.users.filter((u) => u.aktif && !u.roles.includes('Super Admin')).map((u) => `<option value="${esc(u.id)}">${esc(u.nama)}</option>`).join('');
-      $('#impgo').disabled = false;
-    } catch (e) { sel.innerHTML = `<option>${esc(e.message)}</option>`; }
-    $('#impgo').onclick = async (e) => { if (!$('#impsel').value) return; e.target.disabled = true; try { await loginSebagai($('#impsel').value); closeModal(); } catch (x) { alert(x.message); e.target.disabled = false; } };
+      const us = ADM.users.filter((u) => u.aktif && !u.roles.includes('Super Admin')).sort((x, y) => cmp(x.nama, y.nama));
+      const gambar = () => {
+        const q = $('#impq').value.trim().toLowerCase(), l = us.filter((u) => !q || `${u.nama} ${u.email || ''}`.toLowerCase().includes(q)).slice(0, 60);
+        $('#impl').innerHTML = l.map((u) => `<div class="sr${u.id === pilih ? ' on' : ''}" data-u="${esc(u.id)}" style="padding:9px 10px;cursor:pointer;border-radius:8px"><b>${esc(u.nama)}</b> <small class="sub">${esc((u.roles || []).join(', '))}</small></div>`).join('') || '<div class="sub" style="padding:8px">Tidak ada yang cocok.</div>';
+      };
+      $('#impq').disabled = false; $('#impq').focus(); gambar();
+      $('#impq').addEventListener('input', gambar);
+      $('#impl').addEventListener('click', (e) => {
+        const r = e.target.closest('[data-u]'); if (!r) return; pilih = r.dataset.u; const u = us.find((x) => x.id === pilih);
+        $('#imps').style.display = 'block'; $('#imps').innerHTML = `<div class="sub">Akan melihat sebagai</div><b style="font-size:16px">${esc(u.nama)}</b><div style="margin-top:4px">${(u.roles || []).map((x) => chip(x, 'blue')).join(' ') || '<span class="sub">Tanpa role</span>'}</div>${u.email ? `<div class="sub">${esc(u.email)}</div>` : ''}`;
+        $('#impgo').disabled = false; gambar();
+      });
+    } catch (e) { $('#impl').innerHTML = `<div class="sub" style="padding:8px">${esc(e.message)}</div>`; }
+    $('#impgo').onclick = async (e) => { if (!pilih) return; e.target.disabled = true; try { await loginSebagai(pilih); closeModal(); } catch (x) { alert(x.message); e.target.disabled = false; } };
   })();
 }
 // Menu nama di sidebar: Profil Saya, Ubah profil, Login sebagai (Super Admin), Keluar.
